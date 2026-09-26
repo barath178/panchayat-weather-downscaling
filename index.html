@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AeroAgro AI - Physics-Informed Microclimate Weather Downscaling from Block to Panchayat level for Precision Agro-Meteorological Advisory Services.">
+  <title>AeroAgro AI - Block to Panchayat Weather Downscaling & Agromet Advisory Platform</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Design System Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+      <div class="brand-section">
+        <div class="brand-logo-badge" id="brand-logo">
+          <!-- Custom Agro-Radar SVG Icon -->
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" stroke-linecap="round"/>
+            <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z" stroke-linecap="round"/>
+            <path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke-linecap="round"/>
+            <circle cx="12" cy="12" r="2" fill="#10b981"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>AeroAgro AI</h1>
+          <div class="brand-subtitle">Hyper-Local Weather Downscaler • Google Maps Agromet Platform</div>
+        </div>
+      </div>
+
+      <!-- Live Pilot Region Status -->
+      <div class="status-pill" id="live-status-pill">
+        <span class="pulse-dot"></span>
+        <span>Pilot: Mulshi-Velhe Western Ghats (18km Coarse &rarr; 1.2km Fine)</span>
+      </div>
+
+      <!-- Header Controls: Scenario & Language Selectors -->
+      <div class="header-controls">
+        <label for="scenario-select" style="display:none;">Weather Scenario</label>
+        <select id="scenario-select" class="custom-select" aria-label="Select Meteorological Scenario">
+          <option value="monsoon">🌧️ Monsoon Surge (Orographic Lift)</option>
+          <option value="winter_frost">❄️ Winter Night (Thermal Inversion & Frost)</option>
+          <option value="pre_monsoon">⚡ Pre-Monsoon (Convective Cells)</option>
+        </select>
+
+        <span class="p-badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7; padding: 6px 12px;">
+          🌐 English (Official)
+        </span>
+      </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-grid">
+
+      <!-- LEFT SIDEBAR: Coarse vs. Fine Downscaling Analysis & Physics Explainability -->
+      <aside class="panel sidebar-left" aria-label="Downscaling Science Panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+            </svg>
+            Microclimate Downscaling
+          </div>
+          <span class="p-badge" id="resolution-badge" style="background: rgba(6, 182, 212, 0.15); color: #67e8f9;">1.2 km² Grid</span>
+        </div>
+
+        <div class="panel-body custom-scroll">
+
+          <!-- Active Selected Panchayat Card -->
+          <div class="coarse-vs-fine-card">
+            <div class="card-label">Active Focus Area</div>
+            <h3 id="selected-panchayat-name" style="font-size: 1.1rem; font-weight: 700; color: #ffffff;">Male Valley Basin</h3>
+            <p id="selected-panchayat-elev" style="font-size: 0.78rem; color: #94a3b8;">558 m (Enclosed Deep Depression)</p>
+
+            <div class="metric-comparison-row">
+              <div class="metric-box">
+                <div class="metric-box-title">IMD Block (18km)</div>
+                <div class="metric-box-val" id="coarse-rain">28.0 mm</div>
+                <div style="font-size: 0.68rem; color: #64748b;">Uniform Average</div>
+              </div>
+              <div class="metric-box fine-scale">
+                <div class="metric-box-title">Panchayat Fine (1.2km)</div>
+                <div class="metric-box-val" id="fine-rain">32.2 mm</div>
+                <div style="font-size: 0.68rem; color: #6ee7b7;">Downscaled Reality</div>
+              </div>
+            </div>
+
+            <div class="metric-comparison-row">
+              <div class="metric-box">
+                <div class="metric-box-title">Block Temp Range</div>
+                <div class="metric-box-val" id="coarse-temp" style="font-size: 1rem;">22° to 26.5°C</div>
+              </div>
+              <div class="metric-box fine-scale">
+                <div class="metric-box-title">Panchayat Temp</div>
+                <div class="metric-box-val" id="fine-temp" style="font-size: 1rem;">21.8° to 27.2°C</div>
+              </div>
+            </div>
+
+            <div class="metric-comparison-row">
+              <div class="metric-box">
+                <div class="metric-box-title">Block Wind / RH</div>
+                <div class="metric-box-val" id="coarse-wind-rh" style="font-size: 0.9rem;">22 km/h | 82%</div>
+              </div>
+              <div class="metric-box fine-scale">
+                <div class="metric-box-title">Local Wind / RH</div>
+                <div class="metric-box-val" id="fine-wind-rh" style="font-size: 0.9rem;">14.3 km/h | 89%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explainable AI (XAI) Physics Card -->
+          <div class="xai-card">
+            <div class="card-label">Physics-Informed Downscaling Equation</div>
+            <code class="formula-chip" id="active-formula-display">
+              P<sub>local</sub> = P<sub>coarse</sub> &times; [1 + (&Delta;z/300)&times;0.95 &times; sin(&theta;)]
+            </code>
+            <p id="scientific-rationale-text" style="font-size: 0.76rem; color: #cbd5e1; line-height: 1.5;">
+              Mechanical orographic lift active. Air ascends the valley escarpment, amplifying local precipitation above the coarse block forecast.
+            </p>
+            <div class="param-pills">
+              <span class="param-pill">Environmental Lapse Rate: <span>-6.5°C/km</span></span>
+              <span class="param-pill">DEM Source: <span>NASA SRTM 30m</span></span>
+              <span class="param-pill">Hydro Accumulation: <span>D8 Flow</span></span>
+            </div>
+          </div>
+
+          <!-- Selectable Gram Panchayat List -->
+          <div class="card-label" style="margin-top: 12px;">Select Gram Panchayat (8 in Pilot)</div>
+          <div class="panchayat-list" id="panchayat-list-container">
+            <!-- Dynamically populated by app.js -->
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- CENTER: Interactive Google Maps & Micro-Feature Labs -->
+      <section class="center-container" aria-label="Interactive Map and Tools">
+
+        <!-- Google Maps Card -->
+        <div class="map-card">
+          <!-- Map Floating Toolbars: Variable Selector -->
+          <div class="map-floating-toolbar" role="toolbar" aria-label="Variable Selection">
+            <button class="toolbar-btn active" data-var="rainfall" id="btn-var-rain">🌧️ Rain (mm)</button>
+            <button class="toolbar-btn" data-var="temp" id="btn-var-temp">🌡️ Temperature</button>
+            <button class="toolbar-btn" data-var="frost" id="btn-var-frost">❄️ Frost Risk</button>
+            <button class="toolbar-btn" data-var="spray" id="btn-var-spray">🚜 Spray Feasibility</button>
+          </div>
+
+          <!-- Google Maps Layer Mode Switcher -->
+          <div class="map-view-switcher" style="left: 14px; top: 58px; right: auto;" role="group" aria-label="Google Maps Style">
+            <button class="switch-btn active" onclick="window.MapController.setMapType('dark')">🌌 Dark Styled</button>
+            <button class="switch-btn" onclick="window.MapController.setMapType('terrain')">🏔️ Google Terrain</button>
+            <button class="switch-btn" onclick="window.MapController.setMapType('hybrid')">🛰️ Google Satellite</button>
+          </div>
+
+          <!-- Coarse vs Fine View Switcher -->
+          <div class="map-view-switcher" role="group" aria-label="Resolution Toggle">
+            <button class="switch-btn active" data-mode="fine" id="btn-mode-fine">🔬 Downscaled (1.2km)</button>
+            <button class="switch-btn" data-mode="coarse" id="btn-mode-coarse">📦 Coarse Block (18km)</button>
+          </div>
+
+          <!-- Map Container -->
+          <div id="leaflet-map" style="width: 100%; height: 100%; min-height: 480px;"></div>
+
+          <!-- Dynamic Legend Overlay -->
+          <div class="map-legend-overlay">
+            <div class="legend-title" id="legend-title">Precipitation (mm/day)</div>
+            <div class="legend-bar" id="legend-bar" style="background: linear-gradient(to right, #475569, #06b6d4, #0284c7, #2563eb, #7c3aed);"></div>
+            <div class="legend-labels" id="legend-labels">
+              <span>0 mm</span><span>25 mm</span><span>70+ mm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-Map Feature Tabs -->
+        <div class="feature-tab-bar" role="tablist">
+          <button class="tab-btn active" data-tab="spray" id="tab-btn-spray" role="tab">
+            <span>🚜</span> Smart Spray Window
+          </button>
+          <button class="tab-btn" data-tab="frost" id="tab-btn-frost" role="tab">
+            <span>❄️</span> Frost Inversion Simulator
+          </button>
+          <button class="tab-btn" data-tab="acoustic" id="tab-btn-acoustic" role="tab">
+            <span>🎙️</span> Acoustic Rain Gauge (Tin Roof AI)
+          </button>
+        </div>
+
+        <!-- Feature Content Panels -->
+        <div class="feature-content-area">
+
+          <!-- TAB 1: Smart Spray Window -->
+          <div class="feature-panel" id="tab-spray">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">Hourly Precision Spraying Window (06:00 - 19:00)</h3>
+                <p style="font-size: 0.74rem; color: #94a3b8;">Accounts for micro-wind drift, leaf wetness wash-off, and droplet evaporation</p>
+              </div>
+              <div id="spray-status-badge" class="advisory-badge-pill badge-spray-safe">
+                🟢 FAVORABLE SPRAY WINDOW
+              </div>
+            </div>
+
+            <!-- Diurnal Timeline -->
+            <div class="spray-timeline" id="spray-timeline-container">
+              <!-- Dynamically populated -->
+            </div>
+            <p id="spray-summary-text" style="font-size: 0.78rem; color: #cbd5e1; margin-top: 4px;">
+              Safe chemical application between 06:00 and 11:00. Afternoon wind speed exceeds 14 km/h drift limit.
+            </p>
+          </div>
+
+          <!-- TAB 2: Frost Pocket Simulator -->
+          <div class="feature-panel" id="tab-frost" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">Cold-Air Drainage & Nocturnal Thermal Inversion</h3>
+                <p style="font-size: 0.74rem; color: #94a3b8;">Simulates katabatic heavy cold air pooling in low-elevation valley basins during clear winter nights</p>
+              </div>
+              <span class="p-badge frost-risk">Physics Simulation</span>
+            </div>
+
+            <div id="frost-tab-alert">
+              <!-- Dynamically updated based on scenario & panchayat -->
+            </div>
+          </div>
+
+          <!-- TAB 3: Acoustic Rain Gauge (Frugal Ground-Truth AI) -->
+          <div class="feature-panel" id="tab-acoustic" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div>
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: #ffffff;">Acoustic Rain Gauge (Tin-Roof Audio AI)</h3>
+                <p style="font-size: 0.74rem; color: #94a3b8;">Crowdsourced ₹0 ground-truthing: Classifies rain intensity from audio of water hitting corrugated tin roofs</p>
+              </div>
+              <button id="btn-toggle-acoustic" class="btn btn-primary btn-sm">▶ Start Acoustic Audio Stream</button>
+            </div>
+
+            <div class="acoustic-demo-grid">
+              <div class="spectrogram-box">
+                <canvas id="acoustic-canvas"></canvas>
+                <div style="position: absolute; top: 8px; right: 12px; font-family: var(--font-mono); font-size: 0.65rem; color: #06b6d4;">
+                  FFT Spectrum (128 Bands • 0-8 kHz)
+                </div>
+              </div>
+
+              <div class="acoustic-controls">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.75rem; color: #94a3b8;">Simulated Rain Mode:</span>
+                  <span id="acoustic-badge-display" class="p-badge">MODERATE RAIN</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0;">
+                  <button class="btn btn-glass btn-sm acoustic-mode-btn" data-mode="dry">Dry (0 mm)</button>
+                  <button class="btn btn-glass btn-sm acoustic-mode-btn" data-mode="drizzle">Drizzle</button>
+                  <button class="btn btn-glass btn-sm acoustic-mode-btn btn-primary" data-mode="moderate">Moderate</button>
+                  <button class="btn btn-glass btn-sm acoustic-mode-btn" data-mode="heavy">Torrential</button>
+                </div>
+
+                <div style="background: rgba(0,0,0,0.3); border-radius: 6px; padding: 6px 10px; font-size: 0.72rem;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color:#94a3b8;">Estimated Rate:</span>
+                    <strong id="acoustic-rate-display" style="color:#38bdf8;">16.4 mm/hr</strong>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+                    <span style="color:#94a3b8;">CNN Accuracy:</span>
+                    <strong id="acoustic-conf-display" style="color:#6ee7b7;">96.8% Confidence</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- RIGHT SIDEBAR: Agro-Meteorological Advisories & Regional WhatsApp Broadcaster -->
+      <aside class="panel sidebar-right" aria-label="Agro Advisory & Farmer Delivery">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2a9 9 0 0 0-9 9c0 3.6 2.1 6.8 5.3 8.2L7 22l3.4-1.2A9 9 0 1 0 12 2z"/>
+            </svg>
+            Agromet Advisory Engine
+          </div>
+          <span class="p-badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7;">Panchayat Delivery</span>
+        </div>
+
+        <div class="panel-body custom-scroll">
+
+          <!-- Crop Selection Pills -->
+          <div class="card-label">Target Crop Phenology</div>
+          <div class="crop-tag-selector" role="group" aria-label="Select Target Crop">
+            <button class="crop-tag active" data-crop="Table Grapes">🍇 Table Grapes</button>
+            <button class="crop-tag" data-crop="Paddy (Indrayani)">🌾 Paddy (Rice)</button>
+            <button class="crop-tag" data-crop="Vegetables (Tomato)">🍅 Tomato/Vegetables</button>
+            <button class="crop-tag" data-crop="Sugarcane">🎋 Sugarcane</button>
+          </div>
+
+          <!-- Microclimate Pest & Disease Risk Card -->
+          <div class="advisory-card" id="disease-card">
+            <div class="card-label" style="color: #67e8f9;">Pathogen Micro-Risk Assessment</div>
+            <div id="disease-warning-container">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Irrigation Water Balance (ET0) Card -->
+          <div class="advisory-card" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(59, 130, 246, 0.05)); border-color: var(--accent-cyan-glow);">
+            <div class="card-label" style="color: #67e8f9;">Evapotranspiration & Irrigation Advisor</div>
+            <p id="irrigation-action-text" class="advisory-text" style="font-size: 0.8rem;">
+              Downscaled rainfall exceeds daily crop water requirement. Suspend scheduled drip irrigation.
+            </p>
+          </div>
+
+          <!-- Multilingual WhatsApp Broadcast Simulator -->
+          <div class="whatsapp-preview-box">
+            <div class="whatsapp-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#22c55e">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/>
+              </svg>
+              <span>Automated Village WhatsApp Dispatcher</span>
+            </div>
+
+            <div class="whatsapp-bubble" id="whatsapp-bubble-content">
+              🌱 *AGROMET ADVISORY: MALE VALLEY*
+              Loading localized advisory broadcast...
+            </div>
+
+            <div class="whatsapp-actions">
+              <button class="btn btn-glass btn-sm" id="btn-copy-wa">📋 Copy Advisory</button>
+              <button class="btn btn-primary btn-sm" onclick="alert('Simulation: Broadcast delivered to 342 registered farmers in this Gram Panchayat via WhatsApp Cloud API.')">🚀 Broadcast to Village</button>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <footer class="footer-bar">
+      <div>
+        <strong>AeroAgro AI</strong> • Downscaling Engine: Topographic Lapse-Rate & Orographic Amplification Multipliers
+      </div>
+      <div>
+        Map Engine: Google Maps API • Data Sources: IMD Gridded NWP • NASA SRTM 30m DEM • ICAR Agromet Guidelines
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Google Maps JavaScript API -->
+  <script src="https://maps.googleapis.com/maps/api/js?callback=initGoogleMapStandalone&libraries=geometry" async defer></script>
+
+  <!-- Application Modules -->
+  <script src="js/data.js"></script>
+  <script src="js/downscaling-engine.js"></script>
+  <script src="js/advisory-engine.js"></script>
+  <script src="js/acoustic-rain.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
