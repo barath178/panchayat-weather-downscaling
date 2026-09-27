@@ -2,6 +2,8 @@
 
 **Hyper-local weather and crop advisories for every Gram Panchayat in India.**
 
+**Website:** https://aeroagro.vercel.app · mirror: https://barath178.github.io/panchayat-weather-downscaling/
+
 Official forecasts are issued on 12–25 km grids, so a frost hollow, a rain-shadow village and a hillside tea estate inside one block all get the same number. AeroAgro AI takes that coarse forecast and downscales it to about 1.2 km using terrain physics (elevation lapse rate, cold-air drainage, orographic lift, wind-gap funnelling, urban heat island). It then turns the result into decisions a farmer can act on: when to spray, whether to irrigate, which pest to watch for, and evidence for PMFBY crop-insurance claims.
 
 ![Desktop dashboard](design/screens/desktop-dashboard.png)
@@ -98,7 +100,7 @@ Open [`index.html`](index.html) directly in a browser. No install needed.
 
 ## Deploy
 
-**Live demo:** https://barath178.github.io/panchayat-weather-downscaling/
+**Live site:** https://aeroagro.vercel.app (mirror: https://barath178.github.io/panchayat-weather-downscaling/)
 
 - **Frontend → GitHub Pages** (what the live demo uses):
   ```bash
