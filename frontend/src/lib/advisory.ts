@@ -63,7 +63,7 @@ const T = {
   },
 } as const;
 
-const IRRIGATION: Record<string, Record<Lang, string>> = {
+export const IRRIGATION: Record<string, Record<Lang, string>> = {
   'Suspend irrigation': { en: 'Suspend irrigation', hi: 'सिंचाई रोकें', ta: 'நீர்ப்பாசனத்தை நிறுத்தவும்' },
   'Skip irrigation today': { en: 'Skip irrigation today', hi: 'आज सिंचाई न करें', ta: 'இன்று நீர் பாய்ச்ச வேண்டாம்' },
   'Increase irrigation': { en: 'Increase irrigation (evening drip)', hi: 'सिंचाई बढ़ाएँ (शाम को ड्रिप)', ta: 'நீர்ப்பாசனத்தை அதிகரிக்கவும் (மாலை சொட்டு நீர்)' },

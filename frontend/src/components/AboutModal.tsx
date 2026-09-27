@@ -1,8 +1,17 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { X, CloudRain, Mountain, Cpu, Users } from 'lucide-react';
+import { X, CloudRain, Mountain, Cpu, Users, Check } from 'lucide-react';
 import { Logo } from './CommandBar';
+
+// How each part of the MoES problem statement is answered in the product
+const MOES: [string, string][] = [
+  ['Block → panchayat downscaling', '18 km NWP block resolved into 225 cells of 1.2 km from the live Copernicus 90 m DEM'],
+  ['High-resolution from low-resolution', 'Physics-informed inference (lapse rate, cold-air pooling, orographic lift, wind exposure), explained step by step'],
+  ['Agro-met advisory services', '7-day village outlook, spray windows, irrigation (FAO-56 ET₀), crop disease rules, GKMS-format bulletin'],
+  ['Reaching farmers', 'Ask AeroAgro voice assistant and WhatsApp in English, हिन्दी, தமிழ்; kiosk wallboard with QR'],
+  ['National scale', 'AI scan of 303 villages flags alerts that the district forecast misses'],
+];
 
 const STEPS = [
   { icon: CloudRain, title: 'Coarse forecast', text: 'Live Open-Meteo forecast for the ~11–25 km grid cell — the same scale as IMD block forecasts.' },
@@ -14,7 +23,7 @@ const STEPS = [
 const STACK: [string, string][] = [
   ['Frontend', 'Next.js 14 · React · Tailwind · Recharts · Leaflet'],
   ['Backend', 'FastAPI · XGBoost / Random Forest downscaler'],
-  ['Data', 'Open-Meteo · NASA SRTM 30 m · IMD INSAT-3DR'],
+  ['Data', 'Open-Meteo NWP · Copernicus GLO-90 DEM · IMD INSAT-3DR'],
   ['Storage', 'Supabase PostgreSQL + PostGIS'],
 ];
 
@@ -68,6 +77,24 @@ export default function AboutModal({ onClose }: { onClose: () => void }) {
               <p className="mt-2 text-sm leading-relaxed text-ink2">{text}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-accent/20 bg-accent/[0.05] p-5">
+          <div className="eyebrow text-accent">Ministry of Earth Sciences problem statement</div>
+          <p className="mt-1.5 text-sm text-ink2">
+            Downscaling of weather forecast from block level to panchayat level: inferring high-resolution information from low-resolution variables for
+            agro-meteorological advisory services.
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {MOES.map(([k, v]) => (
+              <li key={k} className="flex gap-2.5 text-sm">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                <span>
+                  <strong className="font-semibold text-ink">{k}.</strong> <span className="text-ink2">{v}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <dl className="mt-8 grid gap-x-8 gap-y-2 border-t border-line/10 pt-6 text-sm sm:grid-cols-2">

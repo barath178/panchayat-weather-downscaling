@@ -31,6 +31,10 @@ export interface HourPoint extends HourlyInput {
 /** Live coarse forecast for one location (Open-Meteo, grid-cell mean, no DEM correction). */
 export interface LiveForecast {
   daily: WeatherMetrics;
+  /** 7 days of coarse daily values; days[0] === daily */
+  days: WeatherMetrics[];
+  /** ISO dates (Asia/Kolkata) matching `days` */
+  dates: string[];
   hourly: HourlyInput[];
   gridElevationM: number;
   fetchedAt: number;
@@ -39,8 +43,8 @@ export interface LiveForecast {
 export const LAPSE_RATE_C_PER_KM = 6.5;
 // Daytime maxima cool more slowly with height (sunlit slopes); winter nights are
 // damped by valley inversions. Both are standard observations in Indian hill stations.
-const TMAX_LAPSE_C_PER_KM = 5.0;
-const WINTER_NIGHT_LAPSE_C_PER_KM = 4.5;
+export const TMAX_LAPSE_C_PER_KM = 5.0;
+export const WINTER_NIGHT_LAPSE_C_PER_KM = 4.5;
 export const DRIFT_LIMIT_KMH = 15;
 export const CAUTION_WIND_KMH = 10;
 
@@ -132,54 +136,83 @@ export function scenarioBaseline(p: PanchayatData, scenario: Exclude<Scenario, '
 
 const satVapourPressure = (tC: number) => 6.1078 * Math.exp((17.27 * tC) / (tC + 237.3));
 
+/** One physical step in the downscaling, for the explainability view. */
+export interface Step {
+  label: string;
+  why: string;
+  /** additive change (°C) for temperature, multiplicative factor for rain & wind */
+  value: number;
+}
+
+export interface DownscaleDetail {
+  metrics: WeatherMetrics;
+  tmin: Step[];
+  tmax: Step[];
+  rain: Step[];
+  wind: Step[];
+  dz: number;
+}
+
 /**
- * Apply terrain physics to a coarse block forecast.
+ * Apply terrain physics to a coarse block forecast, recording every step.
  * `coarseElevationM` is the terrain height the coarse value refers to.
  */
-export function downscale(p: PanchayatData, coarse: WeatherMetrics, coarseElevationM = blockElevation(p)): WeatherMetrics {
+export function downscaleDetailed(p: PanchayatData, coarse: WeatherMetrics, coarseElevationM = blockElevation(p)): DownscaleDetail {
   const t = terrainClass(p);
   const dz = p.elevationM - coarseElevationM;
   const slopeRad = (p.slopeDeg * Math.PI) / 180;
   const clearNight = coarse.rainfallMm < 5;
   const coldSeason = coarse.tempMin < 16;
   const nightLapse = coldSeason ? WINTER_NIGHT_LAPSE_C_PER_KM : LAPSE_RATE_C_PER_KM;
+  const tminSteps: Step[] = [];
+  const tmaxSteps: Step[] = [];
+  const rainSteps: Step[] = [];
+  const windSteps: Step[] = [];
+  const hgt = `${Math.abs(Math.round(dz))} m ${dz >= 0 ? 'higher' : 'lower'} than the block average`;
 
   // Temperature: lapse rate + urban heat island + katabatic cold-air pooling on clear nights.
-  let tMax = coarse.tempMax - (TMAX_LAPSE_C_PER_KM * dz) / 1000 - p.slopeDeg * 0.015;
-  let tMin = coarse.tempMin - (nightLapse * dz) / 1000;
+  tmaxSteps.push({ label: 'Height (lapse rate)', why: `${hgt}; air cools ${TMAX_LAPSE_C_PER_KM} °C per km by day`, value: -(TMAX_LAPSE_C_PER_KM * dz) / 1000 });
+  if (p.slopeDeg > 2) tmaxSteps.push({ label: 'Slope exposure', why: `${p.slopeDeg}° slope mixes air and trims the afternoon peak`, value: -p.slopeDeg * 0.015 });
+  tminSteps.push({ label: 'Height (lapse rate)', why: `${hgt}; nights cool ${nightLapse} °C per km`, value: -(nightLapse * dz) / 1000 });
   if (t.urban) {
-    tMax += 1.2;
-    tMin += 2.2;
+    tmaxSteps.push({ label: 'Urban heat island', why: 'Concrete and asphalt store heat', value: 1.2 });
+    tminSteps.push({ label: 'Urban heat island', why: 'Buildings release stored heat all night', value: 2.2 });
   }
   if (clearNight && !t.urban && (t.valley || t.himalayan)) {
     const pooling = p.drainageAccumulation * (coldSeason ? 4.0 : 1.5) * (1 - p.slopeDeg / 40);
-    tMin -= pooling;
+    tminSteps.push({ label: 'Cold-air pooling', why: `Clear night: cold air drains downhill and settles here (drainage index ${p.drainageAccumulation})`, value: -pooling });
   }
   if (t.arid) {
-    tMax += 1.5; // bare sand sensible heating
-    tMin -= 1.0; // strong radiative loss
+    tmaxSteps.push({ label: 'Dry sand heating', why: 'Bare desert soil heats fast by day', value: 1.5 });
+    tminSteps.push({ label: 'Desert radiative cooling', why: 'Dry air lets heat escape at night', value: -1.0 });
+  }
+  const tMax = coarse.tempMax + tmaxSteps.reduce((s, x) => s + x.value, 0);
+  let tMin = coarse.tempMin + tminSteps.reduce((s, x) => s + x.value, 0);
+  if (tMin > tMax - 2) {
+    tminSteps.push({ label: 'Physical consistency', why: 'Night low kept at least 2 °C below the day high', value: tMax - 2 - tMin });
+    tMin = tMax - 2;
   }
 
-  // Rainfall: orographic amplification on windward slopes, rain-shadow damping, coastal convergence.
-  // (Regional windward climate is already in the coarse field; only the sub-grid lift is added here.)
-  let rainMult = 1 + (Math.max(0, dz) / 1000) * 0.6 + Math.sin(slopeRad) * 0.6;
-  if (t.windward) rainMult *= 1.1;
-  if (t.ridge) rainMult *= 1.1;
-  if (t.rainShadow) rainMult *= 0.6;
-  if (t.arid) rainMult *= 0.55;
-  if (t.coastal) rainMult *= 1.08;
-  if (t.urban) rainMult *= 1.06;
-  const rain = coarse.rainfallMm * clamp(rainMult, 0.3, 2.0);
+  // Rainfall: orographic amplification, rain-shadow damping, coastal convergence (multiplicative).
+  const lift = 1 + (Math.max(0, dz) / 1000) * 0.6 + Math.sin(slopeRad) * 0.6;
+  if (Math.abs(lift - 1) > 0.005) rainSteps.push({ label: 'Orographic lift', why: 'Air forced up hills condenses into extra rain', value: lift });
+  if (t.windward) rainSteps.push({ label: 'Windward slope', why: 'Faces the moist monsoon flow', value: 1.1 });
+  if (t.ridge) rainSteps.push({ label: 'Ridge crest', why: 'Crests catch the most cloud water', value: 1.1 });
+  if (t.rainShadow) rainSteps.push({ label: 'Rain shadow', why: 'Hills upwind have already squeezed the rain out', value: 0.6 });
+  if (t.arid) rainSteps.push({ label: 'Arid evaporation', why: 'Dry air evaporates light rain before it lands', value: 0.55 });
+  if (t.coastal) rainSteps.push({ label: 'Coastal convergence', why: 'Sea breeze meets land air and lifts it', value: 1.08 });
+  if (t.urban) rainSteps.push({ label: 'Urban convection', why: 'City heat triggers extra showers', value: 1.06 });
+  const rainMult = clamp(rainSteps.reduce((m, x) => m * x.value, 1), 0.3, 2.0);
+  const rain = coarse.rainfallMm * rainMult;
 
   // Wind: gap funnelling, ridge acceleration, valley sheltering, urban canopy friction.
-  let windMult = 1;
-  if (t.windGap) windMult *= 1.9;
-  if (t.ridge || t.himalayan) windMult *= 1.25;
-  if (t.valley) windMult *= 1 - p.drainageAccumulation * 0.35;
-  if (t.urban) windMult *= 0.75;
-  if (t.arid) windMult *= 1.3;
-  if (t.coastal) windMult *= 1.12;
-  const wind = coarse.windSpeedKmh * windMult;
+  if (t.windGap) windSteps.push({ label: 'Wind gap funnelling', why: 'A gap in the hills squeezes and speeds up the wind', value: 1.9 });
+  if (t.ridge || t.himalayan) windSteps.push({ label: 'Height exposure', why: 'Hilltops sit in faster air', value: 1.25 });
+  if (t.valley) windSteps.push({ label: 'Valley shelter', why: 'Surrounding slopes block the wind', value: 1 - p.drainageAccumulation * 0.35 });
+  if (t.urban) windSteps.push({ label: 'Building friction', why: 'Buildings slow the wind near the ground', value: 0.75 });
+  if (t.arid) windSteps.push({ label: 'Open desert', why: 'Nothing to slow the wind', value: 1.3 });
+  if (t.coastal) windSteps.push({ label: 'Sea breeze', why: 'Daily land–sea breeze adds wind', value: 1.12 });
+  const wind = coarse.windSpeedKmh * windSteps.reduce((m, x) => m * x.value, 1);
 
   // Humidity: conserve vapour pressure, re-evaluate saturation at the local mean temperature.
   const coarseMean = (coarse.tempMax + coarse.tempMin) / 2;
@@ -189,12 +222,46 @@ export function downscale(p: PanchayatData, coarse: WeatherMetrics, coarseElevat
   if (t.urban) rh -= 5;
 
   return {
-    tempMax: round1(tMax),
-    tempMin: round1(Math.min(tMin, tMax - 2)),
-    rainfallMm: round1(Math.max(0, rain)),
-    windSpeedKmh: round1(Math.max(1, wind)),
-    relativeHumidity: Math.round(clamp(rh, 10, 97)),
+    metrics: {
+      tempMax: round1(tMax),
+      tempMin: round1(tMin),
+      rainfallMm: round1(Math.max(0, rain)),
+      windSpeedKmh: round1(Math.max(1, wind)),
+      relativeHumidity: Math.round(clamp(rh, 10, 97)),
+    },
+    tmin: tminSteps,
+    tmax: tmaxSteps,
+    rain: rainSteps,
+    wind: windSteps,
+    dz,
   };
+}
+
+export function downscale(p: PanchayatData, coarse: WeatherMetrics, coarseElevationM = blockElevation(p)): WeatherMetrics {
+  return downscaleDetailed(p, coarse, coarseElevationM).metrics;
+}
+
+// ---------- multi-day scenario (when no live forecast) ----------
+
+const RAIN_PATTERN = [1, 0.55, 1.35, 0.2, 0, 0.7, 1.15];
+const TEMP_PATTERN = [0, 0.6, -0.5, 1.1, 1.6, 0.4, -0.3];
+
+/** A plausible 7-day sequence for a simulated scenario, deterministic per region. */
+export function scenarioWeek(p: PanchayatData, scenario: Exclude<Scenario, 'live'>): WeatherMetrics[] {
+  const base = scenarioBaseline(p, scenario);
+  const j = hashUnit(p.id + 'wk');
+  return RAIN_PATTERN.map((_, d) => {
+    if (d === 0) return base; // today must match the single-day baseline
+    const k = (d + Math.round(Math.abs(j) * 3)) % 7;
+    const dt = TEMP_PATTERN[k];
+    return {
+      tempMax: round1(base.tempMax + dt),
+      tempMin: round1(base.tempMin + dt * 0.6),
+      rainfallMm: round1(base.rainfallMm * RAIN_PATTERN[k]),
+      windSpeedKmh: round1(base.windSpeedKmh * (0.85 + ((k * 37) % 7) / 20)),
+      relativeHumidity: Math.round(clamp(base.relativeHumidity + (RAIN_PATTERN[k] - 0.7) * 8, 10, 99)),
+    };
+  });
 }
 
 // ---------- hourly spray window ----------
@@ -266,8 +333,15 @@ export function classifyHours(hours: HourlyInput[]): HourPoint[] {
   });
 }
 
+export interface SprayWindow {
+  label: string;
+  start?: string;
+  end?: string;
+  hours: number;
+}
+
 /** Longest contiguous safe run, e.g. "06:00–10:00". */
-export function bestSprayWindow(hours: HourPoint[]): { label: string; start?: string; end?: string; hours: number } {
+export function bestSprayWindow(hours: HourPoint[]): SprayWindow {
   let best: [number, number] | null = null;
   let start = -1;
   hours.forEach((h, i) => {

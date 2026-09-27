@@ -42,7 +42,7 @@ export function useLiveForecast(p: PanchayatData, enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) return;
-    const key = `aeroagro:live:${p.id}`;
+    const key = `aeroagro:live7:${p.id}`;
     const cached = cacheGet<LiveForecast>(key);
     if (cached) {
       setState({ status: 'ready', data: cached });
@@ -57,9 +57,9 @@ export function useLiveForecast(p: PanchayatData, enabled: boolean) {
       longitude: String(p.lng),
       elevation: 'nan',
       hourly: 'temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m',
-      daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max',
+      daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean',
       timezone: 'Asia/Kolkata',
-      forecast_days: '1',
+      forecast_days: '7',
     });
 
     fetch(`${API}?${params}`, { signal: ctrl.signal })
@@ -69,8 +69,10 @@ export function useLiveForecast(p: PanchayatData, enabled: boolean) {
       })
       .then((j) => {
         const h = j.hourly;
+        const today = j.daily.time[0];
         const hourly: HourlyInput[] = [];
         for (let i = 0; i < h.time.length; i++) {
+          if (!h.time[i].startsWith(today)) continue;
           const hour = parseInt(h.time[i].slice(11, 13), 10);
           if (hour < 6 || hour > 19) continue;
           hourly.push({
@@ -86,10 +88,25 @@ export function useLiveForecast(p: PanchayatData, enabled: boolean) {
           tempMin: r1(j.daily.temperature_2m_min[0]),
           rainfallMm: r1(j.daily.precipitation_sum[0] ?? 0),
           windSpeedKmh: r1(mean(h.wind_speed_10m.slice(6, 20))),
-          relativeHumidity: Math.round(mean(h.relative_humidity_2m)),
+          relativeHumidity: Math.round(mean(h.relative_humidity_2m.slice(0, 24))),
         };
+        const d = j.daily;
+        const days: WeatherMetrics[] = d.time.map((_: string, k: number) =>
+          k === 0
+            ? daily
+            : {
+                tempMax: r1(d.temperature_2m_max[k]),
+                tempMin: r1(d.temperature_2m_min[k]),
+                rainfallMm: r1(d.precipitation_sum[k] ?? 0),
+                // daily max wind overstates the spray-hours mean; scale to a daytime average
+                windSpeedKmh: r1((d.wind_speed_10m_max[k] ?? 0) * 0.7),
+                relativeHumidity: Math.round(d.relative_humidity_2m_mean?.[k] ?? daily.relativeHumidity),
+              }
+        );
         const data: LiveForecast = {
           daily,
+          days,
+          dates: d.time,
           hourly,
           gridElevationM: Math.round(j.elevation ?? 0),
           fetchedAt: Date.now(),

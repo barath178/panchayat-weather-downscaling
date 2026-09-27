@@ -6,6 +6,7 @@ import L from 'leaflet';
 import type { PanchayatData } from '@/data/all_india_regions';
 import type { WeatherMetrics } from '@/lib/microclimate';
 import type { MapVariable } from '@/app/page';
+import type { BlockField } from '@/lib/blockGrid';
 import { getPosition, nearestRegion } from '@/lib/geo';
 
 interface GoogleMapComponentProps {
@@ -18,6 +19,10 @@ interface GoogleMapComponentProps {
   onViewModeChange: (m: 'fine' | 'coarse') => void;
   regionMetrics: Record<string, { coarse: WeatherMetrics; fine: WeatherMetrics }>;
   liveLoading?: boolean;
+  /** 1.2 km DEM-driven field for the selected block, painted as a map layer */
+  blockField?: BlockField | null;
+  /** bump to fly the map onto the selected block */
+  focusBlock?: number;
 }
 
 type MapType = 'terrain' | 'satellite' | 'roadmap' | 'dark';
@@ -102,6 +107,44 @@ function colorFor(scale: Scale, v: number, darkBase: boolean) {
   return colors[i];
 }
 
+/** Continuous version of the legend ramp, so small in-block differences stay visible. */
+function lerpColor(scale: Scale, v: number, darkBase: boolean): [number, number, number] {
+  const colors = (scale.sequential && darkBase ? [...scale.colors].reverse() : scale.colors).map(
+    (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)] as [number, number, number]
+  );
+  const s = scale.stops.slice();
+  // an open-ended first stop (e.g. −50 °C) would squash the ramp: give it a regular width
+  if (s[1] - s[0] > 3 * (s[2] - s[1])) s[0] = s[1] - (s[2] - s[1]);
+  const mids = s.map((x, i) => (i < s.length - 1 ? (x + s[i + 1]) / 2 : x + (x - s[i - 1]) / 2));
+  if (v <= mids[0]) return colors[0];
+  for (let i = 0; i < mids.length - 1; i++) {
+    if (v <= mids[i + 1]) {
+      const t = (v - mids[i]) / (mids[i + 1] - mids[i]);
+      return [0, 1, 2].map((k) => colors[i][k] + (colors[i + 1][k] - colors[i][k]) * t) as [number, number, number];
+    }
+  }
+  return colors[colors.length - 1];
+}
+
+const FIELD_KEY: Record<MapVariable, 'rainfall' | 'tempMin' | 'tempMax' | 'wind'> = { rainfall: 'rainfall', tempMin: 'tempMin', tempMax: 'tempMax', wind: 'wind' };
+
+/** Paint the 15 × 15 block field as crisp 1.2 km cells with hairline gaps. */
+function blockImage(field: BlockField, variable: MapVariable, scale: Scale, darkBase: boolean) {
+  const n = field.grid.n;
+  const px = 12;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = n * px;
+  const ctx = cv.getContext('2d')!;
+  const vals = field.values[FIELD_KEY[variable]];
+  for (let i = 0; i < n * n; i++) {
+    if (field.sea[i]) continue;
+    const [r, g, b] = lerpColor(scale, vals[i], darkBase);
+    ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
+    ctx.fillRect((i % n) * px, Math.floor(i / n) * px, px - 1, px - 1);
+  }
+  return cv.toDataURL();
+}
+
 function tileLayer(type: MapType): L.Layer {
   const common = { maxZoom: 20, keepBuffer: 4 };
   const google = (lyrs: string) =>
@@ -127,6 +170,8 @@ export default function GoogleMapComponent({
   onViewModeChange,
   regionMetrics,
   liveLoading,
+  blockField,
+  focusBlock,
 }: GoogleMapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -136,6 +181,7 @@ export default function GoogleMapComponent({
   const polygonsRef = useRef<L.LayerGroup | null>(null);
   const coarseRectRef = useRef<L.Rectangle | null>(null);
   const userLayerRef = useRef<L.LayerGroup | null>(null);
+  const blockOverlayRef = useRef<L.ImageOverlay | null>(null);
   const layersRef = useRef<HTMLDivElement>(null);
 
   const [mapType, setMapType] = useState<MapType>('dark');
@@ -155,6 +201,7 @@ export default function GoogleMapComponent({
 
   const scale = SCALES[activeVariable];
   const darkBase = mapType === 'dark' || mapType === 'satellite';
+  const hasGrid = !!blockField && viewMode === 'fine';
 
   const activePanchayat = useMemo(() => panchayats.find((p) => p.id === selectedId) || panchayats[0], [panchayats, selectedId]);
   const availableStates = useMemo(() => Array.from(new Set(panchayats.map((p) => p.state))).sort(), [panchayats]);
@@ -192,6 +239,8 @@ export default function GoogleMapComponent({
       wheelPxPerZoomLevel: 120,
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // The 1.2 km block grid sits above the tiles but below markers and outlines
+    map.createPane('blockGrid').style.zIndex = '350';
     polygonsRef.current = L.layerGroup().addTo(map);
     markersRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -277,7 +326,8 @@ export default function GoogleMapComponent({
           weight: isSelected ? 2 : 1,
           opacity: isSelected ? 0.9 : 0.35,
           fillColor: isSelected ? ACCENT : '#7DC4FF',
-          fillOpacity: isSelected ? 0.12 : 0.04,
+          // keep the 1.2 km grid underneath readable
+          fillOpacity: isSelected ? (hasGrid ? 0 : 0.12) : 0.04,
         });
         polygon.on('click', () => onSelectRef.current(p.id));
         polygons.addLayer(polygon);
@@ -303,7 +353,31 @@ export default function GoogleMapComponent({
         interactive: false,
       }
     ).addTo(map);
-  }, [panchayats, selectedId, activeStateFilter, filterType, viewMode, regionMetrics, scale, darkBase, activePanchayat]);
+  }, [panchayats, selectedId, activeStateFilter, filterType, viewMode, regionMetrics, scale, darkBase, activePanchayat, hasGrid]);
+
+  // 4b. Live 1.2 km grid for the selected block
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (blockOverlayRef.current) {
+      map.removeLayer(blockOverlayRef.current);
+      blockOverlayRef.current = null;
+    }
+    if (!blockField || viewMode !== 'fine') return;
+    blockOverlayRef.current = L.imageOverlay(blockImage(blockField, activeVariable, scale, darkBase), blockField.grid.bounds, {
+      pane: 'blockGrid',
+      opacity: 0.82,
+      interactive: false,
+      className: 'block-grid-overlay',
+    }).addTo(map);
+  }, [blockField, viewMode, activeVariable, scale, darkBase]);
+
+  useEffect(() => {
+    if (!focusBlock || !blockField) return;
+    mapRef.current?.flyToBounds(blockField.grid.bounds, { padding: [48, 48], duration: 1.1 });
+    // only on explicit request
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusBlock]);
 
   // 5. Follow the selection
   useEffect(() => {

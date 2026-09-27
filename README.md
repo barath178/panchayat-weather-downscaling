@@ -6,6 +6,23 @@ Official forecasts are issued on 12–25 km grids, so a frost hollow, a rain-sha
 
 ![Desktop dashboard](design/screens/desktop-dashboard.png)
 
+## MoES problem statement
+
+> *Downscaling of weather forecast from Block level to Panchayat level: inferring high-resolution plots / data / information from low-resolution variables for agro-meteorological advisory services.*
+
+| Requirement | How AeroAgro answers it |
+|---|---|
+| Block → panchayat | The 18 km forecast block around each village is resolved into **225 cells of 1.2 km** using live Copernicus GLO-90 DEM heights (Open-Meteo elevation API), shown as a card and as a map layer. |
+| High-res from low-res | Physics-informed inference per cell (lapse rate, cold-air pooling from topographic position, thermal belts, orographic lift, ridge exposure), blended with the village point forecast through an elevation-aware structure function (as in MET Norway's gridpp). |
+| Explainability | **Explainable AI waterfall**: every step from the block value to the village value, with the reason and its size, for night low, day high, rain and wind. |
+| Agromet advisory | **7-day village outlook** with best spray day, dry spell and alerts; a printable **GKMS-format agromet bulletin** (5-day table, field operations, irrigation water balance, crop protection, livestock, SMS text, QR, SHA-256). |
+| Reaching farmers | **Ask AeroAgro**: an on-device assistant that answers typed or spoken questions in English, हिन्दी and தமிழ் from the downscaled forecast, and reads answers aloud. |
+| National scale | **AI scan of 303 villages**: counts heavy rain, frost, heat, spray-drift and fungal-weather alerts and the ones the district forecast misses. |
+
+Share any village directly with `?v=<region id>`, e.g. `?v=kerala_idukki_227` for Munnar.
+
+![Downscaling engine: 1.2 km DEM grid and explainable waterfall for Munnar](design/screens/downscaling-engine.png)
+
 ## Features
 
 | | |
@@ -40,6 +57,9 @@ panchayat-weather-downscaling/
 │       ├── lib/microclimate.ts  Downscaling physics, spray rules, ET₀, pest rules
 │       ├── lib/useLiveForecast.ts  Open-Meteo live + national fetch (cached 30 min)
 │       ├── lib/advisory.ts    Multilingual WhatsApp / voice advisory
+│       ├── lib/blockGrid.ts   Live DEM → 15 × 15 grid of 1.2 km cells inside the block
+│       ├── lib/week.ts        7-day village outlook, IMD rain classes, alerts
+│       ├── lib/assistant.ts   Ask AeroAgro: multilingual intent + day parsing, grounded answers
 │       ├── components/        Map, charts, PMFBY, kiosk, mobile view…
 │       └── data/all_india_regions.ts  303 regions with terrain covariates
 ├── backend/                   FastAPI service

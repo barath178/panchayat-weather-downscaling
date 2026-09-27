@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Clock, Mountain, Radio, Satellite, ShieldCheck, Download, Github } from 'lucide-react';
+import { Clock, Mountain, Radio, Satellite, ShieldCheck, Download, Github, Sparkles, CloudRain, Layers3, Cpu, FileText, ArrowRight } from 'lucide-react';
 
 import CommandBar, { Logo } from '@/components/CommandBar';
 import Hero from '@/components/Hero';
@@ -17,6 +17,12 @@ import PanchayatKioskView from '@/components/PanchayatKioskView';
 import PMFBYInsuranceModal from '@/components/PMFBYInsuranceModal';
 import IMDSatelliteViewer from '@/components/IMDSatelliteViewer';
 import AboutModal from '@/components/AboutModal';
+import AlertScan from '@/components/AlertScan';
+import WeekForecast from '@/components/WeekForecast';
+import BlockGridCard from '@/components/BlockGridCard';
+import ExplainPanel from '@/components/ExplainPanel';
+import AskAeroAgro from '@/components/AskAeroAgro';
+import AgrometBulletin from '@/components/AgrometBulletin';
 
 import { ALL_INDIA_PANCHAYATS } from '@/data/all_india_regions';
 import {
@@ -26,15 +32,20 @@ import {
   bestSprayWindow,
   classifyHours,
   downscale,
+  downscaleDetailed,
   downscaleHourly,
   irrigationAdvice,
   pestRisk,
   referenceET0,
   scenarioBaseline,
+  scenarioWeek,
   synthHourly,
 } from '@/lib/microclimate';
 import { useLiveForecast, useLiveNational } from '@/lib/useLiveForecast';
 import { Lang, buildAdvisory } from '@/lib/advisory';
+import { buildWeek, weekDates } from '@/lib/week';
+import { GridVar, computeField, useBlockGrid } from '@/lib/blockGrid';
+import type { AssistantAction, AssistantContext } from '@/lib/assistant';
 
 const GoogleMapComponent = dynamic(() => import('@/components/GoogleMapComponent'), {
   ssr: false,
@@ -80,9 +91,23 @@ export default function AeroAgroDashboard() {
   const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('spray');
   const [activeView, setActiveView] = useState<'dashboard' | 'mobile' | 'kiosk'>('dashboard');
   const [showAbout, setShowAbout] = useState(false);
+  const [showBulletin, setShowBulletin] = useState(false);
+  const [focusBlock, setFocusBlock] = useState(0);
   // Wall-clock time is only read after mount so the static HTML and first client render match.
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
+
+  // Shareable links: ?v=<region id> opens that village
+  useEffect(() => {
+    const v = new URLSearchParams(window.location.search).get('v');
+    if (v && ALL_INDIA_PANCHAYATS.some((p) => p.id === v)) setSelectedId(v);
+  }, []);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (selectedId === DEFAULT_ID) url.searchParams.delete('v');
+    else url.searchParams.set('v', selectedId);
+    window.history.replaceState(null, '', url);
+  }, [selectedId]);
 
   const activePanchayat = ALL_INDIA_PANCHAYATS.find((p) => p.id === selectedId) || ALL_INDIA_PANCHAYATS[0];
 
@@ -98,15 +123,41 @@ export default function AeroAgroDashboard() {
   const fallbackScenario = isLive ? seasonForToday(now) : scenario;
 
   // ---- Coarse → fine for the selected region ----
-  const coarse: WeatherMetrics = liveOk ? live.data!.daily : scenarioBaseline(activePanchayat, fallbackScenario);
-  const coarseElev = liveOk ? live.data!.gridElevationM : blockElevation(activePanchayat);
-  const fine = downscale(activePanchayat, coarse, coarseElev);
+  const liveData = liveOk ? live.data! : null;
+  const coarse: WeatherMetrics = useMemo(
+    () => (liveData ? liveData.daily : scenarioBaseline(activePanchayat, fallbackScenario)),
+    [liveData, activePanchayat, fallbackScenario]
+  );
+  const coarseElev = liveData ? liveData.gridElevationM : blockElevation(activePanchayat);
+  const detail = useMemo(() => downscaleDetailed(activePanchayat, coarse, coarseElev), [activePanchayat, coarse, coarseElev]);
+  const fine = detail.metrics;
 
-  const hourlyData = classifyHours(liveOk ? downscaleHourly(live.data!.hourly, coarse, fine) : synthHourly(fine));
-  const sprayWindow = bestSprayWindow(hourlyData);
+  const hourlyData = useMemo(
+    () => classifyHours(liveData ? downscaleHourly(liveData.hourly, coarse, fine) : synthHourly(fine)),
+    [liveData, coarse, fine]
+  );
+  const sprayWindow = useMemo(() => bestSprayWindow(hourlyData), [hourlyData]);
   const et0 = referenceET0(activePanchayat.lat, fine, now);
   const irrigation = irrigationAdvice(et0, fine);
   const pest = pestRisk(activePanchayat, selectedCrop, fine);
+
+  // ---- 7-day village outlook ----
+  const coarseDays = useMemo(
+    () => (liveData?.days?.length ? liveData.days : scenarioWeek(activePanchayat, fallbackScenario)),
+    [liveData, activePanchayat, fallbackScenario]
+  );
+  const dates = useMemo(() => (liveData?.dates?.length ? liveData.dates : weekDates(now, coarseDays.length)), [liveData, now, coarseDays.length]);
+  const week = useMemo(
+    () => buildWeek(activePanchayat, coarseDays, coarseElev, dates, { hourly: hourlyData, spray: sprayWindow }),
+    [activePanchayat, coarseDays, coarseElev, dates, hourlyData, sprayWindow]
+  );
+
+  // ---- 1.2 km grid inside the 18 km block (live DEM) ----
+  const dem = useBlockGrid(activePanchayat);
+  const blockField = useMemo(
+    () => (dem.grid ? computeField(dem.grid, activePanchayat, coarse, coarseElev, fine) : null),
+    [dem.grid, activePanchayat, coarse, coarseElev, fine]
+  );
 
   // ---- Map colouring: every region, coarse or fine ----
   const regionMetrics = useMemo(() => {
@@ -138,10 +189,41 @@ export default function AeroAgroDashboard() {
 
   const shared = { panchayat: activePanchayat, fine, coarse, hourly: hourlyData, sprayWindow, irrigation, pest, et0, lang, onLangChange: setLang, advisoryText, crop: selectedCrop };
 
+  const assistantCtx: AssistantContext = {
+    p: activePanchayat,
+    crop: selectedCrop,
+    week,
+    coarse,
+    fine,
+    irrigation,
+    et0,
+    pest,
+    detail,
+    coarseElevationM: coarseElev,
+    isLive: liveOk,
+  };
+
+  const scrollTo = (id: string) => requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+
   const selectRegion = (id: string) => {
     setSelectedId(id);
-    if (activeView !== 'dashboard') return;
-    requestAnimationFrame(() => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    if (activeView === 'dashboard') scrollTo('dashboard');
+  };
+
+  const onAssistantAction = (a: AssistantAction) => {
+    if (a === 'bulletin') setShowBulletin(true);
+    else if (a === 'spray' || a === 'insurance') {
+      setActiveStudioTab(a);
+      scrollTo('tools');
+    } else if (a === 'explain') scrollTo('explain');
+    else scrollTo('engine');
+  };
+
+  const showGridOnMap = (v: GridVar) => {
+    setActiveVar(v === 'elevation' ? 'tempMin' : v);
+    setViewMode('fine');
+    setFocusBlock((n) => n + 1);
+    scrollTo('map');
   };
 
   return (
@@ -185,21 +267,81 @@ export default function AeroAgroDashboard() {
             </p>
           </div>
 
+          <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
+
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
             <div className="flex min-w-0 flex-col gap-6">
-              <GoogleMapComponent
-                panchayats={ALL_INDIA_PANCHAYATS}
-                selectedId={selectedId}
-                onSelectPanchayat={setSelectedId}
-                activeVariable={activeVar}
-                onVariableChange={setActiveVar}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                regionMetrics={regionMetrics}
-                liveLoading={isLive && nationalStatus === 'loading'}
-              />
+              <div id="map" className="scroll-mt-24">
+                <GoogleMapComponent
+                  panchayats={ALL_INDIA_PANCHAYATS}
+                  selectedId={selectedId}
+                  onSelectPanchayat={setSelectedId}
+                  activeVariable={activeVar}
+                  onVariableChange={setActiveVar}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  regionMetrics={regionMetrics}
+                  liveLoading={isLive && nationalStatus === 'loading'}
+                  blockField={blockField}
+                  focusBlock={focusBlock}
+                />
+              </div>
+              <WeekForecast panchayat={activePanchayat} week={week} isLive={liveOk} onOpenBulletin={() => setShowBulletin(true)} />
+            </div>
 
-              <section className="card overflow-hidden" aria-labelledby="tools-title">
+            <aside className="flex min-w-0 flex-col gap-6">
+              <TodayCard panchayat={activePanchayat} coarse={coarse} fine={fine} coarseElevationM={Math.round(coarseElev)} source={dataSource} />
+              <ActionPlan
+                crop={selectedCrop}
+                crops={cropChoices}
+                onCropChange={setSelectedCrop}
+                hourly={hourlyData}
+                sprayWindow={sprayWindow}
+                irrigation={irrigation}
+                et0={et0}
+                pest={pest}
+              />
+            </aside>
+          </div>
+
+          {/* ---- The downscaling engine ---- */}
+          <section id="engine" className="mt-14 scroll-mt-24" aria-labelledby="engine-title">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <div className="eyebrow flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" /> Inside the AI downscaling engine
+                </div>
+                <h2 id="engine-title" className="mt-1 font-display text-3xl text-ink sm:text-4xl">
+                  From block to panchayat, <span className="italic text-accent">shown working</span>
+                </h2>
+              </div>
+              <ol className="flex flex-wrap items-center gap-1.5 text-xs" aria-label="Pipeline">
+                {[
+                  { icon: CloudRain, t: 'NWP block 18 km' },
+                  { icon: Layers3, t: 'DEM 90 m + terrain' },
+                  { icon: Cpu, t: 'Physics inference' },
+                  { icon: FileText, t: 'Village advisory 1.2 km' },
+                ].map(({ icon: I, t }, i, a) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 ${i === a.length - 1 ? 'border-accent/50 text-accent' : 'border-line/10 text-ink2'}`}>
+                      <I className="h-3.5 w-3.5" /> {t}
+                    </span>
+                    {i < a.length - 1 && <ArrowRight className="h-3.5 w-3.5 text-muted" />}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+              <BlockGridCard panchayat={activePanchayat} field={blockField} onShowOnMap={showGridOnMap} />
+              <div id="explain" className="min-w-0 scroll-mt-24">
+                <ExplainPanel panchayat={activePanchayat} coarse={coarse} detail={detail} coarseElevationM={coarseElev} isLive={liveOk} />
+              </div>
+            </div>
+          </section>
+
+          <div className="mt-14 grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <section id="tools" className="card scroll-mt-24 overflow-hidden" aria-labelledby="tools-title">
                 <div className="border-b border-line/[0.07] px-5 pt-5 sm:px-6">
                   <h2 id="tools-title" className="font-display text-xl text-ink">
                     Deep-dive tools
@@ -236,21 +378,31 @@ export default function AeroAgroDashboard() {
               <WhatsAppDrawer messageText={advisoryText} lang={lang} onLangChange={setLang} placeName={activePanchayat.name} />
             </div>
 
-            <aside className="flex min-w-0 flex-col gap-6">
-              <TodayCard panchayat={activePanchayat} coarse={coarse} fine={fine} coarseElevationM={Math.round(coarseElev)} source={dataSource} />
-              <ActionPlan
-                crop={selectedCrop}
-                crops={cropChoices}
-                onCropChange={setSelectedCrop}
-                hourly={hourlyData}
-                sprayWindow={sprayWindow}
-                irrigation={irrigation}
-                et0={et0}
-                pest={pest}
-              />
+            <aside className="min-w-0 xl:sticky xl:top-24">
+              <AskAeroAgro ctx={assistantCtx} lang={lang} onLangChange={setLang} onAction={onAssistantAction} />
             </aside>
           </div>
+
+          {/* Floating shortcut to the assistant */}
+          <a
+            href="#ask"
+            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-glow transition hover:brightness-110 xl:hidden"
+          >
+            <Sparkles className="h-4 w-4" /> Ask AI
+          </a>
         </main>
+      )}
+
+      {showBulletin && (
+        <AgrometBulletin
+          panchayat={activePanchayat}
+          crop={selectedCrop}
+          week={week}
+          now={now}
+          isLive={liveOk}
+          coarseElevationM={coarseElev}
+          onClose={() => setShowBulletin(false)}
+        />
       )}
 
       <footer className="border-t border-line/[0.07]">
