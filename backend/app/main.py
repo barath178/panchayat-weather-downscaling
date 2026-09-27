@@ -107,7 +107,7 @@ PILOT_PANCHAYATS = [
         "elevationM": 216.0,
         "terrainType": "National Capital Urban Zone",
         "drainageAccumulation": 0.65,
-        "slopeDeg: 0.5,
+        "slopeDeg": 0.5,
         "slopeAspect": "Urban Canopy",
         "ndvi": 0.32
     },

@@ -16,20 +16,21 @@ class OpenMeteoService:
         params = {
             "latitude": lat,
             "longitude": lng,
-            "hourly": [
+            # Open-Meteo expects comma-separated variable lists
+            "hourly": ",".join([
                 "temperature_2m",
                 "relative_humidity_2m",
                 "precipitation",
                 "wind_speed_10m",
                 "wind_direction_10m",
                 "direct_normal_irradiance"
-            ],
-            "daily": [
+            ]),
+            "daily": ",".join([
                 "temperature_2m_max",
                 "temperature_2m_min",
                 "precipitation_sum",
                 "wind_speed_10m_max"
-            ],
+            ]),
             "timezone": "Asia/Kolkata",
             "forecast_days": 3
         }

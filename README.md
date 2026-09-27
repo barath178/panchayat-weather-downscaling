@@ -1,98 +1,108 @@
-# AeroAgro AI: Microclimate Weather Downscaling Platform
-### Inferring High-Resolution Gram Panchayat Weather from Block-Level Forecasts for Precision Agromet Advisories
+# AeroAgro AI: Panchayat-level weather downscaling
 
-A full-stack precision agriculture and agro-meteorological advisory platform aligned with the following production architecture:
+**Hyper-local weather and crop advisories for every Gram Panchayat in India.**
 
-| Layer | Technology | Role in Project |
-| :--- | :--- | :--- |
-| **Frontend** | **Next.js 14 + Tailwind CSS** | Fast responsive dashboard with glassmorphism aesthetics |
-| **Maps** | **Google Maps (JavaScript API)** | Interactive Google Terrain, Satellite Hybrid, and Dark Styled vector maps |
-| **Backend API** | **FastAPI (Python)** | High-performance async REST API for downscaling & advisories |
-| **ML Engine** | **Python + XGBoost + Random Forest** | Tabular spatial downscaling using terrain & vegetation covariates |
-| **Geospatial** | **GeoPandas + Rasterio + Shapely** | Panchayat boundaries, DEM elevation slicing, and spatial joins |
-| **Database** | **PostgreSQL + PostGIS** | Native spatial geometry indexing (`GIST`) and timeseries storage |
-| **DB Hosting** | **Supabase Free Tier** | Managed PostGIS database, row-level security, and authentication |
-| **Weather Ingestion** | **Open-Meteo API** | Free coarse meteorological NWP forecasts (~10–25 km) |
-| **Historical Weather** | **Copernicus ERA5-Land** | Gridded training dataset for machine learning models |
-| **Satellite Imagery** | **Sentinel-2 & Google Earth Engine** | Normalized Difference Vegetation Index (NDVI) extraction |
-| **Terrain Elevation** | **NASA SRTM 30m DEM** | Topographic elevation, slope, and cold-air drainage accumulation |
-| **Model Training** | **Google Colab** | Free cloud Python training pipeline for XGBoost & Random Forest |
-| **Data Viz / Charts** | **Recharts** | Diurnal temperature/wind curves and hourly spray windows |
-| **Deployment** | **Vercel (UI) + Render / Railway (API)** | Production hosting with free/hobby tiers |
-| **Farmer Delivery** | **WhatsApp / Telegram Gateway** | Automated regional language (Marathi, Hindi, English) advisories |
+Official forecasts are issued on 12–25 km grids, so a frost hollow, a rain-shadow village and a hillside tea estate inside one block all get the same number. AeroAgro AI takes that coarse forecast and downscales it to about 1.2 km using terrain physics (elevation lapse rate, cold-air drainage, orographic lift, wind-gap funnelling, urban heat island). It then turns the result into decisions a farmer can act on: when to spray, whether to irrigate, which pest to watch for, and evidence for PMFBY crop-insurance claims.
 
----
+![Desktop dashboard](design/screens/desktop-dashboard.png)
 
-## Project Structure
+## Features
+
+| | |
+|---|---|
+| **Live forecast** | "Live Today" mode pulls the real Open-Meteo forecast (grid-cell mean, `elevation=nan`) for the selected region and a batched national grid for all 303 regions. It falls back to seasonal climatology offline. |
+| **Terrain downscaling** | Block (18 km) vs panchayat (1.2 km) values side by side, with the applied Δz correction shown. |
+| **GIS map** | 303 districts and metros coloured by rain, min/max temperature or wind, at 1.2 km or 18 km. Dark, relief, satellite and road basemaps. IMD INSAT-3DR satellite overlay. GPS "my location". |
+| **Spray window** | Hourly 06:00–19:00 status (safe / caution / do not spray) from wind drift, rain wash-off, heat and leaf wetness, plus the best continuous window. |
+| **Agronomy** | FAO-56 Hargreaves ET₀, irrigation deficit, crop-specific disease rules (rice blast, downy mildew, apple scab, blister blight, yellow rust…). |
+| **PMFBY evidence** | Weather-index trigger check at both resolutions, printable report with a SHA-256 checksum. |
+| **Farmer delivery** | WhatsApp advisory in English, हिन्दी and தமிழ், voice read-out, Kisan mobile view, and a Panchayat kiosk wallboard with a scannable QR code. |
+| **Extras** | Pan-India elevation transect, acoustic tin-roof rain gauge demo (Web Audio FFT). |
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, React 18, Tailwind CSS, Recharts, Leaflet |
+| Physics engine | TypeScript (`frontend/src/lib/microclimate.ts`), runs in the browser |
+| Backend API | FastAPI (Python) with an XGBoost / Random Forest tabular downscaler |
+| Data | Open-Meteo NWP, NASA SRTM 30 m DEM, Sentinel-2 NDVI, ERA5-Land, IMD INSAT-3DR |
+| Database | Supabase PostgreSQL + PostGIS |
+| Training | Google Colab (`backend/notebooks/colab_training.py`) |
+
+## Project structure
 
 ```
 panchayat-weather-downscaling/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                  # FastAPI app with downscaling & advisory endpoints
-│   │   ├── ml/
-│   │   │   └── downscaler.py        # XGBoost & Random Forest tabular inference engine
-│   │   └── services/
-│   │       ├── open_meteo.py        # Ingestion service for coarse numerical weather
-│   │       └── advisory.py          # ICAR-aligned crop spray window & disease rules
-│   ├── notebooks/
-│   │   └── colab_training.py        # Google Colab training script for ERA5 + SRTM + Sentinel
-│   └── requirements.txt             # Python backend dependencies
-│
-├── frontend/
-│   ├── package.json                 # Next.js, Google Maps, Recharts, Tailwind dependencies
+├── frontend/                  Next.js dashboard (main app)
 │   └── src/
-│       └── components/
-│           ├── GoogleMapComponent.tsx# Google Maps (Terrain, Satellite, Dark Styled)
-│           ├── SprayTimelineChart.tsx# Recharts diurnal spray window visualization
-│           ├── ElevationProfile.tsx  # 3D Inversion cross-section profile
-│           ├── AcousticSpectrogram.tsx# Web Audio API acoustic rain gauge
-│           ├── KisanMobileView.tsx   # Smartphone simulator with voice & WhatsApp share
-│           └── PanchayatKioskView.tsx# Gram Panchayat full-screen wallboard mode
-│
-├── supabase/
-│   └── migrations/
-│       └── 001_init_postgis.sql     # PostGIS schema (panchayats, forecasts, advisories)
-│
-└── index.html                       # Standalone zero-dependency Web GIS demonstration
+│       ├── app/page.tsx       Page: state, live data, wiring
+│       ├── lib/microclimate.ts  Downscaling physics, spray rules, ET₀, pest rules
+│       ├── lib/useLiveForecast.ts  Open-Meteo live + national fetch (cached 30 min)
+│       ├── lib/advisory.ts    Multilingual WhatsApp / voice advisory
+│       ├── components/        Map, charts, PMFBY, kiosk, mobile view…
+│       └── data/all_india_regions.ts  303 regions with terrain covariates
+├── backend/                   FastAPI service
+│   ├── app/main.py            REST endpoints
+│   ├── app/ml/downscaler.py   Tabular downscaler
+│   └── app/services/          Open-Meteo ingestion, advisory rules
+├── supabase/migrations/       PostGIS schema
+├── design/                    Figma-ready design file + screenshots
+├── scripts/                   Data and design generators
+└── index.html, js/, css/      Standalone zero-install demo (open in a browser)
 ```
 
----
+## Run it
 
-## Quickstart Guide
-
-### 1. Database Setup (Supabase PostGIS)
-1. Create a free project on [supabase.com](https://supabase.com).
-2. Go to the **SQL Editor** tab.
-3. Paste and run the contents of [`supabase/migrations/001_init_postgis.sql`](file:///c:/Users/barat/.antigravity-ide/panchayat-weather-downscaling/supabase/migrations/001_init_postgis.sql).
-4. Copy your Supabase URL and anon/service key to `.env`.
-
-### 2. Model Training (Google Colab)
-1. Open [Google Colab](https://colab.research.google.com).
-2. Open [`backend/notebooks/colab_training.py`](file:///c:/Users/barat/.antigravity-ide/panchayat-weather-downscaling/backend/notebooks/colab_training.py).
-3. Run all cells to train the `XGBRegressor` (temperature) and `RandomForestRegressor` (precipitation).
-4. Download the generated model files (`temp_downscaler_xgb.json` and `rain_downscaler_rf.joblib`).
-
-### 3. Backend API (FastAPI)
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-- Interactive Swagger docs will be live at: `http://localhost:8000/docs`
-- Endpoints:
-  - `GET /api/v1/panchayats`: List monitored Panchayats with terrain attributes.
-  - `GET /api/v1/downscale`: Ingest coarse Open-Meteo weather and run ML downscaling.
-  - `POST /api/v1/advisory`: Generate hourly spray windows and WhatsApp advisories.
-
-### 4. Frontend Dashboard (Next.js + MapLibre GL)
+### Frontend (main app)
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev          # http://localhost:3000
 ```
-- Web dashboard live at: `http://localhost:3000`
+No API keys are needed. Live weather comes from Open-Meteo's free API.
 
-### 5. Standalone Offline Demonstration
-To explore the physics engine, interactive Leaflet map, frost pocket simulator, and tin-roof acoustic rain gauge immediately without installing npm or python:
-- Open [`index.html`](file:///c:/Users/barat/.antigravity-ide/panchayat-weather-downscaling/index.html) in your browser.
+### Backend (optional)
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000   # Swagger UI at http://localhost:8000/docs
+```
+Endpoints: `GET /health`, `GET /api/v1/panchayats`, `GET /api/v1/downscale`, `POST /api/v1/advisory`.
+
+### Database (optional)
+Create a Supabase project and run [`supabase/migrations/001_init_postgis.sql`](supabase/migrations/001_init_postgis.sql) in the SQL editor.
+
+### Standalone demo
+Open [`index.html`](index.html) directly in a browser. No install needed.
+
+## Deploy
+
+**Live demo:** https://barath178.github.io/panchayat-weather-downscaling/
+
+- **Frontend → GitHub Pages** (what the live demo uses):
+  ```bash
+  cd frontend
+  npm run build:pages          # static export to frontend/out, served under /panchayat-weather-downscaling/
+  ```
+  Then publish `frontend/out` (with an empty `.nojekyll` file) to the `gh-pages` branch.
+- **Frontend → Vercel:** import the repo, set **Root Directory** to `frontend`, and deploy. No environment variables are required.
+- **Backend → Render / Railway:** root `backend`, start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+
+## Design (Figma)
+
+[`design/aeroagro_figma_design.svg`](design/aeroagro_figma_design.svg) is a vector file you can import into Figma (**File → Import**, or drag onto the canvas). Every group becomes a named layer and all text stays editable. It contains:
+
+1. Design system: colour tokens, status colours, data ramps, type scale, components
+2. Desktop GIS dashboard (1920 × 1080)
+3. Kisan mobile (390 × 844)
+4. Panchayat kiosk wallboard
+5. Backend & data architecture, plus the 6-step downscaling pipeline
+6. FastAPI reference
+7. Reference screenshots of the running app
+
+Regenerate it after UI changes with `node scripts/generate_figma_design.js`. The same file is served from the dashboard's **Figma artboard** button.
+
+## Notes
+
+Downscaled values are physics-based estimates for decision support, not an official IMD forecast. "Live Today" uses real forecasts. Monsoon, Winter Frost and Pre-Monsoon are climatological scenarios for demonstration. The PMFBY report is supporting evidence, not an insurer's decision.

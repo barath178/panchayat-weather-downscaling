@@ -1,145 +1,129 @@
 'use client';
 
-import React from 'react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceLine,
-} from 'recharts';
-import { Mountain } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Mountain, Snowflake } from 'lucide-react';
+import type { PanchayatData } from '@/data/all_india_regions';
+import type { WeatherMetrics } from '@/lib/microclimate';
 
 interface ElevationProfileProps {
-  scenario: string;
+  panchayats: PanchayatData[];
+  regionMetrics: Record<string, { coarse: WeatherMetrics; fine: WeatherMetrics }>;
   selectedId: string;
   onSelect: (id: string) => void;
 }
 
-export default function ElevationProfile({
-  scenario,
-  selectedId,
-  onSelect,
-}: ElevationProfileProps) {
-  const isWinter = scenario === 'winter_frost';
+// Pan-India transect: Himalaya & Nilgiris → Deccan → Gangetic plain → delta & below-sea-level Kuttanad
+const TRANSECT_IDS = [
+  'himachalpradeshjkuttarakhand_shimla_260', // Kotgarh Apple Valley
+  'tamilnadu_thenilgiris_7', // Ooty
+  'westbengal_darjeeling_149',
+  'kerala_idukki_227', // Munnar
+  'himachalpradeshjkuttarakhand_kullu_262',
+  'karnataka_mandya_82',
+  'maharashtra_nashik_43',
+  'punjabharyana_ludhiana_232',
+  'uttarpradesh_varanasi_108',
+  'tamilnadu_thanjavur_6', // Thiruvaiyaru
+  'kerala_alappuzha_226', // Kuttanad
+];
 
-  // Pan-India Topographical Cross-Section Transect
-  const profileData = [
-    { name: 'Ooty (Nilgiris)', id: 'tn_ooty', state: 'Tamil Nadu', elev: 2240, temp: isWinter ? 2.8 : 17.5, rain: 92, type: 'Frost Hollow' },
-    { name: 'Kotgarh (Shimla)', id: 'hp_shimla_kotgarh', state: 'Himachal', elev: 2050, temp: isWinter ? -1.5 : 19.0, rain: 85, type: 'Himalayan Basin' },
-    { name: 'Darjeeling', id: 'wb_darjeeling_kurseong', state: 'West Bengal', elev: 2045, temp: isWinter ? 3.0 : 16.8, rain: 110, type: 'Cloud Crest' },
-    { name: 'Munnar', id: 'kl_munnar_highrange', state: 'Kerala', elev: 1600, temp: isWinter ? 8.5 : 21.0, rain: 98, type: 'High Range' },
-    { name: 'Chikmagalur', id: 'ka_chikmagalur', state: 'Karnataka', elev: 1090, temp: isWinter ? 13.5 : 24.2, rain: 72, type: 'Malnad Slope' },
-    { name: 'Mandya Basin', id: 'ka_mandya_srirangapatna', state: 'Karnataka', elev: 678, temp: isWinter ? 16.2 : 28.5, rain: 30, type: 'Deccan Basin' },
-    { name: 'Nashik Plateau', id: 'mh_nashik_dindori', state: 'Maharashtra', elev: 615, temp: isWinter ? 11.2 : 29.8, rain: 38, type: 'Basalt Plateau' },
-    { name: 'Ludhiana Plains', id: 'pb_ludhiana_jagraon', state: 'Punjab', elev: 238, temp: isWinter ? 6.5 : 33.0, rain: 25, type: 'Alluvial Plain' },
-    { name: 'Varanasi Gangetic', id: 'up_varanasi_gangetic', state: 'Uttar Pradesh', elev: 81, temp: isWinter ? 9.8 : 34.2, rain: 36, type: 'River Floodplain' },
-    { name: 'Cauvery Delta', id: 'tn_thiruvaiyaru', state: 'Tamil Nadu', elev: 38, temp: isWinter ? 23.5 : 33.8, rain: 65, type: 'Alluvial Delta' },
-    { name: 'Kuttanad Sea Level', id: 'kl_kuttanad', state: 'Kerala', elev: 2, temp: isWinter ? 24.5 : 32.5, rain: 90, type: 'Below Sea Basin' },
-  ];
+const shortName = (n: string) => n.split(' ').slice(0, 2).join(' ');
+
+function TransectTooltip({ active, payload }: any) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  return (
+    <div className="rounded-xl border border-white/10 bg-slate-950/95 px-3 py-2 text-[11px] shadow-xl">
+      <div className="font-bold text-white">{d.full}</div>
+      <div className="text-slate-400">{d.state}</div>
+      <div className="mt-1 font-mono text-slate-300">Elevation {d.elev} m</div>
+      <div className="font-mono text-slate-300">
+        Temp {d.tMin}–{d.tMax}°C · Rain {d.rain} mm
+      </div>
+    </div>
+  );
+}
+
+export default function ElevationProfile({ panchayats, regionMetrics, selectedId, onSelect }: ElevationProfileProps) {
+  const data = useMemo(
+    () =>
+      TRANSECT_IDS.map((id) => panchayats.find((p) => p.id === id))
+        .filter((p): p is PanchayatData => !!p)
+        .map((p) => {
+          const m = regionMetrics[p.id]?.fine;
+          return {
+            id: p.id,
+            name: shortName(p.name),
+            full: p.name,
+            state: p.state,
+            elev: p.elevationM,
+            tMin: m?.tempMin ?? 0,
+            tMax: m?.tempMax ?? 0,
+            rain: m?.rainfallMm ?? 0,
+          };
+        }),
+    [panchayats, regionMetrics]
+  );
+
+  const frostCount = data.filter((d) => d.tMin <= 4).length;
 
   return (
-    <div className="orchids-glass rounded-2xl p-4 shadow-orchids-card flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <div>
-          <div className="flex items-center gap-2">
-            <Mountain className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              Pan-India Orographic & Thermal Transect (Himalayas & Nilgiris &rarr; Plains & Delta)
-            </h3>
-          </div>
+          <h3 className="text-sm font-bold text-white flex items-center gap-2">
+            <Mountain className="w-4 h-4 text-cyan-400" /> Pan-India elevation transect
+          </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            {isWinter
-              ? 'Sub-zero Himalayan/Nilgiri katabatic cold pooling (<3°C) vs warm coastal Gangetic & Delta plains'
-              : 'Orographic monsoonal cloud burst on Western Ghats/Himalayas vs semi-arid rain-shadows'}
+            Himalaya & Nilgiris → Deccan plateau → Gangetic plain → Cauvery delta & below-sea-level Kuttanad. Temperatures are today’s downscaled values.
           </p>
         </div>
-
         <span
-          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-            isWinter
-              ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+            frostCount ? 'bg-rose-500/15 text-rose-200 border-rose-500/30' : 'bg-white/5 text-slate-300 border-white/10'
           }`}
         >
-          {isWinter ? '❄️ Himalayan / Nilgiri Frost Alert' : '🌧️ Monsoon Orographic Active'}
+          <Snowflake className="w-3 h-3" /> {frostCount ? `${frostCount} site${frostCount > 1 ? 's' : ''} at frost risk (≤ 4°C)` : 'No frost risk on transect'}
         </span>
       </div>
 
-      <div className="h-48 w-full mt-1">
+      <div className="h-52 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={profileData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="elevGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.7} />
-                <stop offset="95%" stopColor="#0f172a" stopOpacity={0.2} />
+                <stop offset="5%" stopColor="#3987e5" stopOpacity={0.6} />
+                <stop offset="95%" stopColor="#3987e5" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-
-            <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
-            <YAxis stroke="#64748b" fontSize={10} domain={[0, 2400]} unit="m" />
-
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                fontSize: '11px',
-              }}
-              formatter={(val: any, name: string) => [
-                `${val} ${name === 'Elevation (m)' ? 'm' : name === 'Temperature' ? '°C' : 'mm'}`,
-                name,
-              ]}
-            />
-
-            {isWinter && (
-              <ReferenceLine
-                y={1800}
-                stroke="#f43f5e"
-                strokeDasharray="4 4"
-                label={{
-                  value: 'Severe Sub-Zero Frost Line (>1800m)',
-                  fill: '#fda4af',
-                  fontSize: 10,
-                  position: 'insideTopLeft',
-                }}
-              />
-            )}
-
-            <Area
-              type="monotone"
-              dataKey="elev"
-              name="Elevation (m)"
-              stroke="#38bdf8"
-              strokeWidth={2}
-              fill="url(#elevGradient)"
-            />
+            <CartesianGrid vertical={false} stroke="#2c2c2a" />
+            <XAxis dataKey="name" stroke="#898781" fontSize={9} tickLine={false} interval={0} angle={-20} textAnchor="end" height={40} />
+            <YAxis stroke="#898781" fontSize={10} unit=" m" tickLine={false} axisLine={false} />
+            <Tooltip content={<TransectTooltip />} />
+            <Area type="monotone" dataKey="elev" stroke="#3987e5" strokeWidth={2} fill="url(#elevGradient)" dot={{ r: 3, fill: '#3987e5' }} isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Cross section badges */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 pt-1">
-        {profileData.slice(0, 6).map((item) => {
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
+        {data.map((item) => {
           const isSelected = item.id === selectedId;
-          const isAtRisk = isWinter && item.temp < 5.0;
-
+          const frost = item.tMin <= 4;
           return (
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
+              aria-pressed={isSelected}
               className={`p-2 rounded-xl text-left border transition-all ${
-                isSelected
-                  ? 'bg-emerald-500/15 border-emerald-500/70 shadow-orchids-glow'
-                  : 'bg-black/30 border-white/5 hover:border-white/15'
+                isSelected ? 'bg-emerald-500/15 border-emerald-500/70' : 'bg-black/30 border-white/5 hover:border-white/20'
               }`}
             >
-              <div className="text-[10px] font-bold text-white truncate">{item.name}</div>
-              <div className="text-[9px] text-slate-400">{item.elev}m • {item.state}</div>
-              <div className={`text-[10px] font-mono font-bold mt-0.5 ${isAtRisk ? 'text-rose-400' : 'text-emerald-400'}`}>
-                {item.temp}°C {isAtRisk ? '❄️' : ''}
+              <div className="text-[10px] font-bold text-white truncate">{item.full}</div>
+              <div className="text-[9px] text-slate-400">{item.elev} m</div>
+              <div className={`text-[10px] font-mono font-bold mt-0.5 flex items-center gap-1 ${frost ? 'text-rose-300' : 'text-slate-200'}`}>
+                {frost && <Snowflake className="w-3 h-3" />}
+                {item.tMin}° / {item.tMax}°C
               </div>
             </button>
           );

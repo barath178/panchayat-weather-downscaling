@@ -82,10 +82,11 @@ window.MapController = {
           maxZoom: 20,
           attribution: '© Google Maps (Roadmap)'
         }),
-        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-          subdomains: 'abcd',
+        // Esri dark canvas (keyless; CARTO basemaps now require an API key)
+        dark: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
           maxZoom: 20,
-          attribution: '© CARTO Dark Matter'
+          maxNativeZoom: 16,
+          attribution: 'Tiles © Esri'
         }),
       };
 

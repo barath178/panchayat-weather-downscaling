@@ -1,138 +1,112 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, CloudRain, Snowflake, Zap, LayoutDashboard, Smartphone, Tv } from 'lucide-react';
+import { CloudRain, Snowflake, Zap, LayoutDashboard, Smartphone, Tv, Radio, Info, Sprout } from 'lucide-react';
+import type { Scenario } from '@/lib/microclimate';
+
+type View = 'dashboard' | 'mobile' | 'kiosk';
 
 interface CommandBarProps {
-  currentScenario: string;
-  onScenarioChange: (scenario: string) => void;
-  activeView: 'dashboard' | 'mobile' | 'kiosk';
-  onViewChange: (view: 'dashboard' | 'mobile' | 'kiosk') => void;
+  currentScenario: Scenario;
+  onScenarioChange: (scenario: Scenario) => void;
+  activeView: View;
+  onViewChange: (view: View) => void;
+  dataSource: { kind: 'live' | 'loading' | 'offline' | 'scenario'; label: string };
+  onAbout: () => void;
 }
 
-export default function CommandBar({
-  currentScenario,
-  onScenarioChange,
-  activeView,
-  onViewChange,
-}: CommandBarProps) {
+const VIEWS: { id: View; label: string; short: string; icon: React.ElementType; active: string }[] = [
+  { id: 'dashboard', label: 'GIS Dashboard', short: 'Dashboard', icon: LayoutDashboard, active: 'bg-emerald-500 text-slate-950' },
+  { id: 'mobile', label: 'Kisan Mobile', short: 'Kisan', icon: Smartphone, active: 'bg-cyan-500 text-slate-950' },
+  { id: 'kiosk', label: 'Panchayat Kiosk', short: 'Kiosk', icon: Tv, active: 'bg-violet-500 text-white' },
+];
+
+const SCENARIOS: { id: Scenario; label: string; icon: React.ElementType; active: string }[] = [
+  { id: 'live', label: 'Live Today', icon: Radio, active: 'bg-rose-500/20 text-rose-200 border-rose-500/40' },
+  { id: 'monsoon', label: 'Monsoon', icon: CloudRain, active: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30' },
+  { id: 'winter_frost', label: 'Winter Frost', icon: Snowflake, active: 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' },
+  { id: 'pre_monsoon', label: 'Pre-Monsoon', icon: Zap, active: 'bg-amber-500/20 text-amber-200 border-amber-500/30' },
+];
+
+const SOURCE_DOT: Record<CommandBarProps['dataSource']['kind'], string> = {
+  live: 'bg-emerald-400 animate-pulse',
+  loading: 'bg-amber-400 animate-pulse',
+  offline: 'bg-rose-400',
+  scenario: 'bg-slate-400',
+};
+
+export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout }: CommandBarProps) {
   return (
-    <header className="sticky top-2 z-50 px-4 sm:px-6 max-w-[1680px] mx-auto w-full">
-      <div className="orchids-glass rounded-2xl px-3.5 py-2 shadow-orchids-card flex flex-wrap items-center justify-between gap-3">
-        
-        {/* Brand & Live Pilot Pill */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-orchids-glow">
-            <Sparkles className="w-4 h-4 text-white" />
+    <header className="sticky top-2 z-[1100] px-3 sm:px-6 max-w-[1680px] mx-auto w-full">
+      <div className="orchids-glass rounded-2xl px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-orchids-glow shrink-0">
+            <Sprout className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-display font-extrabold text-white text-sm tracking-tight">
-                AeroAgro <span className="text-emerald-400 font-semibold">AI</span>
-              </span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                🇮🇳 All-India Agromet Downscaling (1.2 km²)
-              </span>
+          <div className="min-w-0">
+            <div className="font-display font-extrabold text-white text-sm tracking-tight leading-tight">
+              AeroAgro <span className="text-emerald-400">AI</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 truncate" aria-live="polite">
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SOURCE_DOT[dataSource.kind]}`} />
+              <span className="truncate capitalize">{dataSource.label}</span>
             </div>
           </div>
         </div>
 
-        {/* View Mode Switcher: Dashboard | Kisan Mobile | Panchayat Kiosk */}
-        <div className="flex items-center bg-black/50 p-1 rounded-xl border border-white/10 gap-1 text-xs font-semibold">
-          <button
-            onClick={() => onViewChange('dashboard')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-              activeView === 'dashboard'
-                ? 'bg-emerald-500 text-white shadow-orchids-glow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">GIS</span> Dashboard
-          </button>
+        {/* Views */}
+        <nav aria-label="View" className="flex items-center bg-black/50 p-1 rounded-xl border border-white/10 gap-1 text-xs font-semibold order-3 w-full sm:w-auto sm:order-none justify-between sm:justify-center overflow-x-auto scrollbar-none">
+          {VIEWS.map(({ id, label, short, icon: Icon, active }) => (
+            <button
+              key={id}
+              onClick={() => onViewChange(id)}
+              aria-current={activeView === id ? 'page' : undefined}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
+                activeView === id ? `${active} font-bold` : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span className="sm:hidden">{short}</span>
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </nav>
 
-          <button
-            onClick={() => onViewChange('mobile')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-              activeView === 'mobile'
-                ? 'bg-cyan-500 text-white shadow-orchids-cyan-glow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            Kisan Mobile
-          </button>
-
-          <button
-            onClick={() => onViewChange('kiosk')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
-              activeView === 'kiosk'
-                ? 'bg-violet-500 text-white'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            Panchayat Kiosk
-          </button>
+        {/* Scenario */}
+        <div role="radiogroup" aria-label="Weather scenario" className="flex items-center bg-black/40 p-1 rounded-xl border border-white/5 gap-1 overflow-x-auto scrollbar-none order-4 w-full lg:w-auto lg:order-none">
+          {SCENARIOS.map(({ id, label, icon: Icon, active }) => (
+            <button
+              key={id}
+              role="radio"
+              aria-checked={currentScenario === id}
+              onClick={() => onScenarioChange(id)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
+                currentScenario === id ? active : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Central Scenario Switcher Pills */}
-        <div className="flex items-center bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
-          <button
-            onClick={() => onScenarioChange('monsoon')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              currentScenario === 'monsoon'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+        <div className="flex items-center gap-1.5">
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH}/aeroagro_figma_artboard.svg`}
+            download
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
+            title="Download the vector design artboard (.svg) – drag into Figma to edit"
           >
-            <CloudRain className="w-3 h-3 text-cyan-400" />
-            Monsoon Lift
-          </button>
-
+            Figma artboard
+          </a>
           <button
-            onClick={() => onScenarioChange('winter_frost')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              currentScenario === 'winter_frost'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            onClick={onAbout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-semibold"
           >
-            <Snowflake className="w-3 h-3 text-cyan-400" />
-            Winter Frost
-          </button>
-
-          <button
-            onClick={() => onScenarioChange('pre_monsoon')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-              currentScenario === 'pre_monsoon'
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Zap className="w-3 h-3 text-amber-400" />
-            Pre-Monsoon
+            <Info className="w-3.5 h-3.5" /> About
           </button>
         </div>
-
-        {/* Figma Vector Artboard Download Link for Judges & Designers */}
-        <a
-          href="/aeroagro_figma_artboard.svg"
-          download="aeroagro_figma_artboard.svg"
-          className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-bold transition-all shadow-sm"
-          title="Download vector Figma artboard (.SVG) to import directly into Figma"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 38 57" fill="none">
-            <path d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38C23.2533 38 19 33.7467 19 28.5Z" fill="#1ABCFE"/>
-            <path d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z" fill="#0ACF83"/>
-            <path d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z" fill="#FF7262"/>
-            <path d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z" fill="#F24E1E"/>
-            <path d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z" fill="#A259FF"/>
-          </svg>
-          <span>Figma File (.svg)</span>
-        </a>
-
       </div>
     </header>
   );

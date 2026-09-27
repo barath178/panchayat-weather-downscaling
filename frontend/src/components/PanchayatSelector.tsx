@@ -148,16 +148,16 @@ export default function PanchayatSelector({
                 <div className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5 flex-wrap">
                   <span className="truncate">{p.name}</span>
                   {p.isUrban ? (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/50 flex items-center gap-0.5">
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-800/50 flex items-center gap-0.5">
                       <Building2 className="w-2.5 h-2.5" /> Urban
                     </span>
                   ) : (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/40">
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/40">
                       Rural
                     </span>
                   )}
                   {p.state && (
-                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
                       {p.state}
                     </span>
                   )}

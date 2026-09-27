@@ -1,217 +1,136 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Volume2, 
-  Share2, 
-  AlertTriangle, 
-  CheckCircle2, 
-  XCircle, 
-  Droplets, 
-  Wind, 
-  Thermometer, 
-  MapPin, 
-  Sparkles
-} from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, CheckCircle2, XCircle, Droplets, Wind, Thermometer, MapPin, Sprout, Bug, Share2 } from 'lucide-react';
+import VoiceAdvisory from './VoiceAdvisory';
+import type { AdvisoryViewProps } from '@/lib/viewProps';
 
-interface KisanMobileViewProps {
-  panchayat: {
-    id: string;
-    name: string;
-    elevationM: number;
-    terrainType: string;
-  };
-  scenario: string;
-}
+const STATUS_COLOR = { safe: '#0ca30c', caution: '#fab219', danger: '#d03b3b' } as const;
 
-export default function KisanMobileView({ panchayat, scenario }: KisanMobileViewProps) {
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const [activeCrop, setActiveCrop] = useState('Table Grapes');
-
-  const isWinter = scenario === 'winter_frost';
-  const isMaleValley = panchayat.id === 'panchayat_male';
-
-  const t = {
-    title: 'Kisan Agromet Mobile',
-    voiceBtn: '🔊 Listen to Audio Advisory (English)',
-    safeSpray: '06:00 AM - 11:00 AM: Safe to Spray',
-    dangerSpray: 'After 01:00 PM: High Wind Drift & Wash-off Risk',
-    frostAlert: '⚠️ FROST WARNING: 4.2°C nocturnal cold pooling in valley. Run night misting irrigation.',
-    irrigationText: 'Skip irrigation today (32 mm rainfall surplus expected)',
-    pestAlert: 'Downy Mildew Risk: Apply preventative copper spray within 24 hours.',
-    shareBtn: 'Share to Village WhatsApp Group'
-  };
-
-  const playVoice = () => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      if (isPlayingAudio) {
-        window.speechSynthesis.cancel();
-        setIsPlayingAudio(false);
-        return;
-      }
-      const text = `${panchayat.name}. ${isWinter && isMaleValley ? t.frostAlert : ''}. ${t.safeSpray}. ${t.dangerSpray}. ${t.irrigationText}. ${t.pestAlert}`;
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
-      utterance.lang = 'en-US';
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
-      setIsPlayingAudio(true);
-    }
-  };
-
-  const shareWhatsApp = () => {
-    const text = `🌱 *${panchayat.name.toUpperCase()} - AGROMET ADVISORY*\n📍 Elevation: ${panchayat.elevationM}m\n\n✅ ${t.safeSpray}\n🚫 ${t.dangerSpray}\n💧 ${t.irrigationText}\n🐛 ${t.pestAlert}\n\n📲 Broadcast via AeroAgro AI Platform`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-  };
+export default function KisanMobileView({ panchayat, fine, hourly, sprayWindow, irrigation, pest, crop, lang, onLangChange, advisoryText }: AdvisoryViewProps) {
+  const frost = fine.tempMin <= 4;
+  const heat = fine.tempMax >= 40;
+  const worst = hourly.find((h) => h.status === 'danger');
 
   return (
-    <div className="flex justify-center items-center py-4">
-      {/* Smartphone Device Frame Simulator */}
+    <div className="flex flex-col lg:flex-row justify-center items-center lg:items-start gap-8 py-4">
+      {/* Phone frame */}
       <div className="w-full max-w-[390px] bg-[#0c101c] border-[6px] border-slate-800 rounded-[42px] overflow-hidden shadow-2xl relative">
-        
-        {/* Phone Notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-5 bg-slate-800 rounded-b-xl z-30 flex items-center justify-center">
-          <div className="w-10 h-1 bg-slate-700 rounded-full"></div>
-        </div>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-5 bg-slate-800 rounded-b-xl z-30" aria-hidden />
 
-        {/* Mobile App Header */}
-        <div className="bg-gradient-to-b from-emerald-600 to-emerald-700 pt-8 pb-5 px-4 text-white relative">
+        <div className="bg-gradient-to-b from-emerald-600 to-emerald-700 pt-8 pb-5 px-4 text-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-emerald-200" />
-              <span className="font-extrabold text-xs tracking-tight">{t.title}</span>
-            </div>
-            <span className="text-[10px] bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full font-mono">
-              1.2 km² Hyperlocal
+            <span className="flex items-center gap-1.5 font-extrabold text-xs">
+              <Sprout className="w-4 h-4 text-emerald-200" /> Kisan Agromet
             </span>
+            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">1.2 km forecast</span>
           </div>
-
           <div className="mt-2.5">
-            <div className="flex items-center gap-1 text-emerald-100 text-xs font-semibold">
-              <MapPin className="w-3.5 h-3.5" />
-              {panchayat.name}
+            <div className="flex items-center gap-1 text-sm font-bold">
+              <MapPin className="w-3.5 h-3.5" /> {panchayat.name}
             </div>
+            {panchayat.regionalName && <div className="text-[11px] text-emerald-100">{panchayat.regionalName}</div>}
             <div className="text-[11px] text-emerald-200 mt-0.5">
-              Elevation: {panchayat.elevationM} m • {panchayat.terrainType}
+              {panchayat.district} · {panchayat.elevationM} m · {crop}
             </div>
           </div>
 
-          {/* Quick Voice Advisory Button */}
-          <button
-            onClick={playVoice}
-            className={`w-full mt-3 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
-              isPlayingAudio 
-                ? 'bg-rose-500 text-white animate-pulse' 
-                : 'bg-white text-emerald-900 hover:bg-emerald-50'
-            }`}
-          >
-            <Volume2 className="w-4 h-4 text-emerald-700" />
-            {isPlayingAudio ? 'Stop Speech' : t.voiceBtn}
-          </button>
+          <div className="grid grid-cols-3 gap-2 mt-3 text-center">
+            {[
+              { icon: Thermometer, label: 'Temp', v: `${Math.round(fine.tempMin)}–${Math.round(fine.tempMax)}°` },
+              { icon: Droplets, label: 'Rain', v: `${fine.rainfallMm} mm` },
+              { icon: Wind, label: 'Wind', v: `${fine.windSpeedKmh} km/h` },
+            ].map(({ icon: Icon, label, v }) => (
+              <div key={label} className="bg-white/15 rounded-xl py-2">
+                <Icon className="w-3.5 h-3.5 mx-auto mb-0.5 text-emerald-100" />
+                <div className="text-[10px] text-emerald-100">{label}</div>
+                <div className="text-sm font-extrabold">{v}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Mobile Scrollable Body */}
-        <div className="p-4 space-y-3 max-h-[580px] overflow-y-auto pb-8">
-          
-          {/* Critical Hazard Alert Banner (if winter frost in valley) */}
-          {isWinter && isMaleValley && (
-            <div className="bg-rose-500/15 border-2 border-rose-500 rounded-2xl p-3 text-rose-200 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-rose-300 mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                Nocturnal Cold Pooling Hazard (4.2°C)
+        <div className="p-4 space-y-3 max-h-[560px] overflow-y-auto">
+          {(frost || heat) && (
+            <div role="alert" className="bg-rose-500/15 border-2 border-rose-500 rounded-2xl p-3 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-rose-200 mb-1">
+                <AlertTriangle className="w-4 h-4" /> {frost ? `Frost tonight (${fine.tempMin}°C)` : `Heatwave (${fine.tempMax}°C)`}
               </div>
-              <p className="leading-snug text-[11px]">
-                {t.frostAlert}
+              <p className="text-[11px] text-rose-100 leading-snug">
+                {frost ? 'Irrigate in the evening; smoke or cover nursery beds before dawn.' : 'Irrigate crops; avoid field work between 12:00 and 15:00.'}
               </p>
             </div>
           )}
 
-          {/* Traffic Light Spray Window Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-lg">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Smart Spray Window Clock
+          {/* Spray clock */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Spray clock</div>
+            <div className="flex gap-0.5 mb-2" aria-hidden>
+              {hourly.map((h) => (
+                <div key={h.time} className="flex-1 h-2 rounded-sm" style={{ background: STATUS_COLOR[h.status] }} />
+              ))}
             </div>
-
-            {/* Green Safe Box */}
-            <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-2.5 flex items-start gap-2 mb-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold text-emerald-300">
-                  {t.safeSpray}
-                </div>
-                <div className="text-[10px] text-emerald-200/80">
-                  Mild wind (8-11 km/h), zero wash-off risk.
-                </div>
-              </div>
+            <div className="flex justify-between text-[9px] text-slate-500 font-mono mb-2">
+              <span>06</span>
+              <span>12</span>
+              <span>19</span>
             </div>
-
-            {/* Red Danger Box */}
-            <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-2.5 flex items-start gap-2">
-              <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold text-rose-300">
-                  {t.dangerSpray}
-                </div>
-                <div className="text-[10px] text-rose-200/80">
-                  Chemical spray drift and droplet run-off risk.
+            {sprayWindow.hours ? (
+              <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-2.5 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-xs font-bold text-emerald-200">Safe to spray {sprayWindow.label}</div>
+                  <div className="text-[10px] text-emerald-100/80">Low wind, no rain expected.</div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-2.5 flex items-start gap-2">
+                <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="text-xs font-bold text-rose-200">Do not spray today</div>
+              </div>
+            )}
+            {worst && (
+              <div className="mt-2 text-[10px] text-rose-200/90 flex items-center gap-1">
+                <XCircle className="w-3 h-3 text-rose-400" /> {worst.time}: {worst.reason}
+              </div>
+            )}
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-              <div className="flex justify-center mb-0.5"><Droplets className="w-3.5 h-3.5 text-cyan-400" /></div>
-              <div className="text-[10px] text-slate-400">Rainfall</div>
-              <div className="text-xs font-bold text-white">32.2 mm</div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-              <div className="flex justify-center mb-0.5"><Thermometer className="w-3.5 h-3.5 text-amber-400" /></div>
-              <div className="text-[10px] text-slate-400">Temperature</div>
-              <div className="text-xs font-bold text-white">{isWinter ? '4.2° - 26°' : '21° - 27°'}C</div>
-            </div>
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-2">
-              <div className="flex justify-center mb-0.5"><Wind className="w-3.5 h-3.5 text-emerald-400" /></div>
-              <div className="text-[10px] text-slate-400">Wind</div>
-              <div className="text-xs font-bold text-white">14 km/h</div>
-            </div>
-          </div>
-
-          {/* Irrigation Recommendation */}
           <div className="bg-slate-900/90 border border-cyan-500/20 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Droplets className="w-3.5 h-3.5" /> Irrigation Advisory
+            <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Droplets className="w-3.5 h-3.5" /> {irrigation.action}
             </div>
-            <p className="text-xs text-slate-200 leading-snug">
-              {t.irrigationText}
-            </p>
+            <p className="text-xs text-slate-200 leading-snug">{irrigation.detail}</p>
           </div>
 
-          {/* Disease Protection Card */}
           <div className="bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1">
-              Pathogen Management ({activeCrop})
+            <div className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Bug className="w-3.5 h-3.5" /> {pest.title}
             </div>
-            <p className="text-xs text-slate-200 leading-snug">
-              {t.pestAlert}
-            </p>
+            <p className="text-xs text-slate-200 leading-snug">{pest.detail}</p>
           </div>
 
-          {/* WhatsApp Direct Share Button */}
-          <button
-            onClick={shareWhatsApp}
-            className="w-full py-3 px-4 rounded-2xl bg-[#22c55e] hover:bg-[#16a34a] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-green-900/40 transition-all"
+          <VoiceAdvisory textToSpeak={advisoryText} lang={lang} onLangChange={onLangChange} />
+
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(advisoryText)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#1fb857] text-slate-950 font-bold text-xs flex items-center justify-center gap-2"
           >
-            <Share2 className="w-4 h-4" />
-            {t.shareBtn}
-          </button>
-
+            <Share2 className="w-4 h-4" /> Share to village WhatsApp group
+          </a>
         </div>
+      </div>
 
+      <div className="max-w-sm text-sm text-slate-300 space-y-3 lg:pt-16">
+        <h2 className="font-display text-xl font-extrabold text-white">Built for the farmer’s phone</h2>
+        <p>One screen answers the three questions a farmer asks every morning: can I spray, do I irrigate, is my crop at risk?</p>
+        <ul className="space-y-1.5 text-xs text-slate-400">
+          <li>• Advisory in English, हिन्दी and தமிழ், with voice read-out for low-literacy users</li>
+          <li>• One-tap WhatsApp share to the village group</li>
+          <li>• High-contrast spray clock with a written verdict, readable in bright sunlight</li>
+        </ul>
       </div>
     </div>
   );

@@ -1,156 +1,83 @@
 'use client';
 
 import React from 'react';
-import { CloudRain, Thermometer, Wind, Droplets, ArrowUpRight, TrendingUp, Sparkles } from 'lucide-react';
+import { CloudRain, Thermometer, Wind, Droplets, Sparkles } from 'lucide-react';
+import type { WeatherMetrics } from '@/lib/microclimate';
 
 interface MetricsCardProps {
   panchayatName: string;
+  subtitle: string;
   elevationM: number;
+  coarseElevationM: number;
   terrainType: string;
-  coarse: {
-    tempMax: number;
-    tempMin: number;
-    rainfallMm: number;
-    windSpeedKmh: number;
-    relativeHumidity: number;
-  };
-  fine: {
-    tempMax: number;
-    tempMin: number;
-    rainfallMm: number;
-    windSpeedKmh: number;
-    relativeHumidity: number;
-  };
-  scenario: string;
+  coarse: WeatherMetrics;
+  fine: WeatherMetrics;
+  isLive: boolean;
 }
 
-export default function DownscalingMetricsCard({
-  panchayatName,
-  elevationM,
-  terrainType,
-  coarse,
-  fine,
-  scenario,
-}: MetricsCardProps) {
-  const isWinter = scenario === 'winter_frost';
-  const deltaRain = fine.rainfallMm - coarse.rainfallMm;
-  const deltaTempMin = (fine.tempMin - coarse.tempMin).toFixed(1);
-  const rainRatio = coarse.rainfallMm > 0 ? (fine.rainfallMm / coarse.rainfallMm).toFixed(1) : '1.0';
+const fmtDelta = (d: number, unit: string) => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d).toFixed(1)}${unit}`;
+
+export default function DownscalingMetricsCard({ panchayatName, subtitle, elevationM, coarseElevationM, terrainType, coarse, fine, isLive }: MetricsCardProps) {
+  const dz = elevationM - coarseElevationM;
+  const rows = [
+    { icon: CloudRain, color: 'text-cyan-300', label: '24 h rainfall', c: `${coarse.rainfallMm} mm`, f: `${fine.rainfallMm} mm`, delta: fmtDelta(fine.rainfallMm - coarse.rainfallMm, ' mm') },
+    { icon: Thermometer, color: 'text-amber-300', label: 'Temperature', c: `${coarse.tempMin}–${coarse.tempMax}°C`, f: `${fine.tempMin}–${fine.tempMax}°C`, delta: `Tmin ${fmtDelta(fine.tempMin - coarse.tempMin, '°')}` },
+    { icon: Wind, color: 'text-slate-200', label: 'Wind', c: `${coarse.windSpeedKmh} km/h`, f: `${fine.windSpeedKmh} km/h`, delta: fmtDelta(fine.windSpeedKmh - coarse.windSpeedKmh, '') },
+    { icon: Droplets, color: 'text-emerald-300', label: 'Humidity', c: `${coarse.relativeHumidity}%`, f: `${fine.relativeHumidity}%`, delta: fmtDelta(fine.relativeHumidity - coarse.relativeHumidity, '%') },
+  ];
 
   return (
-    <div className="orchids-glass rounded-3xl p-5 shadow-2xl flex flex-col gap-4 border border-white/10">
-      {/* Header */}
+    <div className="orchids-glass rounded-3xl p-4 sm:p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1">
-            <Sparkles className="w-3 h-3 text-emerald-400" />
-            <span>Downscaled Ground-Truth Focus</span>
+            <Sparkles className="w-3 h-3" /> Downscaled microclimate
           </div>
           <h2 className="text-base font-extrabold text-white leading-tight">{panchayatName}</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {elevationM}m MSL • <span className="text-slate-300 font-medium">{terrainType}</span>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+          <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+            {elevationM} m · {terrainType}
           </p>
         </div>
-        <span className="px-2.5 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 font-mono shrink-0">
-          1.2 km² Physics
+        <span
+          className={`px-2.5 py-1 rounded-xl text-[10px] font-bold font-mono shrink-0 border ${
+            isLive ? 'bg-rose-500/15 border-rose-500/30 text-rose-200' : 'bg-white/5 border-white/10 text-slate-300'
+          }`}
+        >
+          {isLive ? '● LIVE' : 'MODEL'}
         </span>
       </div>
 
-      {/* Before vs After Metric Comparison Rows */}
-      <div className="flex flex-col gap-2.5">
-        
-        {/* Metric 1: Precipitation (Rainfall) */}
-        <div className="bg-black/35 border border-white/5 rounded-2xl p-3 hover:border-cyan-500/30 transition-all">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="flex items-center gap-1.5 font-semibold text-slate-200">
-              <CloudRain className="w-4 h-4 text-cyan-400" /> 24h Precipitation
-            </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold">
-              {deltaRain >= 0 ? `+${deltaRain.toFixed(1)} mm (+${rainRatio}x)` : `${deltaRain.toFixed(1)} mm`}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/5">
-            <div>
-              <span className="text-[10px] text-slate-500 block uppercase">18km Block Baseline</span>
-              <span className="text-sm font-semibold text-slate-400">{coarse.rainfallMm} mm</span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] text-cyan-400 block font-bold uppercase">1.2km Downscaled</span>
-              <span className="text-base font-black text-cyan-300 font-mono">{fine.rainfallMm} mm</span>
-            </div>
-          </div>
+      <div className="rounded-2xl border border-white/5 overflow-hidden">
+        <div className="grid grid-cols-[1.2fr_1fr_1fr] text-[10px] uppercase tracking-wider bg-black/30 px-3 py-1.5">
+          <span className="text-slate-500">Variable</span>
+          <span className="text-amber-300/90 text-right">Block 18 km</span>
+          <span className="text-emerald-300 text-right">Panchayat 1.2 km</span>
         </div>
-
-        {/* Metric 2: Temperature Range */}
-        <div className="bg-black/35 border border-white/5 rounded-2xl p-3 hover:border-amber-500/30 transition-all">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="flex items-center gap-1.5 font-semibold text-slate-200">
-              <Thermometer className="w-4 h-4 text-amber-400" /> Diurnal Temperature
+        {rows.map(({ icon: Icon, color, label, c, f, delta }) => (
+          <div key={label} className="grid grid-cols-[1.2fr_1fr_1fr] items-center px-3 py-2 border-t border-white/5 text-xs">
+            <span className="flex items-center gap-1.5 text-slate-200 font-semibold">
+              <Icon className={`w-3.5 h-3.5 ${color}`} /> {label}
             </span>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold">
-              {isWinter ? `Inversion: ${deltaTempMin}°C` : `Lapse: -6.5°C/km`}
+            <span className="text-right text-slate-400 font-mono">{c}</span>
+            <span className="text-right">
+              <span className="block font-mono font-bold text-white">{f}</span>
+              <span className="block text-[9px] font-mono text-slate-500">{delta}</span>
             </span>
           </div>
-
-          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-white/5">
-            <div>
-              <span className="text-[10px] text-slate-500 block uppercase">18km Block Forecast</span>
-              <span className="text-sm font-semibold text-slate-400">{coarse.tempMin}° - {coarse.tempMax}°C</span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] text-amber-400 block font-bold uppercase">1.2km Downscaled</span>
-              <span className="text-base font-black text-amber-300 font-mono">{fine.tempMin}° - {fine.tempMax}°C</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Metric 3: Wind & Relative Humidity Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Wind */}
-          <div className="bg-black/35 border border-white/5 rounded-2xl p-2.5">
-            <div className="flex items-center gap-1 text-[11px] text-slate-400 mb-1">
-              <Wind className="w-3.5 h-3.5 text-slate-300" />
-              <span>Wind Speed</span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs text-slate-500">{coarse.windSpeedKmh} km/h</span>
-              <span className="text-sm font-extrabold text-white font-mono">{fine.windSpeedKmh} km/h</span>
-            </div>
-            <div className="text-[9px] text-emerald-400 font-mono mt-1">
-              Terrain Roughness Adjusted
-            </div>
-          </div>
-
-          {/* Humidity */}
-          <div className="bg-black/35 border border-white/5 rounded-2xl p-2.5">
-            <div className="flex items-center gap-1 text-[11px] text-slate-400 mb-1">
-              <Droplets className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Humidity (RH)</span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xs text-slate-500">{coarse.relativeHumidity}%</span>
-              <span className="text-sm font-extrabold text-emerald-300 font-mono">{fine.relativeHumidity}%</span>
-            </div>
-            <div className="text-[9px] text-cyan-400 font-mono mt-1">
-              Magnus Vapor Equilibrium
-            </div>
-          </div>
-        </div>
-
+        ))}
       </div>
 
-      {/* Physics-Informed Formulation Chip */}
-      <div className="bg-slate-950/70 border border-white/10 rounded-2xl p-3 font-mono text-[10px] text-slate-300">
-        <div className="text-slate-500 mb-1 flex items-center justify-between">
-          <span>// Topographic Downscaling Physics:</span>
-          <span className="text-emerald-400">NASA SRTM 30m</span>
+      <div className="bg-slate-950/70 border border-white/10 rounded-2xl p-3 font-mono text-[10px] text-slate-300 leading-relaxed">
+        <div className="text-slate-500 mb-1">// terrain correction applied</div>
+        <div>
+          Δz = {elevationM} − {coarseElevationM} = <span className="text-white font-semibold">{dz} m</span>
         </div>
-        <div className="text-white font-semibold leading-relaxed">
-          {isWinter
-            ? `T_local = T_coarse - (DA × 7.4°C) [Katabatic Drainage Pooling]`
-            : `P_local = P_coarse × [1 + (Δz / 300) × 0.95 × sin(θ)]`}
+        <div>
+          T<sub>max</sub>: −5.0 °C/km × Δz = <span className="text-white font-semibold">{fmtDelta((-5.0 * dz) / 1000, ' °C')}</span>
         </div>
+        <div>T<sub>min</sub>: −6.5 °C/km × Δz − cold-air pooling (D8 drainage) + UHI</div>
+        <div>P<sub>local</sub> = P<sub>block</sub> × [1 + 0.6·max(0,Δz)/km + 0.6·sin θ] × terrain</div>
       </div>
     </div>
   );

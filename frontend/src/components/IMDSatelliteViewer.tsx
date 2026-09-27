@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExternalLink, RefreshCw, Layers, Eye, Radio, Sparkles, ZoomIn, Info, ShieldCheck } from 'lucide-react';
+import { ExternalLink, RefreshCw, Layers, Eye, Radio, Sparkles, ShieldCheck } from 'lucide-react';
 import { PanchayatData } from '@/data/all_india_regions';
 
 interface IMDSatelliteViewerProps {
   activePanchayat: PanchayatData;
-  scenario: string;
   fineMetrics: {
     tempMax: number;
     tempMin: number;
@@ -78,13 +77,13 @@ const IMD_SATELLITE_CHANNELS = [
 
 export default function IMDSatelliteViewer({
   activePanchayat,
-  scenario,
   fineMetrics,
   coarseMetrics,
 }: IMDSatelliteViewerProps) {
   const [selectedChannel, setSelectedChannel] = useState<string>('ir1');
   const [cacheBuster, setCacheBuster] = useState<number>(Date.now());
-  const [imageLoaded, setImageLoaded] = useState<boolean>(true);
+  const [imageLoaded, setImageLoaded] = useState<boolean>(false);
+  const [imageFailed, setImageFailed] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'resolution' | 'methodology'>('feed');
 
   const currentChannel = IMD_SATELLITE_CHANNELS.find((c) => c.id === selectedChannel) || IMD_SATELLITE_CHANNELS[0];
@@ -204,7 +203,7 @@ export default function IMDSatelliteViewer({
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
                 <strong className="text-cyan-300 font-bold">{currentChannel.name}</strong>
-                <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-cyan-500/20 text-cyan-200">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-200">
                   {currentChannel.type}
                 </span>
                 <span className="text-[10px] font-mono text-slate-400">
@@ -231,9 +230,27 @@ export default function IMDSatelliteViewer({
               className={`w-full h-full object-contain transition-opacity duration-300 ${
                 imageLoaded ? 'opacity-100' : 'opacity-20'
               }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageLoaded(true)}
+              onLoad={() => {
+                setImageLoaded(true);
+                setImageFailed(false);
+              }}
+              onError={() => {
+                setImageLoaded(true);
+                setImageFailed(true);
+              }}
             />
+            {imageFailed && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950 text-center px-6">
+                <Radio className="w-8 h-8 text-slate-600" />
+                <p className="text-sm font-semibold text-slate-200">IMD image server did not respond</p>
+                <p className="text-xs text-slate-400 max-w-sm">
+                  mausam.imd.gov.in sometimes blocks embedding or is under maintenance. Press Refresh, or open the image on the IMD portal.
+                </p>
+                <a href={currentChannel.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-300 underline">
+                  Open {currentChannel.code} image directly
+                </a>
+              </div>
+            )}
 
             {/* Target Reticle Pinpointing Current Panchayat on Satellite Map */}
             <div className="absolute top-4 left-4 z-10 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-[11px] flex items-center gap-2">

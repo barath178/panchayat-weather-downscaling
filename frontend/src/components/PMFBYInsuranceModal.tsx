@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ShieldCheck, AlertTriangle, FileText, CheckCircle2, QrCode, Printer, Share2, X, Download } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ShieldCheck, AlertTriangle, FileText, CheckCircle2, QrCode, Printer, X } from 'lucide-react';
 import { PanchayatData } from '@/data/all_india_regions';
 
 interface Props {
   panchayat: PanchayatData;
-  scenario: string;
   selectedCrop: string;
   fineMetrics: {
     rainfallMm: number;
@@ -25,12 +25,12 @@ interface Props {
 
 export default function PMFBYInsuranceModal({
   panchayat,
-  scenario,
   selectedCrop,
   fineMetrics,
   coarseMetrics,
 }: Props) {
   const [showCertificate, setShowCertificate] = useState(false);
+  const [sha256, setSha256] = useState('');
 
   // WBCIS Parametric Thresholds for crop
   const excessRainThreshold = selectedCrop.includes('Paddy') ? 60.0 : selectedCrop.includes('Wheat') ? 30.0 : 35.0;
@@ -47,10 +47,33 @@ export default function PMFBYInsuranceModal({
 
   // Discrepancy between AWS (coarse) and Downscaled (fine)
   const hasDiscrepancy = (rainBreached && coarseMetrics.rainfallMm < excessRainThreshold) ||
-                         (frostBreached && coarseMetrics.tempMin > frostThreshold);
+                         (frostBreached && coarseMetrics.tempMin > frostThreshold) ||
+                         (windBreached && coarseMetrics.windSpeedKmh < windThreshold);
 
-  const certId = `PMFBY-2026-${panchayat.state.slice(0, 2).toUpperCase()}-${panchayat.id.slice(-6).toUpperCase()}-9428`;
-  const sha256 = `8e49b81f9a2c53018d407c7a8${panchayat.elevationM}f2a0b17c9d`;
+  const today = new Date().toISOString().slice(0, 10);
+  const certId = `AA-${today.replace(/-/g, '')}-${panchayat.district.slice(0, 3).toUpperCase()}-${panchayat.id.split('_').pop()}`;
+
+  // Real SHA-256 over the certificate payload so any edit to the values changes the checksum.
+  useEffect(() => {
+    if (!showCertificate || !globalThis.crypto?.subtle) return;
+    const payload = JSON.stringify({ certId, panchayat: panchayat.id, crop: selectedCrop, fineMetrics, coarseMetrics, date: today });
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload)).then((buf) => {
+      setSha256(Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join(''));
+    });
+  }, [showCertificate, certId, panchayat.id, selectedCrop, fineMetrics, coarseMetrics, today]);
+
+  useEffect(() => {
+    if (!showCertificate) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setShowCertificate(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showCertificate]);
+
+  const auditRows = [
+    { label: '24 h rainfall', c: `${coarseMetrics.rainfallMm} mm`, f: `${fineMetrics.rainfallMm} mm`, trig: `≥ ${excessRainThreshold} mm`, breached: rainBreached },
+    { label: 'Night frost (Tmin)', c: `${coarseMetrics.tempMin}°C`, f: `${fineMetrics.tempMin}°C`, trig: `≤ ${frostThreshold}°C`, breached: frostBreached },
+    { label: 'Wind (lodging)', c: `${coarseMetrics.windSpeedKmh} km/h`, f: `${fineMetrics.windSpeedKmh} km/h`, trig: `≥ ${windThreshold} km/h`, breached: windBreached },
+  ];
 
   return (
     <div className="orchids-glass rounded-2xl p-5 shadow-orchids-card border border-white/10 flex flex-col gap-4">
@@ -64,11 +87,11 @@ export default function PMFBYInsuranceModal({
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               PMFBY Parametric Crop Insurance Verifier
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono">
-                WBCIS Rule 14.3
+                Weather-index (WBCIS)
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">
-              Pradhan Mantri Fasal Bima Yojana • Automated Weather-Index Discrepancy Forensic Audit
+              Checks weather-index triggers at 1.2 km vs the 18 km block value, as evidence for PMFBY localized-calamity claims
             </p>
           </div>
         </div>
@@ -96,7 +119,7 @@ export default function PMFBYInsuranceModal({
         <div>
           <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Insured Crop</span>
           <strong className="text-emerald-400 text-xs block">{selectedCrop}</strong>
-          <span className="text-[10px] text-slate-500">Commercial / Kharif</span>
+          <span className="text-[10px] text-slate-500">Thresholds per crop</span>
         </div>
         <div>
           <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Claim Status</span>
@@ -191,19 +214,26 @@ export default function PMFBYInsuranceModal({
         <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5 leading-relaxed">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
-            <strong>Forensic Discrepancy Attestation:</strong> The official district AWS failed to record the event due to distance attenuation. Topographic downscaling (SRTM 30m DEM + Lapse Rate) proves the localized threshold breach within this 1.2km² polygon. Claim is admissible under <strong>PMFBY Rule 14.3.1 (Localized Calamities)</strong>.
+            <strong>Block vs panchayat discrepancy:</strong> the 18 km block value stays below the trigger, but terrain-downscaled weather for this 1.2 km area crosses it. This is the kind of localized event PMFBY allows farmers to report individually; attach this report as supporting evidence.
           </div>
         </div>
       )}
 
       {/* Modal Popup for Certificate */}
-      {showCertificate && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-6 text-white shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+      {showCertificate && createPortal(
+        <div className="fixed inset-0 z-[2000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowCertificate(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="PMFBY claim evidence certificate"
+            onClick={(e) => e.stopPropagation()}
+            className="pmfby-certificate-sheet relative w-full max-w-2xl bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-6 text-white shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-fade-in"
+          >
             {/* Close */}
             <button
               onClick={() => setShowCertificate(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              aria-label="Close certificate"
+              className="pmfby-no-print absolute top-4 right-4 text-slate-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
@@ -215,13 +245,13 @@ export default function PMFBYInsuranceModal({
               </div>
               <div>
                 <h2 className="text-base font-extrabold tracking-wide text-white">
-                  PRADHAN MANTRI FASAL BIMA YOJANA (PMFBY)
+                  Weather-Index Claim Evidence Report
                 </h2>
                 <h4 className="text-xs font-semibold text-emerald-400">
-                  NATIONAL WEATHER-INDEX CROP INSURANCE SCHEME (WBCIS)
+                  For PMFBY / WBCIS localized-calamity claims
                 </h4>
                 <p className="text-[10px] text-slate-400">
-                  Certified Micro-Meteorological Calamity Assessment Certificate • Rule 14.3 Compliant
+                  Generated by AeroAgro AI · Certificate ID {certId}
                 </p>
               </div>
             </div>
@@ -259,59 +289,51 @@ export default function PMFBYInsuranceModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-slate-300">
-                  <tr>
-                    <td className="p-2.5 font-medium">24h Rainfall</td>
-                    <td className="p-2.5 text-slate-400">{coarseMetrics.rainfallMm} mm</td>
-                    <td className="p-2.5 text-cyan-400 font-bold">{fineMetrics.rainfallMm} mm</td>
-                    <td className="p-2.5">&ge; {excessRainThreshold} mm</td>
-                    <td className="p-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rainBreached ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                        {rainBreached ? 'BREACHED' : 'NORMAL'}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-medium">Night Frost (Tmin)</td>
-                    <td className="p-2.5 text-slate-400">{coarseMetrics.tempMin}°C</td>
-                    <td className="p-2.5 text-rose-400 font-bold">{fineMetrics.tempMin}°C</td>
-                    <td className="p-2.5">&le; {frostThreshold}°C</td>
-                    <td className="p-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${frostBreached ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                        {frostBreached ? 'BREACHED' : 'NORMAL'}
-                      </span>
-                    </td>
-                  </tr>
+                  {auditRows.map((r) => (
+                    <tr key={r.label}>
+                      <td className="p-2.5 font-medium">{r.label}</td>
+                      <td className="p-2.5 text-slate-400">{r.c}</td>
+                      <td className="p-2.5 text-white font-bold">{r.f}</td>
+                      <td className="p-2.5">{r.trig}</td>
+                      <td className="p-2.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.breached ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                          {r.breached ? 'BREACHED' : 'NORMAL'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
 
             {/* Finding */}
-            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-slate-200 leading-relaxed">
-              <strong>AUDIT DETERMINATION:</strong> Localized parametric trigger violation confirmed at 1.2 km² grid resolution via NASA SRTM 30m DEM elevation profiling and topographic lapse rate physics.
+            <div className={`p-3 rounded-xl border text-xs text-slate-200 leading-relaxed ${isEligible ? 'bg-rose-500/10 border-rose-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+              <strong>Audit determination:</strong>{' '}
+              {isEligible
+                ? `Localized weather-index trigger breached at 1.2 km resolution${hasDiscrepancy ? ' that the 18 km block value did not record' : ''}. Evidence supports a localized-calamity claim.`
+                : 'No weather-index trigger was breached at either block or panchayat resolution.'}
               <br />
-              <strong>Recommended Payout:</strong>{' '}
-              <span className="text-emerald-400 font-bold text-sm">
-                {isEligible ? `${payoutPct}% of Sum Insured` : '0% (No Calamity)'}
-              </span>
+              <strong>Indicative payout:</strong>{' '}
+              <span className="font-bold text-sm">{isEligible ? `${payoutPct}% of sum insured` : '0% (no calamity)'}</span>
             </div>
 
             {/* Footer QR & Seal */}
-            <div className="flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-slate-400">
-              <div className="flex items-center gap-2">
-                <QrCode className="w-10 h-10 text-white p-1 bg-white/10 rounded-lg" />
-                <div>
-                  <span className="block text-[10px]">SHA-256 Tamper-Proof Checksum</span>
-                  <span className="font-mono text-[9px] text-slate-500 truncate max-w-[200px] block">{sha256}</span>
+            <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[11px] text-slate-400">
+              <div className="flex items-center gap-2 min-w-0">
+                <QrCode className="w-10 h-10 text-white p-1 bg-white/10 rounded-lg shrink-0" />
+                <div className="min-w-0">
+                  <span className="block text-[10px]">SHA-256 of certificate data · {today}</span>
+                  <span className="font-mono text-[9px] text-slate-500 break-all block">{sha256 || 'computing…'}</span>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-emerald-400 text-xs">AEROAGRO AI CERTIFIED</div>
-                <div className="text-[10px]">Ministry of Agriculture / PMFBY Guidelines</div>
+              <div className="text-right shrink-0">
+                <div className="font-bold text-emerald-400 text-xs">AeroAgro AI evidence report</div>
+                <div className="text-[10px]">Supporting document, not an insurer decision</div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 border-t border-white/10 pt-3">
+            <div className="pmfby-no-print flex justify-end gap-2 border-t border-white/10 pt-3">
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold"
@@ -326,7 +348,8 @@ export default function PMFBYInsuranceModal({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
