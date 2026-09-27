@@ -10,7 +10,7 @@ import {
   Tooltip,
   ReferenceLine,
 } from 'recharts';
-import { Mountain, AlertTriangle, CloudSun } from 'lucide-react';
+import { Mountain } from 'lucide-react';
 
 interface ElevationProfileProps {
   scenario: string;
@@ -25,14 +25,19 @@ export default function ElevationProfile({
 }: ElevationProfileProps) {
   const isWinter = scenario === 'winter_frost';
 
-  // Topographical cross-section profile from West escarpment to East plains
+  // Pan-India Topographical Cross-Section Transect
   const profileData = [
-    { name: 'Dasve Ridge', id: 'panchayat_dasve', elev: 1045, temp: isWinter ? 13.8 : 22.4, rain: 68, type: 'Crest' },
-    { name: 'Male Valley', id: 'panchayat_male', elev: 558, temp: isWinter ? 4.2 : 27.2, rain: 32, type: 'Basin' },
-    { name: 'Paud Basin', id: 'panchayat_paud', elev: 595, temp: isWinter ? 5.1 : 26.8, rain: 35, type: 'Valley' },
-    { name: 'Pirangut', id: 'panchayat_pirangut', elev: 645, temp: isWinter ? 8.4 : 28.5, rain: 26, type: 'Plateau' },
-    { name: 'Sinhagad Peak', id: 'panchayat_sinhagad', elev: 1315, temp: isWinter ? 14.5 : 20.8, rain: 82, type: 'Peak' },
-    { name: 'Khed Shivapur', id: 'panchayat_khed_shivapur', elev: 635, temp: isWinter ? 9.2 : 29.5, rain: 12, type: 'Leeward' },
+    { name: 'Ooty (Nilgiris)', id: 'tn_ooty', state: 'Tamil Nadu', elev: 2240, temp: isWinter ? 2.8 : 17.5, rain: 92, type: 'Frost Hollow' },
+    { name: 'Kotgarh (Shimla)', id: 'hp_shimla_kotgarh', state: 'Himachal', elev: 2050, temp: isWinter ? -1.5 : 19.0, rain: 85, type: 'Himalayan Basin' },
+    { name: 'Darjeeling', id: 'wb_darjeeling_kurseong', state: 'West Bengal', elev: 2045, temp: isWinter ? 3.0 : 16.8, rain: 110, type: 'Cloud Crest' },
+    { name: 'Munnar', id: 'kl_munnar_highrange', state: 'Kerala', elev: 1600, temp: isWinter ? 8.5 : 21.0, rain: 98, type: 'High Range' },
+    { name: 'Chikmagalur', id: 'ka_chikmagalur', state: 'Karnataka', elev: 1090, temp: isWinter ? 13.5 : 24.2, rain: 72, type: 'Malnad Slope' },
+    { name: 'Mandya Basin', id: 'ka_mandya_srirangapatna', state: 'Karnataka', elev: 678, temp: isWinter ? 16.2 : 28.5, rain: 30, type: 'Deccan Basin' },
+    { name: 'Nashik Plateau', id: 'mh_nashik_dindori', state: 'Maharashtra', elev: 615, temp: isWinter ? 11.2 : 29.8, rain: 38, type: 'Basalt Plateau' },
+    { name: 'Ludhiana Plains', id: 'pb_ludhiana_jagraon', state: 'Punjab', elev: 238, temp: isWinter ? 6.5 : 33.0, rain: 25, type: 'Alluvial Plain' },
+    { name: 'Varanasi Gangetic', id: 'up_varanasi_gangetic', state: 'Uttar Pradesh', elev: 81, temp: isWinter ? 9.8 : 34.2, rain: 36, type: 'River Floodplain' },
+    { name: 'Cauvery Delta', id: 'tn_thiruvaiyaru', state: 'Tamil Nadu', elev: 38, temp: isWinter ? 23.5 : 33.8, rain: 65, type: 'Alluvial Delta' },
+    { name: 'Kuttanad Sea Level', id: 'kl_kuttanad', state: 'Kerala', elev: 2, temp: isWinter ? 24.5 : 32.5, rain: 90, type: 'Below Sea Basin' },
   ];
 
   return (
@@ -42,22 +47,24 @@ export default function ElevationProfile({
           <div className="flex items-center gap-2">
             <Mountain className="w-4 h-4 text-cyan-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              Topographic Microclimate Cross-Section (West to East)
+              Pan-India Orographic & Thermal Transect (Himalayas & Nilgiris &rarr; Plains & Delta)
             </h3>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
             {isWinter
-              ? 'Visualizing nocturnal katabatic cold-air pooling & thermal inversion in valley floors'
-              : 'Visualizing orographic cloud lifting on windward ridges vs leeward rainshadow'}
+              ? 'Sub-zero Himalayan/Nilgiri katabatic cold pooling (<3°C) vs warm coastal Gangetic & Delta plains'
+              : 'Orographic monsoonal cloud burst on Western Ghats/Himalayas vs semi-arid rain-shadows'}
           </p>
         </div>
 
-        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-          isWinter
-            ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
-            : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-        }`}>
-          {isWinter ? '⚠️ Thermal Inversion Active' : '🌧️ Orographic Lift Active'}
+        <span
+          className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+            isWinter
+              ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+              : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+          }`}
+        >
+          {isWinter ? '❄️ Himalayan / Nilgiri Frost Alert' : '🌧️ Monsoon Orographic Active'}
         </span>
       </div>
 
@@ -69,15 +76,11 @@ export default function ElevationProfile({
                 <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.7} />
                 <stop offset="95%" stopColor="#0f172a" stopOpacity={0.2} />
               </linearGradient>
-              <linearGradient id="coldAirPool" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.05} />
-              </linearGradient>
             </defs>
 
-            <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} />
-            <YAxis stroke="#64748b" fontSize={10} domain={[400, 1400]} unit="m" />
-            
+            <XAxis dataKey="name" stroke="#64748b" fontSize={9} tickLine={false} />
+            <YAxis stroke="#64748b" fontSize={10} domain={[0, 2400]} unit="m" />
+
             <Tooltip
               contentStyle={{
                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -86,18 +89,22 @@ export default function ElevationProfile({
                 fontSize: '11px',
               }}
               formatter={(val: any, name: string) => [
-                `${val} ${name === 'Elevation (m)' ? 'm' : (name === 'Temperature' ? '°C' : 'mm')}`,
+                `${val} ${name === 'Elevation (m)' ? 'm' : name === 'Temperature' ? '°C' : 'mm'}`,
                 name,
               ]}
             />
 
-            {/* Inversion boundary line at ~620m in winter */}
             {isWinter && (
               <ReferenceLine
-                y={620}
+                y={1800}
                 stroke="#f43f5e"
                 strokeDasharray="4 4"
-                label={{ value: 'Inversion Frost Boundary (<5°C Pool)', fill: '#fda4af', fontSize: 10, position: 'insideTopLeft' }}
+                label={{
+                  value: 'Severe Sub-Zero Frost Line (>1800m)',
+                  fill: '#fda4af',
+                  fontSize: 10,
+                  position: 'insideTopLeft',
+                }}
               />
             )}
 
@@ -114,10 +121,10 @@ export default function ElevationProfile({
       </div>
 
       {/* Cross section badges */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-1">
-        {profileData.map((item) => {
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-1.5 pt-1">
+        {profileData.slice(0, 6).map((item) => {
           const isSelected = item.id === selectedId;
-          const isAtRisk = isWinter && item.temp < 6.0;
+          const isAtRisk = isWinter && item.temp < 5.0;
 
           return (
             <button
@@ -130,7 +137,7 @@ export default function ElevationProfile({
               }`}
             >
               <div className="text-[10px] font-bold text-white truncate">{item.name}</div>
-              <div className="text-[9px] text-slate-400">{item.elev}m</div>
+              <div className="text-[9px] text-slate-400">{item.elev}m • {item.state}</div>
               <div className={`text-[10px] font-mono font-bold mt-0.5 ${isAtRisk ? 'text-rose-400' : 'text-emerald-400'}`}>
                 {item.temp}°C {isAtRisk ? '❄️' : ''}
               </div>

@@ -6,11 +6,14 @@
 
 window.App = {
   state: {
-    selectedPanchayatId: "panchayat_male",
+    selectedPanchayatId: "tn_thiruvaiyaru",
     currentScenario: "monsoon",
     selectedCrop: "Table Grapes",
     language: "en", // en | mr | hi
-    activeTab: "spray" // spray | frost | acoustic | xai
+    activeTab: "spray", // spray | frost | acoustic | xai
+    searchQuery: "",
+    activeState: "all",
+    filterType: "all", // all | urban | rural
   },
 
   init: function() {
@@ -37,7 +40,46 @@ window.App = {
     if (!listEl) return;
 
     listEl.innerHTML = "";
-    window.AgroData.panchayats.forEach(p => {
+
+    const query = (this.state.searchQuery || "").toLowerCase().trim();
+    const allPanchayats = window.AgroData.panchayats || [];
+
+    const filtered = allPanchayats.filter(p => {
+      // State filter
+      const matchState = this.state.activeState === "all" || p.state === this.state.activeState;
+      // Type filter (urban vs rural)
+      const matchType = this.state.filterType === "all" ||
+        (this.state.filterType === "urban" && p.isUrban) ||
+        (this.state.filterType === "rural" && !p.isUrban);
+      // Search query filter
+      const matchQuery = !query ||
+        p.name.toLowerCase().includes(query) ||
+        (p.state && p.state.toLowerCase().includes(query)) ||
+        (p.district && p.district.toLowerCase().includes(query)) ||
+        (p.terrainType && p.terrainType.toLowerCase().includes(query)) ||
+        (p.primaryCrops && p.primaryCrops.some(c => c.toLowerCase().includes(query)));
+
+      return matchState && matchType && matchQuery;
+    });
+
+    // Update counter badge
+    const countBadge = document.getElementById("district-count-label");
+    if (countBadge) {
+      const stateLabel = this.state.activeState === "all" ? "Whole India" : this.state.activeState;
+      countBadge.textContent = `Showing ${filtered.length} of ${allPanchayats.length} Districts (${stateLabel})`;
+    }
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px; color: #64748b; font-size: 0.82rem;">
+          No districts found matching "<strong>${query}</strong>".<br/>
+          <button class="btn btn-glass btn-sm" style="margin-top: 8px;" onclick="window.App.resetFilters()">Clear Filters</button>
+        </div>
+      `;
+      return;
+    }
+
+    filtered.forEach(p => {
       const isSelected = p.id === this.state.selectedPanchayatId;
       const isFrostProne = p.drainageAccumulation > 0.7;
       const isRidge = p.elevationM > 1000;
@@ -49,15 +91,67 @@ window.App = {
       item.innerHTML = `
         <div class="p-info">
           <h4>${p.name}</h4>
-          <span>${p.elevationM}m • ${p.terrainType.split('(')[0]}</span>
+          <span>${p.elevationM}m • ${p.state || 'India'} • ${p.terrainType.split('(')[0]}</span>
         </div>
-        <div>
-          ${isFrostProne ? `<span class="p-badge frost-risk">Frost Basin</span>` : ''}
-          ${isRidge ? `<span class="p-badge rain-hotspot">High Crest</span>` : ''}
+        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+          ${p.isUrban ? `<span class="p-badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4);">🏙️ Urban</span>` : `<span class="p-badge" style="background: rgba(16, 185, 129, 0.15); color: #6ee7b7;">🌾 Agro</span>`}
+          ${isFrostProne && p.elevationM > 1500 ? `<span class="p-badge frost-risk">❄️ Frost</span>` : ''}
+          ${isRidge ? `<span class="p-badge rain-hotspot">Highland</span>` : ''}
         </div>
       `;
       listEl.appendChild(item);
     });
+  },
+
+  onStateSelect: function(stateName) {
+    this.state.activeState = stateName;
+    if (window.MapController && window.MapController.filterByState) {
+      window.MapController.filterByState(stateName);
+    }
+    const selectEl = document.getElementById("map-state-dropdown");
+    if (selectEl && selectEl.value !== stateName) {
+      selectEl.value = stateName;
+    }
+    this.renderPanchayatList();
+  },
+
+  onStateFilterChanged: function(stateName) {
+    this.state.activeState = stateName;
+    const selectEl = document.getElementById("map-state-dropdown");
+    if (selectEl) selectEl.value = stateName;
+    this.renderPanchayatList();
+  },
+
+  onTypeFilter: function(type) {
+    this.state.filterType = type;
+    document.querySelectorAll(".type-filter-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-type") === type);
+    });
+    if (window.MapController && window.MapController.filterByType) {
+      window.MapController.filterByType(type);
+    }
+    this.renderPanchayatList();
+  },
+
+  resetFilters: function() {
+    this.state.searchQuery = "";
+    this.state.activeState = "all";
+    this.state.filterType = "all";
+
+    const searchInput = document.getElementById("panchayat-search");
+    if (searchInput) searchInput.value = "";
+
+    const selectEl = document.getElementById("map-state-dropdown");
+    if (selectEl) selectEl.value = "all";
+
+    document.querySelectorAll(".type-filter-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-type") === "all");
+    });
+
+    if (window.MapController && window.MapController.zoomToWholeIndia) {
+      window.MapController.zoomToWholeIndia();
+    }
+    this.renderPanchayatList();
   },
 
   selectPanchayat: function(panchayatId) {
@@ -141,6 +235,25 @@ window.App = {
 
     // 6. Update Frost Pocket Tab Content
     this._updateFrostTab(downscaledResults, currentPanchayat);
+
+    // 7. Update PMFBY Parametric Crop Insurance Verifier
+    if (window.InsuranceVerifier) {
+      const evaluation = window.InsuranceVerifier.evaluateClaim(
+        currentPanchayat,
+        downscaledResults,
+        this.state.selectedCrop
+      );
+      window.InsuranceVerifier.renderTab("tab-insurance", evaluation);
+
+      const quickStatusEl = document.getElementById("insurance-quick-status-text");
+      if (quickStatusEl) {
+        if (evaluation.isEligible) {
+          quickStatusEl.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚠️ Claim Triggered (${evaluation.payoutPercentage}% Payout)</span>: ${evaluation.breaches[0].type}`;
+        } else {
+          quickStatusEl.innerHTML = `<span style="color: #34d399; font-weight: 600;">🟢 No Calamity Breached</span>: Within WBCIS thresholds for ${evaluation.cropName}`;
+        }
+      }
+    }
   },
 
   _updateMetricCards: function(res, panchayat) {
@@ -346,6 +459,15 @@ window.App = {
     const copyBtn = document.getElementById("btn-copy-wa");
     if (copyBtn) {
       copyBtn.addEventListener("click", () => this.copyWhatsAppText());
+    }
+
+    // Search Input Field
+    const searchInput = document.getElementById("panchayat-search");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        this.state.searchQuery = e.target.value;
+        this.renderPanchayatList();
+      });
     }
   }
 };

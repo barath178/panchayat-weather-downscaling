@@ -71,6 +71,71 @@ PILOT_PANCHAYATS = [
         "slopeDeg": 34.0,
         "slopeAspect": "Crest Line",
         "ndvi": 0.45
+    },
+    {
+        "id": "tn_thiruvaiyaru",
+        "name": "Thiruvaiyaru Cauvery Delta",
+        "state": "Tamil Nadu",
+        "lat": 10.8845,
+        "lng": 79.1065,
+        "elevationM": 38.0,
+        "terrainType": "Alluvial River Delta Basin",
+        "drainageAccumulation": 0.85,
+        "slopeDeg": 0.8,
+        "slopeAspect": "Delta Flat Floor",
+        "ndvi": 0.82
+    },
+    {
+        "id": "tn_ooty",
+        "name": "Ooty Valley Basin",
+        "state": "Tamil Nadu",
+        "lat": 11.4102,
+        "lng": 76.6950,
+        "elevationM": 2240.0,
+        "terrainType": "High Altitude Valley Basin (Frost Hollow)",
+        "drainageAccumulation": 0.94,
+        "slopeDeg": 6.8,
+        "slopeAspect": "Valley Basin Floor",
+        "ndvi": 0.88
+    },
+    {
+        "id": "dl_new_delhi",
+        "name": "New Delhi Capital Core",
+        "state": "Delhi NCR",
+        "lat": 28.6139,
+        "lng": 77.2090,
+        "elevationM": 216.0,
+        "terrainType": "National Capital Urban Zone",
+        "drainageAccumulation": 0.65,
+        "slopeDeg: 0.5,
+        "slopeAspect": "Urban Canopy",
+        "ndvi": 0.32
+    },
+    {
+        "id": "ka_bengaluru",
+        "name": "Bengaluru Urban Tech Core",
+        "state": "Karnataka",
+        "lat": 12.9716,
+        "lng": 77.5946,
+        "elevationM": 920.0,
+        "terrainType": "High Deccan Ridge Plateau",
+        "drainageAccumulation": 0.45,
+        "slopeDeg": 1.2,
+        "slopeAspect": "Ridge Plateau",
+        "ndvi": 0.42
+    },
+    {
+        "id": "kl_kuttanad",
+        "name": "Kuttanad Below-Sea Basin",
+        "state": "Kerala",
+        "lat": 9.4700,
+        "lng": 76.4500,
+        "elevationM": 2.0,
+        "terrainType": "Sub-Sea-Level Backwater Delta",
+        "drainageAccumulation": 0.98,
+        "slopeDeg": 0.1,
+        "slopeAspect": "Delta Flat",
+        "ndvi": 0.89
     }
 ]
 

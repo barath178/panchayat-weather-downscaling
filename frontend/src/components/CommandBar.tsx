@@ -17,7 +17,7 @@ export default function CommandBar({
   onViewChange,
 }: CommandBarProps) {
   return (
-    <header className="sticky top-2 z-50 px-2 max-w-7xl mx-auto w-full">
+    <header className="sticky top-2 z-50 px-4 sm:px-6 max-w-[1680px] mx-auto w-full">
       <div className="orchids-glass rounded-2xl px-3.5 py-2 shadow-orchids-card flex flex-wrap items-center justify-between gap-3">
         
         {/* Brand & Live Pilot Pill */}
@@ -32,7 +32,7 @@ export default function CommandBar({
               </span>
               <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                Western Ghats Pilot (1.2 km²)
+                🇮🇳 All-India Agromet Downscaling (1.2 km²)
               </span>
             </div>
           </div>
@@ -115,6 +115,23 @@ export default function CommandBar({
             Pre-Monsoon
           </button>
         </div>
+
+        {/* Figma Vector Artboard Download Link for Judges & Designers */}
+        <a
+          href="/aeroagro_figma_artboard.svg"
+          download="aeroagro_figma_artboard.svg"
+          className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-bold transition-all shadow-sm"
+          title="Download vector Figma artboard (.SVG) to import directly into Figma"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 38 57" fill="none">
+            <path d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38C23.2533 38 19 33.7467 19 28.5Z" fill="#1ABCFE"/>
+            <path d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z" fill="#0ACF83"/>
+            <path d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z" fill="#FF7262"/>
+            <path d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z" fill="#F24E1E"/>
+            <path d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z" fill="#A259FF"/>
+          </svg>
+          <span>Figma File (.svg)</span>
+        </a>
 
       </div>
     </header>

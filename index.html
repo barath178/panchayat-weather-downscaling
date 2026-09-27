@@ -11,6 +11,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Leaflet Engine for Direct Google Maps Layer Rendering -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- Design System Stylesheet -->
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -35,10 +39,10 @@
         </div>
       </div>
 
-      <!-- Live Pilot Region Status -->
+      <!-- Live Region Status -->
       <div class="status-pill" id="live-status-pill">
         <span class="pulse-dot"></span>
-        <span>Pilot: Mulshi-Velhe Western Ghats (18km Coarse &rarr; 1.2km Fine)</span>
+        <span>🇮🇳 All-India Agromet Platform (18km Coarse &rarr; 1.2km Fine)</span>
       </div>
 
       <!-- Header Controls: Scenario & Language Selectors -->
@@ -133,7 +137,24 @@
           </div>
 
           <!-- Selectable Gram Panchayat List -->
-          <div class="card-label" style="margin-top: 12px;">Select Gram Panchayat (8 in Pilot)</div>
+          <div style="margin-top: 14px;">
+            <div class="card-label" style="display: flex; justify-content: space-between; align-items: center;">
+              <span>Select District / Center</span>
+              <span id="district-count-label" style="font-size: 0.7rem; color: #38bdf8;">303 Districts</span>
+            </div>
+
+            <!-- Search Field -->
+            <div style="margin: 8px 0;">
+              <input type="text" id="panchayat-search" class="custom-search-input" placeholder="🔍 Search district, city, state, crop..." />
+            </div>
+
+            <!-- Quick Filter Chips -->
+            <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+              <button class="type-filter-btn active" data-type="all" onclick="window.App.onTypeFilter('all')">All (303)</button>
+              <button class="type-filter-btn" data-type="urban" onclick="window.App.onTypeFilter('urban')">🏙️ Urban (70+)</button>
+              <button class="type-filter-btn" data-type="rural" onclick="window.App.onTypeFilter('rural')">🌾 Agro (230+)</button>
+            </div>
+          </div>
           <div class="panchayat-list" id="panchayat-list-container">
             <!-- Dynamically populated by app.js -->
           </div>
@@ -146,25 +167,45 @@
 
         <!-- Google Maps Card -->
         <div class="map-card">
-          <!-- Map Floating Toolbars: Variable Selector -->
-          <div class="map-floating-toolbar" role="toolbar" aria-label="Variable Selection">
-            <button class="toolbar-btn active" data-var="rainfall" id="btn-var-rain">🌧️ Rain (mm)</button>
-            <button class="toolbar-btn" data-var="temp" id="btn-var-temp">🌡️ Temperature</button>
-            <button class="toolbar-btn" data-var="frost" id="btn-var-frost">❄️ Frost Risk</button>
-            <button class="toolbar-btn" data-var="spray" id="btn-var-spray">🚜 Spray Feasibility</button>
-          </div>
+          <!-- Apple Dynamic Island Floating Controls (Centered) -->
+          <div class="map-floating-toolbar" style="top: 14px; left: 50%; transform: translateX(-50%); width: auto; max-width: 95%; display: flex; align-items: center; gap: 6px;" role="toolbar" aria-label="Map Command Island">
+            <!-- Region Selector -->
+            <select id="map-state-dropdown" class="custom-select-compact" onchange="window.App.onStateSelect(this.value)">
+              <option value="all">🇮🇳 All India (303 Districts)</option>
+              <option value="Tamil Nadu">Tamil Nadu (38)</option>
+              <option value="Maharashtra">Maharashtra (36)</option>
+              <option value="Karnataka">Karnataka (31)</option>
+              <option value="Uttar Pradesh">Uttar Pradesh (32)</option>
+              <option value="Kerala">Kerala (14)</option>
+              <option value="West Bengal">West Bengal (23)</option>
+              <option value="Rajasthan">Rajasthan (33)</option>
+              <option value="Gujarat">Gujarat (25)</option>
+              <option value="Punjab">Punjab (22)</option>
+              <option value="Haryana">Haryana (22)</option>
+              <option value="Madhya Pradesh">Madhya Pradesh (20)</option>
+              <option value="Andhra Pradesh">Andhra Pradesh (18)</option>
+              <option value="Telangana">Telangana (15)</option>
+              <option value="Bihar">Bihar (16)</option>
+              <option value="Odisha">Odisha (15)</option>
+              <option value="Assam">Assam & NE (14)</option>
+              <option value="Himachal Pradesh">Himachal Pradesh (12)</option>
+              <option value="Jammu and Kashmir">Jammu & Kashmir (10)</option>
+              <option value="Uttarakhand">Uttarakhand (10)</option>
+              <option value="Delhi">Delhi NCR (Metros)</option>
+            </select>
 
-          <!-- Google Maps Layer Mode Switcher -->
-          <div class="map-view-switcher" style="left: 14px; top: 58px; right: auto;" role="group" aria-label="Google Maps Style">
-            <button class="switch-btn active" onclick="window.MapController.setMapType('dark')">🌌 Dark Styled</button>
-            <button class="switch-btn" onclick="window.MapController.setMapType('terrain')">🏔️ Google Terrain</button>
-            <button class="switch-btn" onclick="window.MapController.setMapType('hybrid')">🛰️ Google Satellite</button>
-          </div>
+            <!-- Reset Button -->
+            <button class="switch-btn" onclick="window.MapController.zoomToWholeIndia()" style="border-color: rgba(16, 185, 129, 0.4); color: #6ee7b7; padding: 4px 8px;" title="Reset Map to All India">🇮🇳 Reset</button>
 
-          <!-- Coarse vs Fine View Switcher -->
-          <div class="map-view-switcher" role="group" aria-label="Resolution Toggle">
-            <button class="switch-btn active" data-mode="fine" id="btn-mode-fine">🔬 Downscaled (1.2km)</button>
-            <button class="switch-btn" data-mode="coarse" id="btn-mode-coarse">📦 Coarse Block (18km)</button>
+            <!-- Layer Mode Switcher -->
+            <button class="switch-btn active" onclick="window.MapController.setMapType('terrain')">🏔️ Relief</button>
+            <button class="switch-btn" onclick="window.MapController.setMapType('hybrid')">🛰️ Satellite</button>
+            <button class="switch-btn" onclick="window.MapController.setMapType('dark')">🌌 Dark</button>
+            <button class="switch-btn" onclick="window.MapController.toggleImdOverlay()" id="btn-imd-sat" style="border-color: rgba(6, 182, 212, 0.4); color: #38bdf8;" title="Toggle Live INSAT-3D Satellite Overlay from mausam.imd.gov.in">🛰️ IMD Radar</button>
+
+            <!-- Resolution Toggle -->
+            <button class="switch-btn active" data-mode="fine" id="btn-mode-fine">🔬 1.2km</button>
+            <button class="switch-btn" data-mode="coarse" id="btn-mode-coarse">📦 18km</button>
           </div>
 
           <!-- Map Container -->
@@ -190,6 +231,9 @@
           </button>
           <button class="tab-btn" data-tab="acoustic" id="tab-btn-acoustic" role="tab">
             <span>🎙️</span> Acoustic Rain Gauge (Tin Roof AI)
+          </button>
+          <button class="tab-btn" data-tab="insurance" id="tab-btn-insurance" role="tab">
+            <span>📜</span> PMFBY Insurance Claim Verifier
           </button>
         </div>
 
@@ -277,6 +321,11 @@
             </div>
           </div>
 
+          <!-- TAB 4: PMFBY Parametric Crop Insurance Verifier -->
+          <div class="feature-panel" id="tab-insurance" style="display: none;">
+            <!-- Dynamically populated by InsuranceVerifier.renderTab -->
+          </div>
+
         </div>
 
       </section>
@@ -302,6 +351,20 @@
             <button class="crop-tag" data-crop="Paddy (Indrayani)">🌾 Paddy (Rice)</button>
             <button class="crop-tag" data-crop="Vegetables (Tomato)">🍅 Tomato/Vegetables</button>
             <button class="crop-tag" data-crop="Sugarcane">🎋 Sugarcane</button>
+          </div>
+
+          <!-- PMFBY Insurance Claim Quick Card -->
+          <div class="advisory-card" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.05)); border-color: rgba(239, 68, 68, 0.35);">
+            <div class="card-label" style="color: #f87171; display: flex; justify-content: space-between; align-items: center;">
+              <span>PMFBY Parametric Insurance</span>
+              <span class="p-badge" style="background: rgba(239, 68, 68, 0.2); color: #fca5a5; font-size: 0.65rem;">Rule 14.3</span>
+            </div>
+            <div id="insurance-quick-status-text" style="font-size: 0.78rem; color: #cbd5e1; margin-bottom: 8px;">
+              Checking localized weather triggers...
+            </div>
+            <button class="btn btn-primary btn-sm" style="width: 100%; font-size: 0.74rem;" onclick="window.App.switchFeatureTab('insurance')">
+              📜 Audit PMFBY Claim & Certificate &rarr;
+            </button>
           </div>
 
           <!-- Microclimate Pest & Disease Risk Card -->
@@ -357,14 +420,15 @@
 
   </div>
 
-  <!-- Google Maps JavaScript API -->
-  <script src="https://maps.googleapis.com/maps/api/js?callback=initGoogleMapStandalone&libraries=geometry" async defer></script>
+  <!-- Direct Google Maps Tile Layer Architecture (Zero 404s, Zero Auth Errors) -->
 
   <!-- Application Modules -->
+  <script src="js/all_india_data.js"></script>
   <script src="js/data.js"></script>
   <script src="js/downscaling-engine.js"></script>
   <script src="js/advisory-engine.js"></script>
   <script src="js/acoustic-rain.js"></script>
+  <script src="js/insurance-verifier.js"></script>
   <script src="js/map.js"></script>
   <script src="js/app.js"></script>
 </body>
