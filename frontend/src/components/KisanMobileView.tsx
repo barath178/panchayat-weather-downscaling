@@ -1,137 +1,157 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, CheckCircle2, XCircle, Droplets, Wind, Thermometer, MapPin, Sprout, Bug, Share2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, XCircle, Droplets, Wind, CloudRain, MapPin, Bug, Send, SprayCan, Signal, Wifi, BatteryFull } from 'lucide-react';
 import VoiceAdvisory from './VoiceAdvisory';
 import type { AdvisoryViewProps } from '@/lib/viewProps';
+import { describeSky } from '@/lib/sky';
 
-const STATUS_COLOR = { safe: '#0ca30c', caution: '#fab219', danger: '#d03b3b' } as const;
+const HOUR = { safe: 'bg-good', caution: 'bg-warn', danger: 'bg-bad' } as const;
 
 export default function KisanMobileView({ panchayat, fine, hourly, sprayWindow, irrigation, pest, crop, lang, onLangChange, advisoryText }: AdvisoryViewProps) {
+  const sky = describeSky(fine);
+  const SkyIcon = sky.icon;
   const frost = fine.tempMin <= 4;
   const heat = fine.tempMax >= 40;
-  const worst = hourly.find((h) => h.status === 'danger');
+
+  const verdicts = [
+    {
+      icon: SprayCan,
+      title: 'Spray',
+      tone: sprayWindow.hours >= 3 ? 'good' : sprayWindow.hours ? 'warn' : 'bad',
+      text: sprayWindow.hours ? sprayWindow.label : 'Not today',
+    },
+    { icon: Droplets, title: 'Water', tone: irrigation.action === 'Increase irrigation' ? 'warn' : 'good', text: irrigation.action.replace(' irrigation', '') },
+    { icon: Bug, title: 'Pests', tone: pest.level === 'high' ? 'bad' : pest.level === 'moderate' ? 'warn' : 'good', text: pest.level === 'low' ? 'Low risk' : pest.level === 'moderate' ? 'Watch' : 'High risk' },
+  ] as const;
+  const toneCls = { good: 'text-good', warn: 'text-warn', bad: 'text-bad' };
+  const toneIcon = { good: CheckCircle2, warn: AlertTriangle, bad: XCircle };
 
   return (
-    <div className="flex flex-col lg:flex-row justify-center items-center lg:items-start gap-8 py-4">
-      {/* Phone frame */}
-      <div className="w-full max-w-[390px] bg-[#0c101c] border-[6px] border-slate-800 rounded-[42px] overflow-hidden shadow-2xl relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-5 bg-slate-800 rounded-b-xl z-30" aria-hidden />
+    <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto_1fr]">
+      <div className="order-2 max-w-sm lg:order-1 lg:justify-self-end">
+        <div className="eyebrow">Farmer app</div>
+        <h2 className="mt-2 font-display text-4xl leading-tight text-ink">Three answers, every morning.</h2>
+        <p className="mt-4 text-ink2">Can I spray? Should I water? Is my crop at risk? One glance, in the farmer’s own language, with a voice read-out.</p>
+      </div>
 
-        <div className="bg-gradient-to-b from-emerald-600 to-emerald-700 pt-8 pb-5 px-4 text-white">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-extrabold text-xs">
-              <Sprout className="w-4 h-4 text-emerald-200" /> Kisan Agromet
-            </span>
-            <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">1.2 km forecast</span>
-          </div>
-          <div className="mt-2.5">
-            <div className="flex items-center gap-1 text-sm font-bold">
-              <MapPin className="w-3.5 h-3.5" /> {panchayat.name}
+      {/* Phone */}
+      <div className="order-1 mx-auto w-full max-w-[360px] lg:order-2">
+        <div className="rounded-[46px] border border-line/15 bg-[#050706] p-2.5 shadow-pop">
+          <div className="relative overflow-hidden rounded-[38px] bg-bg">
+            {/* Status bar */}
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-7 pt-3 text-[11px] font-semibold text-ink">
+              <span>9:41</span>
+              <span className="absolute left-1/2 top-2.5 h-6 w-24 -translate-x-1/2 rounded-full bg-black" />
+              <span className="flex items-center gap-1">
+                <Signal className="h-3 w-3" />
+                <Wifi className="h-3 w-3" />
+                <BatteryFull className="h-3.5 w-3.5" />
+              </span>
             </div>
-            {panchayat.regionalName && <div className="text-[11px] text-emerald-100">{panchayat.regionalName}</div>}
-            <div className="text-[11px] text-emerald-200 mt-0.5">
-              {panchayat.district} · {panchayat.elevationM} m · {crop}
-            </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-3 text-center">
-            {[
-              { icon: Thermometer, label: 'Temp', v: `${Math.round(fine.tempMin)}–${Math.round(fine.tempMax)}°` },
-              { icon: Droplets, label: 'Rain', v: `${fine.rainfallMm} mm` },
-              { icon: Wind, label: 'Wind', v: `${fine.windSpeedKmh} km/h` },
-            ].map(({ icon: Icon, label, v }) => (
-              <div key={label} className="bg-white/15 rounded-xl py-2">
-                <Icon className="w-3.5 h-3.5 mx-auto mb-0.5 text-emerald-100" />
-                <div className="text-[10px] text-emerald-100">{label}</div>
-                <div className="text-sm font-extrabold">{v}</div>
+            {/* Sky header */}
+            <div className="px-5 pb-6 pt-12" style={{ background: `linear-gradient(170deg, ${sky.from}, ${sky.to})` }}>
+              <div className="flex items-center gap-1.5 text-xs text-ink2">
+                <MapPin className="h-3.5 w-3.5" /> {panchayat.district}
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-4 space-y-3 max-h-[560px] overflow-y-auto">
-          {(frost || heat) && (
-            <div role="alert" className="bg-rose-500/15 border-2 border-rose-500 rounded-2xl p-3 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-rose-200 mb-1">
-                <AlertTriangle className="w-4 h-4" /> {frost ? `Frost tonight (${fine.tempMin}°C)` : `Heatwave (${fine.tempMax}°C)`}
-              </div>
-              <p className="text-[11px] text-rose-100 leading-snug">
-                {frost ? 'Irrigate in the evening; smoke or cover nursery beds before dawn.' : 'Irrigate crops; avoid field work between 12:00 and 15:00.'}
-              </p>
-            </div>
-          )}
-
-          {/* Spray clock */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Spray clock</div>
-            <div className="flex gap-0.5 mb-2" aria-hidden>
-              {hourly.map((h) => (
-                <div key={h.time} className="flex-1 h-2 rounded-sm" style={{ background: STATUS_COLOR[h.status] }} />
-              ))}
-            </div>
-            <div className="flex justify-between text-[9px] text-slate-500 font-mono mb-2">
-              <span>06</span>
-              <span>12</span>
-              <span>19</span>
-            </div>
-            {sprayWindow.hours ? (
-              <div className="bg-emerald-500/15 border border-emerald-500/40 rounded-xl p-2.5 flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="mt-1 font-display text-2xl leading-tight text-ink">{panchayat.name}</div>
+              {panchayat.regionalName && <div className="text-sm text-ink2">{panchayat.regionalName}</div>}
+              <div className="mt-5 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-emerald-200">Safe to spray {sprayWindow.label}</div>
-                  <div className="text-[10px] text-emerald-100/80">Low wind, no rain expected.</div>
+                  <div className="font-display text-6xl leading-none text-ink">{Math.round(fine.tempMax)}°</div>
+                  <div className="mt-2 text-sm font-medium text-ink">{sky.label}</div>
+                  <div className="text-xs text-ink2">Low {Math.round(fine.tempMin)}° · {crop}</div>
+                </div>
+                <SkyIcon className="h-16 w-16 text-ink/80" strokeWidth={1.2} />
+              </div>
+              <div className="mt-4 flex gap-4 text-xs text-ink2">
+                <span className="flex items-center gap-1">
+                  <CloudRain className="h-3.5 w-3.5" /> {fine.rainfallMm} mm
+                </span>
+                <span className="flex items-center gap-1">
+                  <Wind className="h-3.5 w-3.5" /> {fine.windSpeedKmh} km/h
+                </span>
+                <span className="flex items-center gap-1">
+                  <Droplets className="h-3.5 w-3.5" /> {fine.relativeHumidity}%
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 p-4">
+              {(frost || heat) && (
+                <div role="alert" className="flex items-start gap-2.5 rounded-2xl bg-bad/15 p-3 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-bad" />
+                  <span className="text-ink">
+                    {frost ? `Frost tonight (${fine.tempMin}°C). Water in the evening and cover nurseries.` : `Heatwave (${fine.tempMax}°C). Irrigate and avoid field work 12–3 pm.`}
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                {verdicts.map(({ icon: Icon, title, tone, text }) => {
+                  const T = toneIcon[tone];
+                  return (
+                    <div key={title} className="rounded-2xl bg-surface p-3">
+                      <Icon className="h-4 w-4 text-ink2" />
+                      <div className="mt-2 text-xs text-muted">{title}</div>
+                      <div className={`mt-0.5 flex items-center gap-1 text-[13px] font-semibold leading-tight ${toneCls[tone]}`}>
+                        <T className="h-3.5 w-3.5 shrink-0" /> {text}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-2xl bg-surface p-3">
+                <div className="text-xs text-muted">Spray clock</div>
+                <div className="mt-2 flex gap-[3px]">
+                  {hourly.map((h) => (
+                    <span key={h.time} className={`h-2.5 flex-1 rounded-full ${HOUR[h.status]}`} />
+                  ))}
+                </div>
+                <div className="mt-1 flex justify-between text-[10px] text-muted">
+                  <span>6 am</span>
+                  <span>noon</span>
+                  <span>7 pm</span>
                 </div>
               </div>
-            ) : (
-              <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-2.5 flex items-start gap-2">
-                <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <div className="text-xs font-bold text-rose-200">Do not spray today</div>
+
+              <div className="rounded-2xl bg-surface p-3 text-sm text-ink2">
+                <span className="font-semibold text-ink">{pest.title}. </span>
+                {pest.detail}
               </div>
-            )}
-            {worst && (
-              <div className="mt-2 text-[10px] text-rose-200/90 flex items-center gap-1">
-                <XCircle className="w-3 h-3 text-rose-400" /> {worst.time}: {worst.reason}
-              </div>
-            )}
-          </div>
 
-          <div className="bg-slate-900/90 border border-cyan-500/20 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-cyan-300 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Droplets className="w-3.5 h-3.5" /> {irrigation.action}
+              <VoiceAdvisory textToSpeak={advisoryText} lang={lang} onLangChange={onLangChange} />
+
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(advisoryText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn w-full rounded-2xl bg-[#25D366] py-3 text-[#07130b] hover:brightness-110"
+              >
+                <Send className="h-4 w-4" /> Share to village group
+              </a>
             </div>
-            <p className="text-xs text-slate-200 leading-snug">{irrigation.detail}</p>
           </div>
-
-          <div className="bg-slate-900/90 border border-amber-500/20 rounded-2xl p-3">
-            <div className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Bug className="w-3.5 h-3.5" /> {pest.title}
-            </div>
-            <p className="text-xs text-slate-200 leading-snug">{pest.detail}</p>
-          </div>
-
-          <VoiceAdvisory textToSpeak={advisoryText} lang={lang} onLangChange={onLangChange} />
-
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(advisoryText)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 px-4 rounded-2xl bg-[#25D366] hover:bg-[#1fb857] text-slate-950 font-bold text-xs flex items-center justify-center gap-2"
-          >
-            <Share2 className="w-4 h-4" /> Share to village WhatsApp group
-          </a>
         </div>
       </div>
 
-      <div className="max-w-sm text-sm text-slate-300 space-y-3 lg:pt-16">
-        <h2 className="font-display text-xl font-extrabold text-white">Built for the farmer’s phone</h2>
-        <p>One screen answers the three questions a farmer asks every morning: can I spray, do I irrigate, is my crop at risk?</p>
-        <ul className="space-y-1.5 text-xs text-slate-400">
-          <li>• Advisory in English, हिन्दी and தமிழ், with voice read-out for low-literacy users</li>
-          <li>• One-tap WhatsApp share to the village group</li>
-          <li>• High-contrast spray clock with a written verdict, readable in bright sunlight</li>
-        </ul>
-      </div>
+      <ul className="order-3 max-w-sm space-y-4 text-sm text-ink2">
+        {[
+          ['Built for sunlight', 'High-contrast colours and large type that stay readable outdoors.'],
+          ['Speaks the farmer’s language', 'English, हिन्दी and தமிழ், read aloud with the phone’s own voice.'],
+          ['Works over WhatsApp', 'No new app to install — advisories travel through village groups.'],
+        ].map(([t, d]) => (
+          <li key={t} className="flex gap-3">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+            <span>
+              <span className="block font-semibold text-ink">{t}</span>
+              {d}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

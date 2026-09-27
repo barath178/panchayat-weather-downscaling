@@ -15,35 +15,36 @@ const OUT = path.join(ROOT, 'design', 'aeroagro_figma_design.svg');
 const PUBLIC_COPY = path.join(ROOT, 'frontend', 'public', 'aeroagro_figma_artboard.svg');
 
 // ---------- design tokens (mirrors frontend/tailwind.config.js + globals.css) ----------
+// "emerald" is the brand accent slot (new-leaf lime); cyan = water/sky; amber = heat/coarse grid.
 const C = {
-  canvas: '#05070D',
-  bg: '#080A11',
-  surface: '#0E1424',
-  surface2: '#141B2E',
-  inset: '#0A0F1C',
-  border: '#FFFFFF17',
-  borderStrong: '#FFFFFF2A',
-  text: '#F8FAFC',
-  text2: '#CBD5E1',
-  muted: '#94A3B8',
-  faint: '#64748B',
-  emerald: '#10B981',
-  emeraldSoft: '#10B98126',
-  cyan: '#06B6D4',
-  amber: '#F59E0B',
-  rose: '#F43F5E',
-  violet: '#8B5CF6',
-  blue: '#3987E5',
-  good: '#0CA30C',
-  warning: '#FAB219',
-  critical: '#D03B3B',
+  canvas: '#060907',
+  bg: '#0A0E0C',
+  surface: '#111714',
+  surface2: '#18201C',
+  inset: '#0D1210',
+  border: '#E2F0E714',
+  borderStrong: '#E2F0E726',
+  text: '#ECF2EE',
+  text2: '#B8C4BD',
+  muted: '#808E86',
+  faint: '#5E6B64',
+  emerald: '#C8F169',
+  emeraldSoft: '#C8F16926',
+  cyan: '#7DC4FF',
+  amber: '#F6B94C',
+  rose: '#FF7A66',
+  violet: '#A99BFF',
+  blue: '#7DC4FF',
+  good: '#2FB344',
+  warning: '#F2B01E',
+  critical: '#E5484D',
   whatsapp: '#25D366',
 };
 const BLUE_RAMP = ['#CDE2FB', '#9EC5F4', '#6DA7EC', '#3987E5', '#256ABF', '#184F95', '#0D366B'];
 const DIVERGING = ['#104281', '#2A78D6', '#86B6EF', '#9A9993', '#F0A3A3', '#E34948', '#A52626'];
 
 const FONT = "'Plus Jakarta Sans', Inter, sans-serif";
-const DISPLAY = "Outfit, 'Plus Jakarta Sans', Inter, sans-serif";
+const DISPLAY = "Fraunces, Georgia, serif";
 const MONO = "'JetBrains Mono', 'SF Mono', monospace";
 
 // ---------- primitives ----------
@@ -101,7 +102,7 @@ function designSystem() {
 
   const kids = [
     text(48, 72, 'AeroAgro AI · Design system', { size: 34, weight: 800, font: DISPLAY }),
-    text(48, 104, 'Dark glass UI for farmers, panchayat officers and hackathon judges. Tokens mirror tailwind.config.js.', { size: 15, fill: C.muted }),
+    text(48, 104, 'Field-at-night greens, one new-leaf lime accent, topographic contours. Tokens mirror tailwind.config.js.', { size: 15, fill: C.muted }),
 
     text(48, 160, 'COLOUR TOKENS', { size: 12, fill: C.emerald, weight: 700, ls: 1.5 }),
     ...swatches.map(([n, hex], i) =>
@@ -128,7 +129,7 @@ function designSystem() {
     ...DIVERGING.map((c, i) => rect(700 + i * 58, 516, 56, 20, { fill: c })),
 
     text(48, 580, 'TYPE SCALE', { size: 12, fill: C.emerald, weight: 700, ls: 1.5 }),
-    text(48, 628, 'Display 32 · Outfit ExtraBold', { size: 32, weight: 800, font: DISPLAY }),
+    text(48, 628, 'Display 32 · Fraunces', { size: 32, weight: 500, font: DISPLAY }),
     text(48, 664, 'Title 18 · Plus Jakarta Sans Bold', { size: 18, weight: 700 }),
     text(48, 692, 'Body 14 · Plus Jakarta Sans Medium — readable advice for farmers', { size: 14, fill: C.text2 }),
     text(48, 716, 'Label 11 · UPPERCASE TRACKED', { size: 11, weight: 700, fill: C.muted, ls: 1.5 }),
@@ -138,12 +139,12 @@ function designSystem() {
     pill('Button/Primary', 48, 820, 'Share on WhatsApp', { fill: C.whatsapp, color: C.bg, w: 190, h: 40, r: 12 }),
     pill('Button/Secondary', 252, 820, 'Copy', { fill: C.surface2, color: C.text, stroke: C.borderStrong, w: 90, h: 40, r: 12 }),
     pill('Button/Accent', 356, 820, 'Claim certificate', { fill: C.emerald, color: C.bg, w: 170, h: 40, r: 12 }),
-    segmented('Segmented/Scenario', 540, 822, ['Live Today', 'Monsoon', 'Winter Frost', 'Pre-Monsoon'], 0, '#F43F5E33', '#FECDD3'),
+    segmented('Segmented/Scenario', 540, 822, ['Live Today', 'Monsoon', 'Winter Frost', 'Pre-Monsoon'], 0, '#F43F5E33', '#FFD2CA'),
     ...['Samba Paddy', 'Table Grapes', 'Royal Apple'].map((c, i) => pill(`Chip/Crop/${c}`, 48 + i * 140, 884, c, { w: 128, fill: i === 0 ? C.emerald : C.surface2, color: i === 0 ? C.bg : C.text2, r: 10 })),
     card('Card/Advisory', 500, 880, 560, 150, [
       rect(20, 20, 520, 110, { r: 16, fill: C.emerald + '1A', stroke: C.emerald + '55' }),
       circle(44, 48, 8, 'none', C.good, 2),
-      text(62, 53, 'Best spray window: 06:00–10:00', { size: 15, weight: 700, fill: '#A7F3D0' }),
+      text(62, 53, 'Best spray window: 06:00–10:00', { size: 15, weight: 700, fill: '#DDF7A6' }),
       text(36, 84, '4 consecutive hours with wind under 10 km/h and no rain.', { size: 13, fill: C.text2 }),
       text(36, 110, 'Glass card · r24 · surface + 1px white/9% border', { size: 11, fill: C.faint, font: MONO }),
     ]),
@@ -159,8 +160,8 @@ function desktop() {
     text(68, 32, 'AeroAgro AI', { size: 17, weight: 800, font: DISPLAY }),
     circle(72, 46, 3, C.emerald),
     text(80, 50, 'Live · Open-Meteo · 17:12', { size: 11, fill: C.muted }),
-    segmented('Nav/Views', 520, 14, ['GIS Dashboard', 'Kisan Mobile', 'Panchayat Kiosk'], 0),
-    segmented('Nav/Scenario', 1010, 14, ['Live Today', 'Monsoon', 'Winter Frost', 'Pre-Monsoon'], 0, '#F43F5E33', '#FECDD3'),
+    segmented('Nav/Views', 520, 14, ['Dashboard', 'Farmer app', 'Village kiosk'], 0),
+    segmented('Nav/Scenario', 1010, 14, ['Live Today', 'Monsoon', 'Winter Frost', 'Pre-Monsoon'], 0, '#F43F5E33', '#FFD2CA'),
     pill('Button/Figma', W - 64 - 250, 16, 'Figma artboard', { w: 136, fill: C.violet + '26', color: '#DDD6FE', stroke: C.violet + '55' }),
     pill('Button/About', W - 64 - 104, 16, 'About', { w: 88, fill: C.surface2, stroke: C.borderStrong }),
   ]);
@@ -170,14 +171,14 @@ function desktop() {
   const pts = [[180, 180], [260, 240], [330, 170], [420, 300], [520, 210], [610, 330], [720, 260], [800, 380], [300, 420], [460, 460], [640, 470], [900, 300], [980, 420], [240, 330], [560, 380], [860, 190], [1040, 260], [380, 540]];
   pts.forEach(([x, y], i) => markers.push(circle(x, y, 7, BLUE_RAMP[(i * 3) % 7], '#E2E8F08C', 1.5)));
   const map = card('Map/Leaflet', 32, 104, 1180, 620, [
-    rect(0, 0, 1180, 620, { r: 24, fill: '#1C1F26' }),
+    rect(0, 0, 1180, 620, { r: 24, fill: '#1A1D1B' }),
     `<path d="M120 80 C 300 40, 500 120, 640 90 S 980 60, 1100 140 L 1120 560 C 900 600, 600 540, 380 590 S 120 560, 90 500 Z" fill="#23272F" stroke="#2E333D"/>`,
-    line(200, 150, 700, 480, '#2E333D', 2), line(400, 100, 900, 520, '#2E333D', 2),
+    line(200, 150, 700, 480, '#2C312D', 2), line(400, 100, 900, 520, '#2C312D', 2),
     ...markers,
     circle(620, 300, 12, BLUE_RAMP[1], C.emerald, 4),
     rect(590, 270, 60, 60, { stroke: C.amber, sw: 2, fill: C.amber + '14' }),
     group('Map/Toolbar', 24, 20, [
-      rect(0, 0, 1132, 48, { r: 16, fill: '#0F172AE6', stroke: C.borderStrong }),
+      rect(0, 0, 1132, 48, { r: 16, fill: '#111714E6', stroke: C.borderStrong }),
       text(20, 30, 'All India (303)  ▾', { size: 13, weight: 700 }),
       segmented('Map/Variable', 170, 6, ['Rain', 'Min °C', 'Max °C', 'Wind'], 0),
       segmented('Map/Resolution', 450, 6, ['1.2 km', '18 km'], 0),
@@ -185,9 +186,9 @@ function desktop() {
       segmented('Map/Base', 790, 6, ['Dark', 'Relief', 'Satellite', 'Roads'], 0, '#FFFFFF26', C.text),
     ]),
     group('Map/Legend', 920, 500, [
-      rect(0, 0, 236, 96, { r: 16, fill: '#020617E6', stroke: C.border }),
+      rect(0, 0, 236, 96, { r: 16, fill: '#0A0E0CE6', stroke: C.border }),
       text(14, 24, 'Rainfall (mm/day)', { size: 12, weight: 700 }),
-      text(222, 24, '1.2 km', { size: 11, fill: '#6EE7B7', anchor: 'end' }),
+      text(222, 24, '1.2 km', { size: 11, fill: '#C8F169', anchor: 'end' }),
       ...BLUE_RAMP.slice().reverse().map((c, i) => rect(14 + i * 30, 34, 30, 10, { fill: c })),
       text(14, 62, '1     5    10    20    40    70', { size: 10, fill: C.muted, font: MONO }),
       text(14, 84, 'Thiruvaiyaru Cauvery Delta', { size: 11, fill: C.text2 }),
@@ -201,7 +202,7 @@ function desktop() {
   const studio = card('Studio/SprayWindow', 32, 744, 1180, 316, [
     text(24, 36, 'Microclimate Analytics Studio', { size: 16, weight: 800 }),
     segmented('Studio/Tabs', 24, 52, ['Spray Window', 'PMFBY Verifier', 'IMD Satellite', 'Elevation Transect', 'Acoustic Rain AI'], 0),
-    pill('Badge/BestWindow', 950, 54, 'Best window 06:00–10:00', { w: 206, fill: C.emerald + '26', color: '#A7F3D0', stroke: C.emerald + '66', r: 16 }),
+    pill('Badge/BestWindow', 950, 54, 'Best window 06:00–10:00', { w: 206, fill: C.emerald + '26', color: '#DDF7A6', stroke: C.emerald + '66', r: 16 }),
     ...bars.map((_, i) => group(`Strip/${i + 6}h`, 24 + i * 80, 104, [rect(0, 0, 74, 40, { r: 8, fill: C.inset, stroke: C.border }), rect(0, 36, 74, 4, { fill: barStatus[i] }), text(37, 24, String(i + 6).padStart(2, '0'), { size: 12, font: MONO, fill: C.text2, anchor: 'middle' })])),
     text(24, 176, 'Wind speed (km/h)', { size: 12, weight: 700, fill: C.text2 }),
     line(24, 212, 660, 212, C.critical, 1.5, '5 5'),
@@ -217,11 +218,11 @@ function desktop() {
     text(24, 36, 'DOWNSCALED MICROCLIMATE', { size: 11, weight: 700, fill: C.emerald, ls: 1.5 }),
     text(24, 64, 'Thiruvaiyaru Cauvery Delta', { size: 20, weight: 800 }),
     text(24, 86, 'Thanjavur, Tamil Nadu · 38 m · Alluvial River Delta Basin', { size: 12, fill: C.muted }),
-    pill('Badge/Live', 560, 22, '● LIVE', { w: 70, h: 26, fill: C.rose + '26', color: '#FECDD3', size: 11, r: 13 }),
+    pill('Badge/Live', 560, 22, '● LIVE', { w: 70, h: 26, fill: C.rose + '26', color: '#FFD2CA', size: 11, r: 13 }),
     rect(24, 108, 604, 36, { r: 10, fill: '#00000055' }),
     text(40, 131, 'VARIABLE', { size: 10, fill: C.faint, ls: 1 }),
     text(440, 131, 'BLOCK 18 KM', { size: 10, fill: C.amber, anchor: 'end', ls: 1 }),
-    text(612, 131, 'PANCHAYAT 1.2 KM', { size: 10, fill: '#6EE7B7', anchor: 'end', ls: 1 }),
+    text(612, 131, 'PANCHAYAT 1.2 KM', { size: 10, fill: '#C8F169', anchor: 'end', ls: 1 }),
     ...rows.map(([l, c, f], i) =>
       group(`Row/${l}`, 24, 150 + i * 48, [line(0, 0, 604, 0, C.border), text(16, 30, l, { size: 13, weight: 700 }), text(416, 30, c, { size: 13, fill: C.muted, font: MONO, anchor: 'end' }), text(588, 30, f, { size: 13, weight: 700, font: MONO, anchor: 'end' })])
     ),
@@ -233,11 +234,11 @@ function desktop() {
     text(24, 36, 'CROP ADVISORY', { size: 11, weight: 700, fill: C.emerald, ls: 1.5 }),
     text(24, 62, 'Local agricultural guidance', { size: 17, weight: 800 }),
     ...['Samba Paddy', 'Poovan Banana', 'Blackgram', 'Sharbati Wheat'].map((c, i) => pill(`Chip/${c}`, 24 + i * 148, 80, c, { w: 138, fill: i === 0 ? C.emerald : C.surface2, color: i === 0 ? C.bg : C.text2 })),
-    group('Card/SprayWindow', 24, 128, [rect(0, 0, 604, 70, { r: 16, fill: C.emerald + '1A', stroke: C.emerald + '55' }), text(20, 30, '✓  Best spray window: 06:00–10:00', { size: 14, weight: 700, fill: '#A7F3D0' }), text(20, 52, '4 consecutive hours with wind under 10 km/h and no rain expected.', { size: 12, fill: C.text2 })]),
+    group('Card/SprayWindow', 24, 128, [rect(0, 0, 604, 70, { r: 16, fill: C.emerald + '1A', stroke: C.emerald + '55' }), text(20, 30, '✓  Best spray window: 06:00–10:00', { size: 14, weight: 700, fill: '#DDF7A6' }), text(20, 52, '4 consecutive hours with wind under 10 km/h and no rain expected.', { size: 12, fill: C.text2 })]),
     group('Card/Pest', 24, 212, [rect(0, 0, 604, 78, { r: 16, fill: C.surface2, stroke: C.border }), text(20, 28, 'Pest & disease risk', { size: 13, weight: 700, fill: C.text2 }), text(584, 28, 'LOW', { size: 10, font: MONO, anchor: 'end', fill: C.text2 }), text(20, 52, 'Low pest pressure — keep weekly field scouting.', { size: 12, fill: C.text2 })]),
-    group('Card/Irrigation', 24, 304, [rect(0, 0, 604, 64, { r: 16, fill: C.cyan + '1A', stroke: C.cyan + '55' }), text(20, 28, 'Normal irrigation', { size: 13, weight: 700, fill: '#A5F3FC' }), text(584, 28, 'ET₀ 5.2 mm', { size: 11, font: MONO, anchor: 'end', fill: '#A5F3FC' }), text(20, 50, '4.6 mm deficit. Irrigate early morning or evening.', { size: 12, fill: C.text2 })]),
+    group('Card/Irrigation', 24, 304, [rect(0, 0, 604, 64, { r: 16, fill: C.cyan + '1A', stroke: C.cyan + '55' }), text(20, 28, 'Normal irrigation', { size: 13, weight: 700, fill: '#B9DEFF' }), text(584, 28, 'ET₀ 5.2 mm', { size: 11, font: MONO, anchor: 'end', fill: '#B9DEFF' }), text(20, 50, '4.6 mm deficit. Irrigate early morning or evening.', { size: 12, fill: C.text2 })]),
     group('Card/Language', 24, 382, [rect(0, 0, 604, 48, { r: 14, fill: C.surface2, stroke: C.border }), segmented('Lang', 12, 6, ['English', 'हिन्दी', 'தமிழ்'], 0), pill('Button/Listen', 500, 8, 'Listen', { w: 92, h: 32, fill: C.emerald, color: C.bg })]),
-    group('Card/WhatsApp', 24, 444, [rect(0, 0, 604, 92, { r: 16, fill: '#052E1655', stroke: C.emerald + '33' }), text(20, 30, 'WhatsApp advisory', { size: 13, weight: 700 }), text(20, 56, '*AGROMET ADVISORY: THIRUVAIYARU CAUVERY DELTA* …', { size: 11, fill: '#D1FAE5', font: MONO }), pill('Button/WhatsApp', 420, 50, 'Share on WhatsApp', { w: 168, h: 32, fill: C.whatsapp, color: C.bg })]),
+    group('Card/WhatsApp', 24, 444, [rect(0, 0, 604, 92, { r: 16, fill: '#1F292455', stroke: C.emerald + '33' }), text(20, 30, 'WhatsApp advisory', { size: 13, weight: 700 }), text(20, 56, '*AGROMET ADVISORY: THIRUVAIYARU CAUVERY DELTA* …', { size: 11, fill: '#E6EDE8', font: MONO }), pill('Button/WhatsApp', 420, 50, 'Share on WhatsApp', { w: 168, h: 32, fill: C.whatsapp, color: C.bg })]),
   ]);
 
   return frame('02 Desktop Dashboard', 1360, 80, W, 1080, [header, map, studio, metrics, advisory], { label: '02 · Desktop — GIS Dashboard (1920 × 1080)' });
@@ -247,27 +248,27 @@ function desktop() {
 function mobile() {
   const hours = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0];
   const kids = [
-    rect(0, 0, 390, 844, { r: 44, fill: '#0C101C', stroke: '#1E293B', sw: 6 }),
-    rect(129, 0, 132, 22, { r: 10, fill: '#1E293B' }),
-    `<path d="M3 44 Q3 3 44 3 L346 3 Q387 3 387 44 L387 300 L3 300 Z" fill="#059669"/>`,
+    rect(0, 0, 390, 844, { r: 44, fill: '#0C101C', stroke: '#1F2924', sw: 6 }),
+    rect(129, 0, 132, 22, { r: 10, fill: '#1F2924' }),
+    `<path d="M3 44 Q3 3 44 3 L346 3 Q387 3 387 44 L387 300 L3 300 Z" fill="#3A3420"/>`,
     text(24, 60, 'Kisan Agromet', { size: 14, weight: 800 }),
     pill('Badge/Forecast', 262, 44, '1.2 km forecast', { w: 110, h: 24, fill: '#FFFFFF33', color: C.text, size: 10, r: 12 }),
     text(24, 100, 'Thiruvaiyaru Cauvery Delta', { size: 18, weight: 800 }),
-    text(24, 122, 'திருவையாறு காவிரி டெல்டா', { size: 13, fill: '#D1FAE5' }),
-    text(24, 142, 'Thanjavur · 38 m · Samba Paddy', { size: 12, fill: '#A7F3D0' }),
+    text(24, 122, 'திருவையாறு காவிரி டெல்டா', { size: 13, fill: '#E6EDE8' }),
+    text(24, 142, 'Thanjavur · 38 m · Samba Paddy', { size: 12, fill: '#DDF7A6' }),
     ...[['Temp', '26–36°'], ['Rain', '0.7 mm'], ['Wind', '5.1 km/h']].map(([l, v], i) =>
-      group(`Stat/${l}`, 24 + i * 116, 164, [rect(0, 0, 106, 82, { r: 14, fill: '#FFFFFF26' }), text(53, 34, l, { size: 11, fill: '#D1FAE5', anchor: 'middle' }), text(53, 62, v, { size: 16, weight: 800, anchor: 'middle' })])
+      group(`Stat/${l}`, 24 + i * 116, 164, [rect(0, 0, 106, 82, { r: 14, fill: '#FFFFFF26' }), text(53, 34, l, { size: 11, fill: '#E6EDE8', anchor: 'middle' }), text(53, 62, v, { size: 16, weight: 800, anchor: 'middle' })])
     ),
     group('Card/SprayClock', 20, 320, [
-      rect(0, 0, 350, 150, { r: 18, fill: '#0F172A', stroke: '#1E293B' }),
+      rect(0, 0, 350, 150, { r: 18, fill: '#111714', stroke: '#1F2924' }),
       text(18, 30, 'SPRAY CLOCK', { size: 10, weight: 700, fill: C.muted, ls: 1.5 }),
       ...hours.map((h, i) => rect(18 + i * 22.5, 44, 20, 10, { r: 3, fill: h ? C.warning : C.good })),
       rect(18, 76, 314, 56, { r: 12, fill: C.emerald + '26', stroke: C.emerald + '66' }),
-      text(36, 102, '✓  Safe to spray 06:00–10:00', { size: 14, weight: 700, fill: '#A7F3D0' }),
-      text(36, 120, 'Low wind, no rain expected.', { size: 11, fill: '#D1FAE5' }),
+      text(36, 102, '✓  Safe to spray 06:00–10:00', { size: 14, weight: 700, fill: '#DDF7A6' }),
+      text(36, 120, 'Low wind, no rain expected.', { size: 11, fill: '#E6EDE8' }),
     ]),
-    group('Card/Irrigation', 20, 484, [rect(0, 0, 350, 70, { r: 18, fill: '#0F172A', stroke: C.cyan + '44' }), text(18, 28, 'NORMAL IRRIGATION', { size: 10, weight: 700, fill: '#67E8F9', ls: 1.2 }), text(18, 50, '4.6 mm deficit. Irrigate morning or evening.', { size: 12, fill: C.text2 })]),
-    group('Card/Pest', 20, 566, [rect(0, 0, 350, 70, { r: 18, fill: '#0F172A', stroke: C.amber + '44' }), text(18, 28, 'LOW PEST PRESSURE', { size: 10, weight: 700, fill: '#FCD34D', ls: 1.2 }), text(18, 50, 'Keep weekly field scouting.', { size: 12, fill: C.text2 })]),
+    group('Card/Irrigation', 20, 484, [rect(0, 0, 350, 70, { r: 18, fill: '#111714', stroke: C.cyan + '44' }), text(18, 28, 'NORMAL IRRIGATION', { size: 10, weight: 700, fill: '#7DC4FF', ls: 1.2 }), text(18, 50, '4.6 mm deficit. Irrigate morning or evening.', { size: 12, fill: C.text2 })]),
+    group('Card/Pest', 20, 566, [rect(0, 0, 350, 70, { r: 18, fill: '#111714', stroke: C.amber + '44' }), text(18, 28, 'LOW PEST PRESSURE', { size: 10, weight: 700, fill: '#F6B94C', ls: 1.2 }), text(18, 50, 'Keep weekly field scouting.', { size: 12, fill: C.text2 })]),
     group('Card/Language', 20, 648, [rect(0, 0, 350, 48, { r: 14, fill: '#FFFFFF0D', stroke: C.border }), segmented('Lang', 10, 6, ['English', 'हिन्दी', 'தமிழ்'], 0), pill('Listen', 262, 8, 'Listen', { w: 76, h: 32, fill: C.emerald, color: C.bg })]),
     pill('Button/ShareWhatsApp', 20, 712, 'Share to village WhatsApp group', { w: 350, h: 50, fill: C.whatsapp, color: C.bg, size: 14, r: 18 }),
   ];
@@ -282,11 +283,11 @@ function kiosk() {
     card('Kiosk/Header', 32, 28, 1376, 110, [
       rect(24, 24, 60, 60, { r: 16, fill: C.cyan }),
       text(104, 56, 'Thiruvaiyaru Cauvery Delta', { size: 28, weight: 800 }),
-      text(104, 82, 'திருவையாறு காவிரி டெல்டா  ·  Thanjavur, Tamil Nadu · 38 m', { size: 14, fill: '#6EE7B7' }),
-      text(1340, 62, '05:18:39 PM', { size: 34, weight: 800, font: MONO, fill: '#A5F3FC', anchor: 'end' }),
+      text(104, 82, 'திருவையாறு காவிரி டெல்டா  ·  Thanjavur, Tamil Nadu · 38 m', { size: 14, fill: '#C8F169' }),
+      text(1340, 62, '05:18:39 PM', { size: 34, weight: 800, font: MONO, fill: '#B9DEFF', anchor: 'end' }),
       text(1340, 86, 'Sunday, 27 September · IST', { size: 12, fill: C.muted, anchor: 'end' }),
     ]),
-    group('Kiosk/Alert', 32, 158, [rect(0, 0, 1376, 76, { r: 18, fill: '#052E16AA', stroke: C.emerald, sw: 2 }), circle(40, 38, 14, 'none', '#6EE7B7', 2.5), text(72, 34, 'No severe weather expected today', { size: 18, weight: 700 }), text(72, 58, 'Best spray window 06:00–10:00. Normal irrigation.', { size: 14, fill: C.text2 })]),
+    group('Kiosk/Alert', 32, 158, [rect(0, 0, 1376, 76, { r: 18, fill: '#18301CAA', stroke: C.emerald, sw: 2 }), circle(40, 38, 14, 'none', '#C8F169', 2.5), text(72, 34, 'No severe weather expected today', { size: 18, weight: 700 }), text(72, 58, 'Best spray window 06:00–10:00. Normal irrigation.', { size: 14, fill: C.text2 })]),
     card('Kiosk/Weather', 32, 254, 330, 500, [
       text(20, 34, 'TODAY’S WEATHER · 1.2 KM', { size: 11, weight: 700, fill: C.muted, ls: 1.2 }),
       text(20, 74, 'Temperature', { size: 13, fill: C.muted }), text(20, 116, '25.7° – 35.7°C', { size: 36, weight: 800 }),
@@ -305,16 +306,16 @@ function kiosk() {
     ]),
     card('Kiosk/FarmActions', 728, 254, 330, 500, [
       text(20, 34, 'FARM ACTIONS', { size: 11, weight: 700, fill: C.muted, ls: 1.2 }),
-      rect(20, 52, 290, 110, { r: 14, fill: C.cyan + '1A', stroke: C.cyan + '55' }), text(36, 84, 'Normal irrigation', { size: 16, weight: 700, fill: '#A5F3FC' }), text(36, 110, '4.6 mm deficit. Irrigate early', { size: 13, fill: C.text2 }), text(36, 130, 'morning or evening.', { size: 13, fill: C.text2 }),
+      rect(20, 52, 290, 110, { r: 14, fill: C.cyan + '1A', stroke: C.cyan + '55' }), text(36, 84, 'Normal irrigation', { size: 16, weight: 700, fill: '#B9DEFF' }), text(36, 110, '4.6 mm deficit. Irrigate early', { size: 13, fill: C.text2 }), text(36, 130, 'morning or evening.', { size: 13, fill: C.text2 }),
       rect(20, 178, 290, 100, { r: 14, fill: C.amber + '1A', stroke: C.amber + '55' }), text(36, 210, 'Low pest pressure', { size: 16, weight: 700 }), text(36, 236, 'Keep weekly field scouting.', { size: 13, fill: C.text2 }),
     ]),
     card('Kiosk/QR', 1076, 254, 332, 500, [
-      text(166, 36, 'TAKE THIS ADVISORY HOME', { size: 12, weight: 700, fill: '#6EE7B7', anchor: 'middle', ls: 1.2 }),
+      text(166, 36, 'TAKE THIS ADVISORY HOME', { size: 12, weight: 700, fill: '#C8F169', anchor: 'middle', ls: 1.2 }),
       rect(76, 64, 180, 180, { r: 18, fill: '#FFFFFF' }),
-      ...Array.from({ length: 64 }, (_, k) => ((k * 37) % 5 < 2 ? rect(96 + (k % 8) * 18, 84 + Math.floor(k / 8) * 18, 16, 16, { fill: '#0F172A' }) : '')),
+      ...Array.from({ length: 64 }, (_, k) => ((k * 37) % 5 < 2 ? rect(96 + (k % 8) * 18, 84 + Math.floor(k / 8) * 18, 16, 16, { fill: '#111714' }) : '')),
       text(166, 280, 'Scan to open today’s advisory', { size: 13, fill: C.text2, anchor: 'middle' }),
       text(166, 300, 'in WhatsApp', { size: 13, fill: C.text2, anchor: 'middle' }),
-    ], { fill: '#062A1C' }),
+    ], { fill: '#18201C' }),
   ];
   return frame('04 Panchayat Kiosk', 560, 1320, 1440, 780, kids, { label: '04 · Panchayat Kiosk wallboard (1440 × 780)' });
 }
@@ -400,7 +401,7 @@ function backend() {
         ['5 · Advise', 'Hourly spray status, ET₀', 'pest rules, PMFBY triggers'],
         ['6 · Deliver', 'Dashboard · Kisan · Kiosk', 'WhatsApp in 3 languages'],
       ].map(([t, a, b], i) =>
-        group(`Step/${t}`, 28 + i * 298, 70, [rect(0, 0, 278, 150, { r: 16, fill: C.inset, stroke: C.border }), circle(30, 34, 14, C.emerald + '33', C.emerald, 1.5), text(30, 39, String(i + 1), { size: 13, weight: 800, anchor: 'middle', fill: '#A7F3D0' }), text(54, 39, t.slice(4), { size: 15, weight: 800 }), text(18, 84, a, { size: 12.5, fill: C.text2 }), text(18, 106, b, { size: 12.5, fill: C.text2 })])
+        group(`Step/${t}`, 28 + i * 298, 70, [rect(0, 0, 278, 150, { r: 16, fill: C.inset, stroke: C.border }), circle(30, 34, 14, C.emerald + '33', C.emerald, 1.5), text(30, 39, String(i + 1), { size: 13, weight: 800, anchor: 'middle', fill: '#DDF7A6' }), text(54, 39, t.slice(4), { size: 15, weight: 800 }), text(18, 84, a, { size: 12.5, fill: C.text2 }), text(18, 106, b, { size: 12.5, fill: C.text2 })])
       ),
     ]),
   ];
@@ -412,11 +413,11 @@ function apiReference() {
   const endpoint = (y, method, route, desc, example) =>
     group(`Endpoint/${method} ${route}`, 40, y, [
       rect(0, 0, 1120, 170, { r: 18, fill: C.surface, stroke: C.border }),
-      pill(`Method/${method}`, 20, 20, method, { w: 66, h: 28, fill: method === 'GET' ? C.cyan + '33' : C.emerald + '33', color: method === 'GET' ? '#A5F3FC' : '#A7F3D0', size: 12, r: 8 }),
+      pill(`Method/${method}`, 20, 20, method, { w: 66, h: 28, fill: method === 'GET' ? C.cyan + '33' : C.emerald + '33', color: method === 'GET' ? '#B9DEFF' : '#DDF7A6', size: 12, r: 8 }),
       text(100, 40, route, { size: 17, weight: 700, font: MONO }),
       text(20, 76, desc, { size: 13, fill: C.text2 }),
       rect(20, 94, 1080, 58, { r: 10, fill: C.inset }),
-      ...example.map((l, i) => text(36, 118 + i * 20, l, { size: 12, fill: '#A7F3D0', font: MONO })),
+      ...example.map((l, i) => text(36, 118 + i * 20, l, { size: 12, fill: '#DDF7A6', font: MONO })),
     ]);
   const kids = [
     text(40, 64, 'API reference · FastAPI', { size: 30, weight: 800, font: DISPLAY }),
@@ -429,36 +430,77 @@ function apiReference() {
   return frame('06 API Reference', 2120, 2240, 1200, 900, kids, { label: '06 · API reference (1200 × 900)' });
 }
 
+// ---------- 08 · landing hero ----------
+function hero() {
+  const W = 1340;
+  const H = 780;
+  const topoFile = path.join(ROOT, 'frontend', 'src', 'assets', 'topo.svg');
+  const topo = fs.existsSync(topoFile) ? (fs.readFileSync(topoFile, 'utf8').match(/<g[\s\S]*<\/g>/) || [''])[0] : '';
+  const revealFile = path.join(ROOT, 'design', 'screens', 'reveal.png');
+  const reveal = fs.existsSync(revealFile) ? fs.readFileSync(revealFile).toString('base64') : null;
+
+  const kids = [
+    `<clipPath id="heroClip"><rect width="${W}" height="${H}" rx="28"/></clipPath>`,
+    `<g clip-path="url(#heroClip)" opacity="0.9"><g transform="scale(${W / 1600})">${topo}</g></g>`,
+    `<g id="Hero_Copy">`,
+    rect(56, 70, 330, 30, { r: 15, fill: C.emerald + '1A', stroke: C.emerald + '44' }),
+    circle(74, 85, 4, C.emerald),
+    text(88, 90, 'Live microclimate forecasts for Indian farms', { size: 13, fill: C.emerald, weight: 600 }),
+    text(56, 180, 'Weather for', { size: 68, weight: 500, font: DISPLAY }),
+    text(56, 252, 'your village,', { size: 68, weight: 500, font: DISPLAY }),
+    `<text x="56" y="324" fill="${C.emerald}" font-family="${DISPLAY}" font-size="68" font-style="italic">not your district.</text>`,
+    text(56, 376, 'AeroAgro sharpens 18 km forecasts into 1.2 km microclimates using terrain', { size: 17, fill: C.text2 }),
+    text(56, 402, 'physics, then tells each farmer when to spray, water and protect their crop.', { size: 17, fill: C.text2 }),
+    group('Hero/Search', 56, 440, [rect(0, 0, 380, 56, { r: 16, fill: C.surface, stroke: C.borderStrong }), circle(30, 28, 8, 'none', C.muted, 2), text(52, 34, 'Find your village, district or crop', { size: 15, fill: C.muted })]),
+    pill('Hero/UseLocation', 448, 440, 'Use my location', { w: 170, h: 56, fill: C.surface2, color: C.text, stroke: C.borderStrong, size: 15, r: 16 }),
+    text(56, 540, 'Try', { size: 14, fill: C.muted }),
+    ...['Ooty', 'Munnar', 'Kotgarh apples', 'Jaisalmer'].map((c, i, a) => {
+      const x = 92 + a.slice(0, i).reduce((s, v) => s + v.length * 7.6 + 40, 0);
+      return pill(`Hero/Try/${c}`, x, 520, c, { w: Math.round(c.length * 7.6 + 30), h: 30, fill: C.surface2, color: C.text2, stroke: C.border, size: 13, r: 15 });
+    }),
+    line(56, 590, 620, 590, C.border),
+    ...[['303', 'districts & metros'], ['225×', 'finer than 18 km'], ['3', 'languages + voice'], ['₹0', 'data cost']].map(([v, l], i) =>
+      group(`Hero/Stat/${l}`, 56 + i * 145, 610, [text(0, 36, v, { size: 34, font: DISPLAY }), text(0, 60, l, { size: 12, fill: C.muted })])
+    ),
+    `</g>`,
+    reveal
+      ? group('Hero/ResolutionReveal', 700, 90, [`<image width="580" height="600" preserveAspectRatio="xMidYMid slice" href="data:image/png;base64,${reveal}"/>`])
+      : card('Hero/ResolutionReveal', 700, 90, 580, 600, [text(290, 300, 'Resolution reveal', { anchor: 'middle', fill: C.muted })]),
+  ];
+  return frame('08 Landing Hero', 2080, 1320, W, H, kids, { label: '08 · Landing hero with resolution reveal (1340 × 780)' });
+}
+
 // ---------- 07 · reference screenshots ----------
 function screenshots() {
   const dir = path.join(ROOT, 'design', 'screens');
+  // [file, width, height, label, x, y, scale]
   const shots = [
-    ['desktop-dashboard.png', 1440, 1000, 'Desktop dashboard (live)'],
-    ['kiosk.png', 1440, 620, 'Panchayat kiosk'],
-    ['kisan-mobile.png', 390, 700, 'Kisan mobile'],
-    ['pmfby-certificate.png', 700, 600, 'PMFBY evidence report'],
+    ['hero.png', 1440, 900, 'Landing hero', 40, 110, 0.5],
+    ['desktop-dashboard.png', 1440, 1000, 'Live dashboard', 800, 110, 0.5],
+    ['farmer-app.png', 1440, 900, 'Farmer app', 1560, 110, 0.45],
+    ['kiosk.png', 1440, 900, 'Village kiosk', 40, 680, 0.5],
+    ['pmfby-certificate.png', 672, 640, 'Insurance evidence report', 800, 680, 0.62],
+    ['mobile-dashboard.png', 390, 844, 'Phone', 1260, 680, 0.55],
   ];
-  const kids = [text(40, 60, 'Reference screenshots of the running app', { size: 26, weight: 800, font: DISPLAY })];
-  const pos = [[40, 100, 0.72], [1120, 100, 0.72], [1120, 600, 0.52], [1380, 600, 0.6]];
-  shots.forEach(([file, w, h, label], i) => {
+  const kids = [text(40, 64, 'Reference screenshots of the running app', { size: 28, font: DISPLAY })];
+  for (const [file, w, h, label, x, y, s] of shots) {
     const p = path.join(dir, file);
-    if (!fs.existsSync(p)) return;
-    const [x, y, s] = pos[i];
+    if (!fs.existsSync(p)) continue;
     const b64 = fs.readFileSync(p).toString('base64');
     kids.push(
       group(`Screen/${label}`, x, y, [
-        text(0, -10, label, { size: 13, fill: C.muted }),
+        text(0, -12, label, { size: 14, fill: C.muted }),
         `<image width="${Math.round(w * s)}" height="${Math.round(h * s)}" href="data:image/png;base64,${b64}"/>`,
-        rect(0, 0, Math.round(w * s), Math.round(h * s), { r: 0, stroke: C.borderStrong }),
+        rect(0, 0, Math.round(w * s), Math.round(h * s), { stroke: C.borderStrong }),
       ])
     );
-  });
-  return frame('07 Screens', 80, 3440, 2260, 900, kids, { label: '07 · Reference screenshots (raster)' });
+  }
+  return frame('07 Screens', 80, 3440, 2260, 1180, kids, { label: '07 · Reference screenshots (raster)' });
 }
 
 // ---------- assemble ----------
 const W = 3500;
-const H = 4420;
+const H = 4700;
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
@@ -471,6 +513,7 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
   ${desktop()}
   ${mobile()}
   ${kiosk()}
+  ${hero()}
   ${backend()}
   ${apiReference()}
   ${screenshots()}

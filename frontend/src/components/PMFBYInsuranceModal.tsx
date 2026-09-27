@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, AlertTriangle, FileText, CheckCircle2, QrCode, Printer, X } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, FileText, CheckCircle2, Printer, X, CloudRain, Snowflake, Wind } from 'lucide-react';
 import { PanchayatData } from '@/data/all_india_regions';
 
 interface Props {
@@ -23,21 +23,31 @@ interface Props {
   };
 }
 
-export default function PMFBYInsuranceModal({
-  panchayat,
-  selectedCrop,
-  fineMetrics,
-  coarseMetrics,
-}: Props) {
+/** Bar showing how close a value is to its insurance trigger. */
+function Gauge({ value, trigger, inverse }: { value: number; trigger: number; inverse?: boolean }) {
+  // For frost the danger direction is downward: map 20°C → 0 %, trigger → 100 %.
+  const pct = inverse ? ((20 - value) / (20 - trigger)) * 100 : (value / trigger) * 100;
+  const clamped = Math.max(2, Math.min(100, pct));
+  const tone = pct >= 100 ? 'bg-bad' : pct >= 70 ? 'bg-warn' : 'bg-good';
+  return (
+    <div className="mt-3">
+      <div className="h-1.5 overflow-hidden rounded-full bg-raised">
+        <div className={`h-full rounded-full ${tone} transition-all`} style={{ width: `${clamped}%` }} />
+      </div>
+      <div className="mt-1 text-[11px] text-muted">{Math.round(Math.max(0, pct))}% of the way to the trigger</div>
+    </div>
+  );
+}
+
+export default function PMFBYInsuranceModal({ panchayat, selectedCrop, fineMetrics, coarseMetrics }: Props) {
   const [showCertificate, setShowCertificate] = useState(false);
   const [sha256, setSha256] = useState('');
 
-  // WBCIS Parametric Thresholds for crop
+  // Weather-index thresholds per crop
   const excessRainThreshold = selectedCrop.includes('Paddy') ? 60.0 : selectedCrop.includes('Wheat') ? 30.0 : 35.0;
   const frostThreshold = selectedCrop.includes('Apple') ? 0.0 : 3.5;
   const windThreshold = 35.0;
 
-  // Breach checks
   const rainBreached = fineMetrics.rainfallMm >= excessRainThreshold;
   const frostBreached = fineMetrics.tempMin <= frostThreshold;
   const windBreached = fineMetrics.windSpeedKmh >= windThreshold;
@@ -45,10 +55,11 @@ export default function PMFBYInsuranceModal({
   const isEligible = rainBreached || frostBreached || windBreached;
   const payoutPct = (rainBreached && fineMetrics.rainfallMm > excessRainThreshold * 1.4) || (frostBreached && fineMetrics.tempMin < 1.0) ? 100 : 70;
 
-  // Discrepancy between AWS (coarse) and Downscaled (fine)
-  const hasDiscrepancy = (rainBreached && coarseMetrics.rainfallMm < excessRainThreshold) ||
-                         (frostBreached && coarseMetrics.tempMin > frostThreshold) ||
-                         (windBreached && coarseMetrics.windSpeedKmh < windThreshold);
+  // Breach visible at 1.2 km but missed by the 18 km block value
+  const hasDiscrepancy =
+    (rainBreached && coarseMetrics.rainfallMm < excessRainThreshold) ||
+    (frostBreached && coarseMetrics.tempMin > frostThreshold) ||
+    (windBreached && coarseMetrics.windSpeedKmh < windThreshold);
 
   const today = new Date().toISOString().slice(0, 10);
   const certId = `AA-${today.replace(/-/g, '')}-${panchayat.district.slice(0, 3).toUpperCase()}-${panchayat.id.split('_').pop()}`;
@@ -69,288 +80,169 @@ export default function PMFBYInsuranceModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [showCertificate]);
 
-  const auditRows = [
-    { label: '24 h rainfall', c: `${coarseMetrics.rainfallMm} mm`, f: `${fineMetrics.rainfallMm} mm`, trig: `≥ ${excessRainThreshold} mm`, breached: rainBreached },
-    { label: 'Night frost (Tmin)', c: `${coarseMetrics.tempMin}°C`, f: `${fineMetrics.tempMin}°C`, trig: `≤ ${frostThreshold}°C`, breached: frostBreached },
-    { label: 'Wind (lodging)', c: `${coarseMetrics.windSpeedKmh} km/h`, f: `${fineMetrics.windSpeedKmh} km/h`, trig: `≥ ${windThreshold} km/h`, breached: windBreached },
+  const triggers = [
+    { icon: CloudRain, label: 'Excess rain', unit: 'mm', fine: fineMetrics.rainfallMm, coarse: coarseMetrics.rainfallMm, trigger: excessRainThreshold, sign: '≥', breached: rainBreached, inverse: false },
+    { icon: Snowflake, label: 'Frost', unit: '°C', fine: fineMetrics.tempMin, coarse: coarseMetrics.tempMin, trigger: frostThreshold, sign: '≤', breached: frostBreached, inverse: true },
+    { icon: Wind, label: 'Wind lodging', unit: 'km/h', fine: fineMetrics.windSpeedKmh, coarse: coarseMetrics.windSpeedKmh, trigger: windThreshold, sign: '≥', breached: windBreached, inverse: false },
   ];
 
   return (
-    <div className="orchids-glass rounded-2xl p-5 shadow-orchids-card border border-white/10 flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
+    <div className="flex flex-col gap-5">
+      {/* Verdict */}
+      <div className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl p-4 ${isEligible ? 'bg-bad/10' : 'bg-good/10'}`}>
+        <div className="flex items-center gap-3">
+          <span className={`grid h-10 w-10 place-items-center rounded-xl ${isEligible ? 'bg-bad/20 text-bad' : 'bg-good/20 text-good'}`}>
+            {isEligible ? <AlertTriangle className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+          </span>
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              PMFBY Parametric Crop Insurance Verifier
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono">
-                Weather-index (WBCIS)
-              </span>
-            </h3>
-            <p className="text-[11px] text-slate-400">
-              Checks weather-index triggers at 1.2 km vs the 18 km block value, as evidence for PMFBY localized-calamity claims
-            </p>
+            <div className="text-base font-semibold text-ink">
+              {isEligible ? `Weather trigger breached · ${payoutPct}% indicative payout` : 'No insurance trigger breached today'}
+            </div>
+            <div className="text-sm text-ink2">
+              {selectedCrop} in {panchayat.name} · PMFBY weather-index (WBCIS) check
+            </div>
           </div>
         </div>
-
-        {isEligible ? (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-            PARAMETRIC TRIGGER BREACHED ({payoutPct}% PAYOUT)
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            WITHIN NORMAL WBCIS BOUNDS
-          </div>
-        )}
+        <button onClick={() => setShowCertificate(true)} className="btn-primary">
+          <FileText className="h-4 w-4" /> Evidence report
+        </button>
       </div>
 
-      {/* Summary Box */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-black/40 p-3.5 rounded-xl border border-white/5 text-xs">
-        <div>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Insured Panchayat</span>
-          <strong className="text-white text-xs block truncate">{panchayat.name}</strong>
-          <span className="text-[10px] text-slate-500">{panchayat.elevationM}m MSL • {panchayat.state}</span>
-        </div>
-        <div>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Insured Crop</span>
-          <strong className="text-emerald-400 text-xs block">{selectedCrop}</strong>
-          <span className="text-[10px] text-slate-500">Thresholds per crop</span>
-        </div>
-        <div>
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Claim Status</span>
-          <strong className={isEligible ? 'text-rose-400' : 'text-emerald-400'}>
-            {isEligible ? 'Calamity Validated' : 'No Breach Recorded'}
-          </strong>
-          <span className="text-[10px] text-slate-500">{isEligible ? `${payoutPct}% Indemnity` : 'Safe Bounds'}</span>
-        </div>
-        <div className="flex items-center justify-end">
-          <button
-            onClick={() => setShowCertificate(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            Claim Certificate
-          </button>
-        </div>
+      {/* Trigger gauges */}
+      <div className="grid gap-3 md:grid-cols-3">
+        {triggers.map((t) => {
+          const Icon = t.icon;
+          return (
+            <div key={t.label} className="rounded-2xl bg-surface2 p-4">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-sm text-ink2">
+                  <Icon className="h-4 w-4" /> {t.label}
+                </span>
+                <span className="text-xs text-muted">
+                  trigger {t.sign} {t.trigger} {t.unit}
+                </span>
+              </div>
+              <div className="mt-3 flex items-baseline gap-2">
+                <span className="font-display text-3xl text-ink tabular">{t.fine}</span>
+                <span className="text-sm text-muted">{t.unit} at 1.2 km</span>
+              </div>
+              <div className="text-xs text-muted">
+                Block forecast: {t.coarse} {t.unit}
+              </div>
+              <Gauge value={t.fine} trigger={t.trigger} inverse={t.inverse} />
+            </div>
+          );
+        })}
       </div>
 
-      {/* Parametric Comparison Grid */}
-      <div className="flex flex-col gap-2.5">
-        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-          <span>Parametric Weather Index Triggers</span>
-          <span className="text-cyan-400 font-mono text-[10px]">Grid Resolution: 1.2 km² (SRTM 30m)</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {/* Rainfall Index */}
-          <div className={`p-3 rounded-xl border transition-all ${rainBreached ? 'bg-rose-500/10 border-rose-500/40' : 'bg-white/5 border-white/5'}`}>
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-semibold text-slate-300">🌧️ 24h Precipitation</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${rainBreached ? 'bg-rose-500/20 text-rose-300 font-bold' : 'bg-slate-800 text-slate-400'}`}>
-                Trigger &ge; {excessRainThreshold}mm
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 block">Downscaled (1.2km)</span>
-                <span className="text-base font-bold text-white">{fineMetrics.rainfallMm} mm</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 block">District AWS (18km)</span>
-                <span className="text-xs text-slate-400">{coarseMetrics.rainfallMm} mm</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Frost Index */}
-          <div className={`p-3 rounded-xl border transition-all ${frostBreached ? 'bg-rose-500/10 border-rose-500/40' : 'bg-white/5 border-white/5'}`}>
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-semibold text-slate-300">❄️ Night Frost (Tmin)</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${frostBreached ? 'bg-rose-500/20 text-rose-300 font-bold' : 'bg-slate-800 text-slate-400'}`}>
-                Trigger &le; {frostThreshold}°C
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 block">Downscaled (1.2km)</span>
-                <span className="text-base font-bold text-white">{fineMetrics.tempMin}°C</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 block">District AWS (18km)</span>
-                <span className="text-xs text-slate-400">{coarseMetrics.tempMin}°C</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Wind Lodging Index */}
-          <div className={`p-3 rounded-xl border transition-all ${windBreached ? 'bg-rose-500/10 border-rose-500/40' : 'bg-white/5 border-white/5'}`}>
-            <div className="flex justify-between items-start mb-2">
-              <span className="text-xs font-semibold text-slate-300">💨 Peak Wind Lodging</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${windBreached ? 'bg-rose-500/20 text-rose-300 font-bold' : 'bg-slate-800 text-slate-400'}`}>
-                Trigger &ge; {windThreshold}km/h
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 block">Downscaled (1.2km)</span>
-                <span className="text-base font-bold text-white">{fineMetrics.windSpeedKmh} km/h</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-slate-500 block">District AWS (18km)</span>
-                <span className="text-xs text-slate-400">{coarseMetrics.windSpeedKmh} km/h</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Discrepancy forensic alert */}
       {hasDiscrepancy && (
-        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2.5 leading-relaxed">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-          <div>
-            <strong>Block vs panchayat discrepancy:</strong> the 18 km block value stays below the trigger, but terrain-downscaled weather for this 1.2 km area crosses it. This is the kind of localized event PMFBY allows farmers to report individually; attach this report as supporting evidence.
-          </div>
+        <div className="flex items-start gap-3 rounded-2xl bg-warn/10 p-4 text-sm text-ink2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warn" />
+          <p>
+            <strong className="text-ink">The district forecast missed this.</strong> The 18 km block value stays below the trigger, but terrain-downscaled weather for this
+            village crosses it. PMFBY lets farmers report localized calamities individually; this report is supporting evidence.
+          </p>
         </div>
       )}
 
-      {/* Modal Popup for Certificate */}
-      {showCertificate && createPortal(
-        <div className="fixed inset-0 z-[2000] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowCertificate(false)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="PMFBY claim evidence certificate"
-            onClick={(e) => e.stopPropagation()}
-            className="pmfby-certificate-sheet relative w-full max-w-2xl bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-6 text-white shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-fade-in"
-          >
-            {/* Close */}
-            <button
-              onClick={() => setShowCertificate(false)}
-              aria-label="Close certificate"
-              className="pmfby-no-print absolute top-4 right-4 text-slate-400 hover:text-white"
+      <p className="text-xs leading-relaxed text-muted">
+        Why it matters: crop-insurance claims are judged against the nearest weather station, often 20–30 km away. A frost hollow or a cloudburst on one hillside can
+        wipe out a crop without the station ever recording it.
+      </p>
+
+      {showCertificate &&
+        createPortal(
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-sm" onClick={() => setShowCertificate(false)}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Weather-index claim evidence report"
+              onClick={(e) => e.stopPropagation()}
+              className="pmfby-certificate-sheet relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-[#FBFAF6] p-8 text-slate-900 shadow-pop animate-fade-in"
             >
-              <X className="w-5 h-5" />
-            </button>
+              <button onClick={() => setShowCertificate(false)} aria-label="Close report" className="pmfby-no-print absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 hover:bg-slate-200/60 hover:text-slate-900">
+                <X className="h-5 w-5" />
+              </button>
 
-            {/* Official Header */}
-            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                <ShieldCheck className="w-7 h-7" />
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-300 pb-5 pr-10">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Weather-index claim evidence</div>
+                  <h2 className="mt-1 font-display text-3xl text-slate-900">{panchayat.name}</h2>
+                  <p className="text-sm text-slate-600">
+                    {panchayat.district}, {panchayat.state} · {panchayat.elevationM} m · {selectedCrop}
+                  </p>
+                </div>
+                <div className="text-right text-xs text-slate-500">
+                  <div>Report ID</div>
+                  <div className="font-mono text-slate-800">{certId}</div>
+                  <div className="mt-1">{today}</div>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base font-extrabold tracking-wide text-white">
-                  Weather-Index Claim Evidence Report
-                </h2>
-                <h4 className="text-xs font-semibold text-emerald-400">
-                  For PMFBY / WBCIS localized-calamity claims
-                </h4>
-                <p className="text-[10px] text-slate-400">
-                  Generated by AeroAgro AI · Certificate ID {certId}
-                </p>
-              </div>
-            </div>
 
-            {/* Meta Table */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-black/30 p-2.5 rounded-xl border border-white/5 text-[11px]">
-              <div>
-                <span className="text-[9px] text-slate-400 block">Certificate ID</span>
-                <strong className="text-cyan-300 font-mono text-[10px]">{certId}</strong>
-              </div>
-              <div>
-                <span className="text-[9px] text-slate-400 block">Insured Panchayat</span>
-                <strong className="text-white">{panchayat.name}</strong>
-              </div>
-              <div>
-                <span className="text-[9px] text-slate-400 block">Insured Crop</span>
-                <strong className="text-emerald-400">{selectedCrop}</strong>
-              </div>
-              <div>
-                <span className="text-[9px] text-slate-400 block">Elevation MSL</span>
-                <strong className="text-white">{panchayat.elevationM} meters</strong>
-              </div>
-            </div>
-
-            {/* Scientific Forensic Table */}
-            <div className="border border-white/10 rounded-xl overflow-hidden text-xs">
-              <table className="w-full text-left">
-                <thead className="bg-emerald-500/10 text-emerald-300 font-semibold border-b border-white/10">
-                  <tr>
-                    <th className="p-2.5">Parameter</th>
-                    <th className="p-2.5">District AWS (18km)</th>
-                    <th className="p-2.5">Panchayat Fine (1.2km)</th>
-                    <th className="p-2.5">Trigger</th>
-                    <th className="p-2.5">Audit Status</th>
+              <table className="mt-6 w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-300 text-left text-xs text-slate-500">
+                    <th className="pb-2 font-medium">Index</th>
+                    <th className="pb-2 text-right font-medium">Block 18 km</th>
+                    <th className="pb-2 text-right font-medium">Village 1.2 km</th>
+                    <th className="pb-2 text-right font-medium">Trigger</th>
+                    <th className="pb-2 text-right font-medium">Result</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5 text-slate-300">
-                  {auditRows.map((r) => (
-                    <tr key={r.label}>
-                      <td className="p-2.5 font-medium">{r.label}</td>
-                      <td className="p-2.5 text-slate-400">{r.c}</td>
-                      <td className="p-2.5 text-white font-bold">{r.f}</td>
-                      <td className="p-2.5">{r.trig}</td>
-                      <td className="p-2.5">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${r.breached ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
-                          {r.breached ? 'BREACHED' : 'NORMAL'}
+                <tbody className="tabular">
+                  {triggers.map((t) => (
+                    <tr key={t.label} className="border-b border-slate-200">
+                      <td className="py-3">{t.label}</td>
+                      <td className="py-3 text-right text-slate-500">
+                        {t.coarse} {t.unit}
+                      </td>
+                      <td className="py-3 text-right font-semibold">
+                        {t.fine} {t.unit}
+                      </td>
+                      <td className="py-3 text-right text-slate-500">
+                        {t.sign} {t.trigger} {t.unit}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${t.breached ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}`}>
+                          {t.breached ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                          {t.breached ? 'Breached' : 'Normal'}
                         </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
 
-            {/* Finding */}
-            <div className={`p-3 rounded-xl border text-xs text-slate-200 leading-relaxed ${isEligible ? 'bg-rose-500/10 border-rose-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
-              <strong>Audit determination:</strong>{' '}
-              {isEligible
-                ? `Localized weather-index trigger breached at 1.2 km resolution${hasDiscrepancy ? ' that the 18 km block value did not record' : ''}. Evidence supports a localized-calamity claim.`
-                : 'No weather-index trigger was breached at either block or panchayat resolution.'}
-              <br />
-              <strong>Indicative payout:</strong>{' '}
-              <span className="font-bold text-sm">{isEligible ? `${payoutPct}% of sum insured` : '0% (no calamity)'}</span>
-            </div>
+              <div className="mt-6 rounded-xl bg-slate-100 p-4 text-sm leading-relaxed text-slate-700">
+                <strong className="text-slate-900">Determination: </strong>
+                {isEligible
+                  ? `A weather-index trigger was breached at 1.2 km resolution${hasDiscrepancy ? ', which the 18 km block value did not record' : ''}. Indicative payout ${payoutPct}% of sum insured.`
+                  : 'No weather-index trigger was breached at either block or village resolution. Indicative payout 0%.'}
+              </div>
 
-            {/* Footer QR & Seal */}
-            <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[11px] text-slate-400">
-              <div className="flex items-center gap-2 min-w-0">
-                <QrCode className="w-10 h-10 text-white p-1 bg-white/10 rounded-lg shrink-0" />
-                <div className="min-w-0">
-                  <span className="block text-[10px]">SHA-256 of certificate data · {today}</span>
-                  <span className="font-mono text-[9px] text-slate-500 break-all block">{sha256 || 'computing…'}</span>
+              <div className="mt-6 flex items-end justify-between gap-6 border-t border-slate-300 pt-4 text-xs text-slate-500">
+                <div className="min-w-0 flex-1">
+                  <div>SHA-256 of report data</div>
+                  <div className="break-all font-mono text-[10px] text-slate-700">{sha256 || 'computing…'}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="font-display text-base text-slate-900">AeroAgro AI</div>
+                  <div>Supporting evidence, not an insurer’s decision</div>
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <div className="font-bold text-emerald-400 text-xs">AeroAgro AI evidence report</div>
-                <div className="text-[10px]">Supporting document, not an insurer decision</div>
+
+              <div className="pmfby-no-print mt-6 flex justify-end gap-2">
+                <button onClick={() => window.print()} className="btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-100">
+                  <Printer className="h-4 w-4" /> Print / save PDF
+                </button>
+                <button onClick={() => setShowCertificate(false)} className="btn bg-slate-900 text-white hover:bg-slate-800">
+                  Done
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="pmfby-no-print flex justify-end gap-2 border-t border-white/10 pt-3">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold"
-              >
-                <Printer className="w-3.5 h-3.5" /> Print / Save PDF
-              </button>
-              <button
-                onClick={() => setShowCertificate(false)}
-                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg text-xs font-bold"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

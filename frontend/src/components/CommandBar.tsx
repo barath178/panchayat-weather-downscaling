@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
-import { CloudRain, Snowflake, Zap, LayoutDashboard, Smartphone, Tv, Radio, Info, Sprout } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { LayoutDashboard, Smartphone, Tv, Info, ChevronDown, Check, Radio, CloudRain, Snowflake, Sun } from 'lucide-react';
 import type { Scenario } from '@/lib/microclimate';
+import type { PanchayatData } from '@/data/all_india_regions';
+import RegionSearch from './RegionSearch';
 
 type View = 'dashboard' | 'mobile' | 'kiosk';
 
@@ -13,100 +15,147 @@ interface CommandBarProps {
   onViewChange: (view: View) => void;
   dataSource: { kind: 'live' | 'loading' | 'offline' | 'scenario'; label: string };
   onAbout: () => void;
+  regions: PanchayatData[];
+  onSelectRegion: (id: string) => void;
 }
 
-const VIEWS: { id: View; label: string; short: string; icon: React.ElementType; active: string }[] = [
-  { id: 'dashboard', label: 'GIS Dashboard', short: 'Dashboard', icon: LayoutDashboard, active: 'bg-emerald-500 text-slate-950' },
-  { id: 'mobile', label: 'Kisan Mobile', short: 'Kisan', icon: Smartphone, active: 'bg-cyan-500 text-slate-950' },
-  { id: 'kiosk', label: 'Panchayat Kiosk', short: 'Kiosk', icon: Tv, active: 'bg-violet-500 text-white' },
+const VIEWS: { id: View; label: string; icon: React.ElementType }[] = [
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'mobile', label: 'Farmer app', icon: Smartphone },
+  { id: 'kiosk', label: 'Village kiosk', icon: Tv },
 ];
 
-const SCENARIOS: { id: Scenario; label: string; icon: React.ElementType; active: string }[] = [
-  { id: 'live', label: 'Live Today', icon: Radio, active: 'bg-rose-500/20 text-rose-200 border-rose-500/40' },
-  { id: 'monsoon', label: 'Monsoon', icon: CloudRain, active: 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30' },
-  { id: 'winter_frost', label: 'Winter Frost', icon: Snowflake, active: 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' },
-  { id: 'pre_monsoon', label: 'Pre-Monsoon', icon: Zap, active: 'bg-amber-500/20 text-amber-200 border-amber-500/30' },
+const SCENARIOS: { id: Scenario; label: string; hint: string; icon: React.ElementType }[] = [
+  { id: 'live', label: 'Live today', hint: 'Real forecast from Open-Meteo', icon: Radio },
+  { id: 'monsoon', label: 'Monsoon', hint: 'Simulated SW-monsoon day', icon: CloudRain },
+  { id: 'winter_frost', label: 'Winter frost', hint: 'Simulated clear, cold night', icon: Snowflake },
+  { id: 'pre_monsoon', label: 'Pre-monsoon heat', hint: 'Simulated hot, dry day', icon: Sun },
 ];
 
-const SOURCE_DOT: Record<CommandBarProps['dataSource']['kind'], string> = {
-  live: 'bg-emerald-400 animate-pulse',
-  loading: 'bg-amber-400 animate-pulse',
-  offline: 'bg-rose-400',
-  scenario: 'bg-slate-400',
+const DOT: Record<CommandBarProps['dataSource']['kind'], string> = {
+  live: 'bg-good',
+  loading: 'bg-warn animate-pulse',
+  offline: 'bg-alert',
+  scenario: 'bg-sky',
 };
 
-export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout }: CommandBarProps) {
+export function Logo({ className = '' }: { className?: string }) {
   return (
-    <header className="sticky top-2 z-[1100] px-3 sm:px-6 max-w-[1680px] mx-auto w-full">
-      <div className="orchids-glass rounded-2xl px-3 py-2 flex flex-wrap items-center justify-between gap-2">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-orchids-glow shrink-0">
-            <Sprout className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-display font-extrabold text-white text-sm tracking-tight leading-tight">
-              AeroAgro <span className="text-emerald-400">AI</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 truncate" aria-live="polite">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${SOURCE_DOT[dataSource.kind]}`} />
-              <span className="truncate capitalize">{dataSource.label}</span>
-            </div>
-          </div>
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <rect width="32" height="32" rx="9" fill="rgb(var(--accent))" />
+      <path d="M8 21c3-1 5-3.5 8-3.5s5 2.5 8 3.5" stroke="rgb(var(--accent-ink))" strokeOpacity=".35" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M16 24V13.5M16 13.5c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM16 16.5c0-2.8-2-4.6-5-4.6 0 2.8 2 4.6 5 4.6z" stroke="rgb(var(--accent-ink))" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ScenarioMenu({ value, onChange, dataSource }: { value: Scenario; onChange: (s: Scenario) => void; dataSource: CommandBarProps['dataSource'] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const current = SCENARIOS.find((s) => s.id === value)!;
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', esc);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={dataSource.label}
+        className="flex h-10 items-center gap-2 rounded-xl border border-line/10 bg-surface px-3 text-sm font-medium text-ink hover:border-line/20"
+      >
+        <span className={`h-2 w-2 rounded-full ${DOT[dataSource.kind]}`} />
+        <span className="whitespace-nowrap">{current.label}</span>
+        <ChevronDown className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-full z-[1600] mt-2 w-72 rounded-2xl border border-line/10 bg-surface p-1.5 shadow-pop animate-fade-in">
+          <div className="px-3 pb-1.5 pt-2 text-[11px] text-muted">{dataSource.label}</div>
+          {SCENARIOS.map(({ id, label, hint, icon: Icon }) => (
+            <button
+              key={id}
+              role="menuitemradio"
+              aria-checked={value === id}
+              onClick={() => {
+                onChange(id);
+                setOpen(false);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-raised"
+            >
+              <span className={`grid h-8 w-8 place-items-center rounded-lg ${value === id ? 'bg-accent text-accent-ink' : 'bg-surface2 text-ink2'}`}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-semibold text-ink">{label}</span>
+                <span className="block text-xs text-muted">{hint}</span>
+              </span>
+              {value === id && <Check className="h-4 w-4 text-accent" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion }: CommandBarProps) {
+  return (
+    <header className="z-[1100] border-b border-line/[0.07] bg-bg/80 backdrop-blur-xl md:sticky md:top-0">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 sm:px-8">
+        <a href="#top" className="flex items-center gap-2.5" aria-label="AeroAgro AI home">
+          <Logo className="h-8 w-8" />
+          <span className="font-display text-xl text-ink">
+            AeroAgro<span className="text-accent"> AI</span>
+          </span>
+        </a>
+
+        <div className={`order-last w-full md:order-none md:ml-6 md:block md:w-auto md:flex-1 md:max-w-md ${activeView === 'dashboard' ? 'hidden' : ''}`}>
+          <RegionSearch regions={regions} onSelect={onSelectRegion} shortcut />
         </div>
 
-        {/* Views */}
-        <nav aria-label="View" className="flex items-center bg-black/50 p-1 rounded-xl border border-white/10 gap-1 text-xs font-semibold order-3 w-full sm:w-auto sm:order-none justify-between sm:justify-center overflow-x-auto scrollbar-none">
-          {VIEWS.map(({ id, label, short, icon: Icon, active }) => (
+        <div className="ml-auto flex items-center gap-2">
+          <nav aria-label="View" className="seg hidden sm:inline-flex">
+            {VIEWS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => onViewChange(id)}
+                aria-current={activeView === id ? 'page' : undefined}
+                className={`seg-btn ${activeView === id ? 'seg-on' : ''}`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden lg:inline">{label}</span>
+              </button>
+            ))}
+          </nav>
+          <ScenarioMenu value={currentScenario} onChange={onScenarioChange} dataSource={dataSource} />
+          <button onClick={onAbout} aria-label="About AeroAgro" className="grid h-10 w-10 place-items-center rounded-xl border border-line/10 bg-surface text-ink2 hover:text-ink">
+            <Info className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Mobile view switcher */}
+        <nav aria-label="View" className="seg order-last flex w-full sm:hidden">
+          {VIEWS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => onViewChange(id)}
               aria-current={activeView === id ? 'page' : undefined}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg whitespace-nowrap transition-all ${
-                activeView === id ? `${active} font-bold` : 'text-slate-400 hover:text-white'
-              }`}
+              className={`seg-btn flex-1 justify-center ${activeView === id ? 'seg-on' : ''}`}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="sm:hidden">{short}</span>
-              <span className="hidden sm:inline">{label}</span>
+              <Icon className="h-4 w-4" /> {label}
             </button>
           ))}
         </nav>
-
-        {/* Scenario */}
-        <div role="radiogroup" aria-label="Weather scenario" className="flex items-center bg-black/40 p-1 rounded-xl border border-white/5 gap-1 overflow-x-auto scrollbar-none order-4 w-full lg:w-auto lg:order-none">
-          {SCENARIOS.map(({ id, label, icon: Icon, active }) => (
-            <button
-              key={id}
-              role="radio"
-              aria-checked={currentScenario === id}
-              onClick={() => onScenarioChange(id)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
-                currentScenario === id ? active : 'border-transparent text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Icon className="w-3 h-3" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <a
-            href={`${process.env.NEXT_PUBLIC_BASE_PATH}/aeroagro_figma_artboard.svg`}
-            download
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-200 text-xs font-bold transition-all"
-            title="Download the vector design artboard (.svg) – drag into Figma to edit"
-          >
-            Figma artboard
-          </a>
-          <button
-            onClick={onAbout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 text-xs font-semibold"
-          >
-            <Info className="w-3.5 h-3.5" /> About
-          </button>
-        </div>
       </div>
     </header>
   );

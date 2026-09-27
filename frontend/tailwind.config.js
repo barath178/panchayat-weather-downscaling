@@ -1,53 +1,63 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ['./src/pages/**/*.{js,ts,jsx,tsx,mdx}', './src/components/**/*.{js,ts,jsx,tsx,mdx}', './src/app/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
       colors: {
-        orchids: {
-          bg: "#080a11",
-          subtle: "#0e121d",
-          surface: "rgba(16, 21, 34, 0.72)",
-          surfaceElevated: "rgba(24, 32, 52, 0.85)",
-          card: "rgba(18, 24, 40, 0.65)",
-          cardHover: "rgba(26, 35, 58, 0.8)",
-          border: "rgba(255, 255, 255, 0.08)",
-          borderLight: "rgba(255, 255, 255, 0.15)",
-          accent: "#10b981",
-          cyan: "#06b6d4",
-          violet: "#8b5cf6",
-          amber: "#f59e0b",
-          rose: "#f43f5e",
-        },
+        // Brand tokens – defined as CSS variables in globals.css
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        surface2: 'rgb(var(--surface-2) / <alpha-value>)',
+        raised: 'rgb(var(--raised) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        ink2: 'rgb(var(--ink-2) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-ink': 'rgb(var(--accent-ink) / <alpha-value>)',
+        sky: 'rgb(var(--sky) / <alpha-value>)',
+        sun: 'rgb(var(--sun) / <alpha-value>)',
+        alert: 'rgb(var(--alert) / <alpha-value>)',
+        frost: 'rgb(var(--frost) / <alpha-value>)',
+        // Status (fixed; always paired with icon + label)
+        good: '#2FB344',
+        warn: '#F2B01E',
+        bad: '#E5484D',
       },
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "-apple-system", "sans-serif"],
-        display: ["Outfit", "-apple-system", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: {
+        card: '22px',
       },
       boxShadow: {
-        "orchids-card": "0 12px 36px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.07)",
-        "orchids-glow": "0 0 24px -4px rgba(16, 185, 129, 0.25)",
-        "orchids-cyan-glow": "0 0 24px -4px rgba(6, 182, 212, 0.25)",
-      },
-      backdropBlur: {
-        xs: "2px",
+        card: '0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.7)',
+        pop: '0 24px 60px -12px rgb(0 0 0 / 0.75)',
+        glow: '0 0 0 1px rgb(var(--accent) / 0.35), 0 8px 30px -6px rgb(var(--accent) / 0.35)',
       },
       gridTemplateColumns: {
-        14: "repeat(14, minmax(0, 1fr))",
+        14: 'repeat(14, minmax(0, 1fr))',
       },
       keyframes: {
-        "fade-in": {
-          from: { opacity: "0", transform: "translateY(4px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
+        'fade-in': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'rise': {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'pulse-ring': {
+          '0%': { transform: 'scale(0.9)', opacity: '0.7' },
+          '100%': { transform: 'scale(2.2)', opacity: '0' },
         },
       },
       animation: {
-        "fade-in": "fade-in 180ms ease-out",
+        'fade-in': 'fade-in 220ms ease-out both',
+        rise: 'rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both',
+        'pulse-ring': 'pulse-ring 1.8s ease-out infinite',
       },
     },
   },

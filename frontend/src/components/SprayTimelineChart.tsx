@@ -11,15 +11,16 @@ interface Props {
   isLive: boolean;
 }
 
-// Status palette – always paired with an icon and a label.
-const STATUS: Record<SprayStatus, { color: string; label: string; icon: React.ElementType; text: string }> = {
-  safe: { color: '#0ca30c', label: 'Safe', icon: CheckCircle2, text: 'text-emerald-300' },
-  caution: { color: '#fab219', label: 'Caution', icon: AlertTriangle, text: 'text-amber-300' },
-  danger: { color: '#d03b3b', label: 'Do not spray', icon: XCircle, text: 'text-rose-300' },
+// Status colours match the verdict tiles; always paired with an icon + label.
+const STATUS: Record<SprayStatus, { color: string; label: string; icon: React.ElementType }> = {
+  safe: { color: '#2FB344', label: 'Safe', icon: CheckCircle2 },
+  caution: { color: '#F2B01E', label: 'Caution', icon: AlertTriangle },
+  danger: { color: '#E5484D', label: 'Do not spray', icon: XCircle },
 };
 
-const AXIS = '#898781';
-const GRID = '#2c2c2a';
+const AXIS = '#808E86';
+const GRID = 'rgba(226,240,231,0.07)';
+const LINE = '#7DC4FF';
 
 function HourTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
@@ -27,16 +28,16 @@ function HourTooltip({ active, payload }: any) {
   const s = STATUS[h.status];
   const Icon = s.icon;
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/95 px-3 py-2 text-[11px] shadow-xl">
-      <div className="font-bold text-white mb-0.5">{h.time}</div>
-      <div className={`flex items-center gap-1 font-semibold ${s.text}`}>
-        <Icon className="w-3 h-3" /> {s.label}
+    <div className="rounded-xl border border-line/10 bg-surface px-3 py-2 text-xs shadow-pop">
+      <div className="font-semibold text-ink">{h.time}</div>
+      <div className="mt-0.5 flex items-center gap-1 font-medium" style={{ color: s.color }}>
+        <Icon className="h-3.5 w-3.5" /> {s.label}
       </div>
-      <div className="text-slate-300 mt-0.5">{h.reason}</div>
-      <div className="grid grid-cols-2 gap-x-3 mt-1 text-slate-400 font-mono">
+      <div className="mt-0.5 text-ink2">{h.reason}</div>
+      <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted tabular">
         <span>Wind {h.windKmh} km/h</span>
         <span>Temp {h.tempC}°C</span>
-        <span>RH {h.rh}%</span>
+        <span>Humidity {h.rh}%</span>
         <span>Rain {h.rainMm} mm</span>
       </div>
     </div>
@@ -50,57 +51,44 @@ export default function SprayTimelineChart({ hourlyData, sprayWindow, isLive }: 
   const tMax = Math.ceil(Math.max(...temps) + 2);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between flex-wrap gap-2">
-        <div>
-          <h3 className="text-sm font-bold text-white">Hourly spray feasibility · 06:00–19:00</h3>
-          <p className="text-[11px] text-slate-400">
-            {isLive ? 'Live hourly forecast, downscaled to 1.2 km' : 'Modelled diurnal cycle from the downscaled daily forecast'} · drift limit {DRIFT_LIMIT_KMH} km/h
-          </p>
-        </div>
-        <div
-          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
-            sprayWindow.hours ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200' : 'bg-rose-500/15 border-rose-500/40 text-rose-200'
-          }`}
-        >
-          {sprayWindow.hours ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="max-w-lg text-sm text-ink2">
+          {isLive ? 'Live hourly forecast, downscaled to 1.2 km.' : 'Diurnal cycle modelled from the downscaled daily forecast.'} Spraying stops above{' '}
+          {DRIFT_LIMIT_KMH} km/h wind or when rain is due within two hours.
+        </p>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${sprayWindow.hours ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad'}`}>
+          {sprayWindow.hours ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
           {sprayWindow.hours ? `Best window ${sprayWindow.label}` : 'No safe window'}
-        </div>
+        </span>
       </div>
 
-      {/* Status strip */}
-      <div className="grid grid-cols-7 sm:grid-cols-14 gap-1" role="list" aria-label="Hourly spray status">
+      {/* Hour strip */}
+      <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-14" role="list" aria-label="Hourly spray status">
         {hourlyData.map((h) => {
           const s = STATUS[h.status];
           const Icon = s.icon;
           return (
-            <div
-              key={h.time}
-              role="listitem"
-              title={`${h.time} · ${s.label} · ${h.reason}`}
-              className="rounded-lg border border-white/5 bg-black/30 py-1.5 flex flex-col items-center gap-0.5"
-              style={{ boxShadow: `inset 0 -3px 0 ${s.color}` }}
-            >
-              <span className="text-[10px] font-mono text-slate-300">{h.time.slice(0, 2)}</span>
-              <Icon className="w-3.5 h-3.5" style={{ color: s.color }} aria-label={s.label} />
+            <div key={h.time} role="listitem" title={`${h.time} · ${s.label} · ${h.reason}`} className="flex flex-col items-center gap-1 rounded-xl bg-surface2 py-2">
+              <span className="text-[11px] text-muted tabular">{h.time.slice(0, 2)}</span>
+              <Icon className="h-4 w-4" style={{ color: s.color }} aria-label={s.label} />
             </div>
           );
         })}
       </div>
 
-      <div className="grid md:grid-cols-5 gap-4">
-        {/* Wind (bars coloured by status) */}
+      <div className="grid gap-6 md:grid-cols-5">
         <div className="md:col-span-3">
-          <div className="text-[11px] font-semibold text-slate-300 mb-1">Wind speed (km/h)</div>
-          <div className="h-52">
+          <div className="text-xs font-medium text-ink2">Wind speed · km/h</div>
+          <div className="mt-2 h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hourlyData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }} barCategoryGap={2}>
+              <BarChart data={hourlyData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }} barCategoryGap={3}>
                 <CartesianGrid vertical={false} stroke={GRID} />
-                <XAxis dataKey="time" tickFormatter={(t) => t.slice(0, 2)} stroke={AXIS} fontSize={10} tickLine={false} />
+                <XAxis dataKey="time" tickFormatter={(t) => t.slice(0, 2)} stroke={AXIS} fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke={AXIS} fontSize={10} domain={[0, Math.ceil(maxWind / 5) * 5]} tickLine={false} axisLine={false} />
-                <Tooltip content={<HourTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                <ReferenceLine y={DRIFT_LIMIT_KMH} stroke="#d03b3b" strokeDasharray="4 4" label={{ value: 'Drift limit', fill: '#fca5a5', fontSize: 10, position: 'insideTopRight' }} />
-                <ReferenceLine y={CAUTION_WIND_KMH} stroke="#fab219" strokeDasharray="2 4" strokeOpacity={0.6} />
+                <Tooltip content={<HourTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <ReferenceLine y={DRIFT_LIMIT_KMH} stroke="#E5484D" strokeDasharray="4 4" label={{ value: 'Drift limit', fill: '#E5484D', fontSize: 10, position: 'insideTopRight' }} />
+                <ReferenceLine y={CAUTION_WIND_KMH} stroke="#F2B01E" strokeDasharray="2 4" strokeOpacity={0.5} />
                 <Bar dataKey="windKmh" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                   {hourlyData.map((h) => (
                     <Cell key={h.time} fill={STATUS[h.status].color} />
@@ -111,34 +99,33 @@ export default function SprayTimelineChart({ hourlyData, sprayWindow, isLive }: 
           </div>
         </div>
 
-        {/* Temperature */}
         <div className="md:col-span-2">
-          <div className="text-[11px] font-semibold text-slate-300 mb-1">Air temperature (°C)</div>
-          <div className="h-52">
+          <div className="text-xs font-medium text-ink2">Air temperature · °C</div>
+          <div className="mt-2 h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={hourlyData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke={GRID} />
-                <XAxis dataKey="time" tickFormatter={(t) => t.slice(0, 2)} stroke={AXIS} fontSize={10} tickLine={false} />
+                <XAxis dataKey="time" tickFormatter={(t) => t.slice(0, 2)} stroke={AXIS} fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis stroke={AXIS} fontSize={10} domain={[tMin, tMax]} tickLine={false} axisLine={false} />
                 <Tooltip content={<HourTooltip />} />
-                <Line type="monotone" dataKey="tempC" stroke="#3987e5" strokeWidth={2} dot={{ r: 3, fill: '#3987e5', strokeWidth: 0 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="tempC" stroke={LINE} strokeWidth={2} dot={{ r: 3, fill: LINE, strokeWidth: 0 }} activeDot={{ r: 5 }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-400">
+      <div className="flex flex-wrap items-center gap-4 border-t border-line/[0.07] pt-4 text-xs text-muted">
         {(Object.keys(STATUS) as SprayStatus[]).map((k) => {
           const s = STATUS[k];
           const Icon = s.icon;
           return (
             <span key={k} className="flex items-center gap-1.5">
-              <Icon className="w-3.5 h-3.5" style={{ color: s.color }} /> {s.label}
+              <Icon className="h-3.5 w-3.5" style={{ color: s.color }} /> {s.label}
             </span>
           );
         })}
-        <span className="ml-auto text-slate-500">Rules: wind &gt; {DRIFT_LIMIT_KMH} km/h, rain within 2 h → stop · &gt; {CAUTION_WIND_KMH} km/h or ≥ 33°C → caution</span>
+        <span className="ml-auto">Hover a bar for the reason</span>
       </div>
     </div>
   );

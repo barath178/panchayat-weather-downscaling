@@ -2,16 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Bug, Clock, Droplets, Mountain, Radio, Satellite, ShieldCheck, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { Clock, Mountain, Radio, Satellite, ShieldCheck, Download, Github } from 'lucide-react';
 
-import CommandBar from '@/components/CommandBar';
-import PanchayatSelector from '@/components/PanchayatSelector';
-import DownscalingMetricsCard from '@/components/DownscalingMetricsCard';
+import CommandBar, { Logo } from '@/components/CommandBar';
+import Hero from '@/components/Hero';
+import TodayCard from '@/components/TodayCard';
+import ActionPlan from '@/components/ActionPlan';
+import WhatsAppDrawer from '@/components/WhatsAppDrawer';
 import SprayTimelineChart from '@/components/SprayTimelineChart';
 import ElevationProfile from '@/components/ElevationProfile';
 import AcousticSpectrogram from '@/components/AcousticSpectrogram';
-import VoiceAdvisory from '@/components/VoiceAdvisory';
-import WhatsAppDrawer from '@/components/WhatsAppDrawer';
 import KisanMobileView from '@/components/KisanMobileView';
 import PanchayatKioskView from '@/components/PanchayatKioskView';
 import PMFBYInsuranceModal from '@/components/PMFBYInsuranceModal';
@@ -39,10 +39,10 @@ import { Lang, buildAdvisory } from '@/lib/advisory';
 const GoogleMapComponent = dynamic(() => import('@/components/GoogleMapComponent'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[460px] sm:h-[620px] rounded-3xl bg-[#080d1a] border border-white/10 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono text-emerald-400 font-semibold">Loading terrain map…</span>
+    <div className="card grid h-[520px] place-items-center sm:h-[600px]">
+      <div className="flex flex-col items-center gap-3 text-sm text-muted">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+        Loading map…
       </div>
     </div>
   ),
@@ -61,12 +61,12 @@ function seasonForToday(): Exclude<Scenario, 'live'> {
   return 'winter_frost';
 }
 
-const STUDIO_TABS: { id: StudioTab; label: string; icon: React.ElementType; active: string }[] = [
-  { id: 'spray', label: 'Spray Window', icon: Clock, active: 'bg-emerald-500 text-slate-950' },
-  { id: 'insurance', label: 'PMFBY Verifier', icon: ShieldCheck, active: 'bg-amber-500 text-slate-950' },
-  { id: 'imd', label: 'IMD Satellite', icon: Satellite, active: 'bg-blue-600 text-white' },
-  { id: 'profile', label: 'Elevation Transect', icon: Mountain, active: 'bg-cyan-500 text-slate-950' },
-  { id: 'acoustic', label: 'Acoustic Rain AI', icon: Radio, active: 'bg-violet-500 text-white' },
+const STUDIO_TABS: { id: StudioTab; label: string; icon: React.ElementType; blurb: string }[] = [
+  { id: 'spray', label: 'Hourly spray', icon: Clock, blurb: 'Wind, rain and heat hour by hour' },
+  { id: 'insurance', label: 'Crop insurance', icon: ShieldCheck, blurb: 'PMFBY weather-index evidence' },
+  { id: 'imd', label: 'Satellite', icon: Satellite, blurb: 'Live IMD INSAT-3DR imagery' },
+  { id: 'profile', label: 'Terrain transect', icon: Mountain, blurb: 'Himalaya to the delta' },
+  { id: 'acoustic', label: 'Rain by sound', icon: Radio, blurb: 'Tin-roof acoustic gauge' },
 ];
 
 export default function AeroAgroDashboard() {
@@ -98,9 +98,7 @@ export default function AeroAgroDashboard() {
   const coarseElev = liveOk ? live.data!.gridElevationM : blockElevation(activePanchayat);
   const fine = downscale(activePanchayat, coarse, coarseElev);
 
-  const hourlyData = classifyHours(
-    liveOk ? downscaleHourly(live.data!.hourly, coarse, fine) : synthHourly(fine)
-  );
+  const hourlyData = classifyHours(liveOk ? downscaleHourly(live.data!.hourly, coarse, fine) : synthHourly(fine));
   const sprayWindow = bestSprayWindow(hourlyData);
   const et0 = referenceET0(activePanchayat.lat, fine);
   const irrigation = irrigationAdvice(et0, fine);
@@ -123,21 +121,27 @@ export default function AeroAgroDashboard() {
   );
 
   const dataSource = liveOk
-    ? { kind: 'live' as const, label: `Live · Open-Meteo · ${new Date(live.data!.fetchedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` }
+    ? { kind: 'live' as const, label: `Live forecast · Open-Meteo · updated ${new Date(live.data!.fetchedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}` }
     : isLive && live.status === 'loading'
     ? { kind: 'loading' as const, label: 'Fetching live forecast…' }
     : isLive
-    ? { kind: 'offline' as const, label: `Offline · ${fallbackScenario.replace('_', ' ')} climatology` }
-    : { kind: 'scenario' as const, label: 'Scenario simulation' };
+    ? { kind: 'offline' as const, label: `Offline · using ${fallbackScenario.replace('_', ' ')} climatology` }
+    : { kind: 'scenario' as const, label: 'Simulated scenario for demonstration' };
 
-  const cropChoices = [...activePanchayat.primaryCrops, 'Samba Paddy', 'Sharbati Wheat', 'Royal Apple', 'Darjeeling Tea', 'Table Grapes', 'Cotton']
+  const cropChoices = [...activePanchayat.primaryCrops, 'Samba Paddy', 'Table Grapes', 'Sharbati Wheat', 'Cotton', 'Royal Apple', 'Darjeeling Tea']
     .filter((v, i, a) => a.indexOf(v) === i)
     .slice(0, 7);
 
   const shared = { panchayat: activePanchayat, fine, coarse, hourly: hourlyData, sprayWindow, irrigation, pest, et0, lang, onLangChange: setLang, advisoryText, crop: selectedCrop };
 
+  const selectRegion = (id: string) => {
+    setSelectedId(id);
+    if (activeView !== 'dashboard') return;
+    requestAnimationFrame(() => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
   return (
-    <div className="min-h-screen bg-orchids-bg text-slate-100 flex flex-col selection:bg-emerald-500 selection:text-slate-950">
+    <div id="top" className="flex min-h-screen flex-col">
       <CommandBar
         currentScenario={scenario}
         onScenarioChange={setScenario}
@@ -145,178 +149,131 @@ export default function AeroAgroDashboard() {
         onViewChange={setActiveView}
         dataSource={dataSource}
         onAbout={() => setShowAbout(true)}
+        regions={ALL_INDIA_PANCHAYATS}
+        onSelectRegion={selectRegion}
       />
 
+      {activeView === 'dashboard' && <Hero regions={ALL_INDIA_PANCHAYATS} onSelect={setSelectedId} />}
+
       {activeView === 'mobile' && (
-        <main className="max-w-5xl mx-auto w-full px-4 mt-3 flex-1">
-          <KisanMobileView {...shared} />
-        </main>
+        <div className="topo-bg flex-1">
+          <main className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-8">
+            <KisanMobileView {...shared} />
+          </main>
+        </div>
       )}
 
       {activeView === 'kiosk' && (
-        <main className="w-full px-4 mt-3 flex-1">
+        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-8">
           <PanchayatKioskView {...shared} />
         </main>
       )}
 
       {activeView === 'dashboard' && (
-        <main className="max-w-[1680px] mx-auto w-full px-3 sm:px-6 mt-3 grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1">
-          <section className="lg:col-span-8 flex flex-col gap-4 min-w-0">
-            <GoogleMapComponent
-              panchayats={ALL_INDIA_PANCHAYATS}
-              selectedId={selectedId}
-              onSelectPanchayat={setSelectedId}
-              activeVariable={activeVar}
-              onVariableChange={setActiveVar}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              regionMetrics={regionMetrics}
-              liveLoading={isLive && nationalStatus === 'loading'}
-            />
-
-            {/* Studio */}
-            <div className="orchids-glass rounded-3xl p-3 sm:p-4 flex flex-col gap-4">
-              <div className="flex items-center justify-between flex-wrap gap-3 border-b border-white/10 pb-3">
-                <div>
-                  <h3 className="text-sm font-extrabold text-white">Microclimate Analytics Studio</h3>
-                  <p className="text-[11px] text-slate-400">Physics-informed agromet and crop-protection tools for {activePanchayat.name}</p>
-                </div>
-                <div role="tablist" className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/5 gap-1 text-xs overflow-x-auto max-w-full scrollbar-none">
-                  {STUDIO_TABS.map(({ id, label, icon: Icon, active }) => (
-                    <button
-                      key={id}
-                      role="tab"
-                      aria-selected={activeStudioTab === id}
-                      onClick={() => setActiveStudioTab(id)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap transition-all ${
-                        activeStudioTab === id ? `${active} font-bold shadow-md` : 'text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" /> {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div key={activeStudioTab} className="animate-fade-in">
-                {activeStudioTab === 'spray' && <SprayTimelineChart hourlyData={hourlyData} sprayWindow={sprayWindow} isLive={liveOk} />}
-                {activeStudioTab === 'insurance' && (
-                  <PMFBYInsuranceModal panchayat={activePanchayat} selectedCrop={selectedCrop} fineMetrics={fine} coarseMetrics={coarse} />
-                )}
-                {activeStudioTab === 'imd' && (
-                  <IMDSatelliteViewer activePanchayat={activePanchayat} fineMetrics={fine} coarseMetrics={coarse} />
-                )}
-                {activeStudioTab === 'profile' && (
-                  <ElevationProfile
-                    panchayats={ALL_INDIA_PANCHAYATS}
-                    regionMetrics={regionMetrics}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                  />
-                )}
-                {activeStudioTab === 'acoustic' && <AcousticSpectrogram />}
-              </div>
+        <main id="dashboard" className="mx-auto w-full max-w-[1400px] flex-1 scroll-mt-20 px-4 pb-16 sm:px-8">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-t border-line/[0.07] pt-10">
+            <div>
+              <div className="eyebrow">Live dashboard</div>
+              <h2 className="mt-1 font-display text-3xl text-ink sm:text-4xl">India, one village at a time</h2>
             </div>
-          </section>
+            <p className="max-w-md text-sm text-muted">
+              Click any dot on the map or search above. Colours show today’s {viewMode === 'fine' ? 'downscaled 1.2 km' : 'coarse 18 km'} forecast.
+            </p>
+          </div>
 
-          <aside className="lg:col-span-4 flex flex-col gap-4 min-w-0">
-            <DownscalingMetricsCard
-              panchayatName={`${activePanchayat.name}`}
-              subtitle={`${activePanchayat.district}, ${activePanchayat.state}`}
-              elevationM={activePanchayat.elevationM}
-              coarseElevationM={Math.round(coarseElev)}
-              terrainType={activePanchayat.terrainType}
-              coarse={coarse}
-              fine={fine}
-              isLive={liveOk}
-            />
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <GoogleMapComponent
+                panchayats={ALL_INDIA_PANCHAYATS}
+                selectedId={selectedId}
+                onSelectPanchayat={setSelectedId}
+                activeVariable={activeVar}
+                onVariableChange={setActiveVar}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                regionMetrics={regionMetrics}
+                liveLoading={isLive && nationalStatus === 'loading'}
+              />
 
-            <div className="orchids-glass rounded-3xl p-4 sm:p-5 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Crop advisory</span>
-                  <h4 className="text-sm font-bold text-white">Local agricultural guidance</h4>
+              <section className="card overflow-hidden" aria-labelledby="tools-title">
+                <div className="border-b border-line/[0.07] px-5 pt-5 sm:px-6">
+                  <h2 id="tools-title" className="font-display text-xl text-ink">
+                    Deep-dive tools
+                  </h2>
+                  <p className="mt-0.5 text-sm text-muted">{STUDIO_TABS.find((t) => t.id === activeStudioTab)!.blurb} for {activePanchayat.name}</p>
+                  <div role="tablist" className="-mb-px mt-4 flex gap-1 overflow-x-auto scrollbar-none">
+                    {STUDIO_TABS.map(({ id, label, icon: Icon }) => (
+                      <button
+                        key={id}
+                        role="tab"
+                        aria-selected={activeStudioTab === id}
+                        onClick={() => setActiveStudioTab(id)}
+                        className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-3 pb-3 pt-1 text-sm font-medium transition-colors ${
+                          activeStudioTab === id ? 'border-accent text-ink' : 'border-transparent text-muted hover:text-ink2'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" /> {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  ICAR rules
-                </span>
-              </div>
 
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Select crop">
-                {cropChoices.map((crop) => (
-                  <button
-                    key={crop}
-                    onClick={() => setSelectedCrop(crop)}
-                    aria-pressed={selectedCrop === crop}
-                    className={`text-xs px-3 py-1.5 rounded-xl font-semibold border transition-all ${
-                      selectedCrop === crop
-                        ? 'bg-emerald-500 text-slate-950 font-bold border-emerald-400'
-                        : 'bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {crop}
-                  </button>
-                ))}
-              </div>
-
-              {/* Spray window summary */}
-              <div className={`rounded-2xl p-3.5 border ${sprayWindow.hours ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'}`}>
-                <div className={`flex items-center gap-1.5 text-xs font-bold ${sprayWindow.hours ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {sprayWindow.hours ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                  {sprayWindow.hours ? `Best spray window: ${sprayWindow.label}` : 'No safe spray window today'}
+                <div key={activeStudioTab} role="tabpanel" className="animate-fade-in p-5 sm:p-6">
+                  {activeStudioTab === 'spray' && <SprayTimelineChart hourlyData={hourlyData} sprayWindow={sprayWindow} isLive={liveOk} />}
+                  {activeStudioTab === 'insurance' && <PMFBYInsuranceModal panchayat={activePanchayat} selectedCrop={selectedCrop} fineMetrics={fine} coarseMetrics={coarse} />}
+                  {activeStudioTab === 'imd' && <IMDSatelliteViewer activePanchayat={activePanchayat} fineMetrics={fine} coarseMetrics={coarse} />}
+                  {activeStudioTab === 'profile' && (
+                    <ElevationProfile panchayats={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} />
+                  )}
+                  {activeStudioTab === 'acoustic' && <AcousticSpectrogram />}
                 </div>
-                <p className="text-[11px] text-slate-300 mt-1">
-                  {sprayWindow.hours
-                    ? `${sprayWindow.hours} consecutive hours with wind under 10 km/h and no rain expected.`
-                    : 'Rain or wind above the 15 km/h drift limit through the day. Postpone chemical application.'}
-                </p>
-              </div>
+              </section>
 
-              {/* Pest risk */}
-              <div
-                className={`rounded-2xl p-3.5 border ${
-                  pest.level === 'high' ? 'bg-rose-500/10 border-rose-500/30' : pest.level === 'moderate' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-white/5 border-white/10'
-                }`}
-              >
-                <div className="flex items-center justify-between text-xs font-bold mb-1">
-                  <span className={`flex items-center gap-1.5 ${pest.level === 'high' ? 'text-rose-300' : pest.level === 'moderate' ? 'text-amber-300' : 'text-slate-300'}`}>
-                    <Bug className="w-4 h-4" /> Pest & disease risk
-                  </span>
-                  <span className="bg-black/30 px-2 py-0.5 rounded-full text-[9px] font-mono uppercase text-slate-200">{pest.level}</span>
-                </div>
-                <h5 className="text-xs font-bold text-white mb-1">{pest.title}</h5>
-                <p className="text-[11px] text-slate-300 leading-relaxed">{pest.detail}</p>
-              </div>
-
-              {/* Irrigation */}
-              <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-2xl p-3.5">
-                <div className="flex items-center justify-between text-xs font-bold text-cyan-300 mb-1">
-                  <span className="flex items-center gap-1.5">
-                    <Droplets className="w-4 h-4" /> {irrigation.action}
-                  </span>
-                  <span className="text-[10px] font-mono text-cyan-200" title="FAO-56 Hargreaves reference evapotranspiration">
-                    ET₀ {et0} mm
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed">{irrigation.detail}</p>
-              </div>
-
-              <VoiceAdvisory textToSpeak={advisoryText} lang={lang} onLangChange={setLang} />
-              <WhatsAppDrawer messageText={advisoryText} panchayatName={activePanchayat.name} />
+              <WhatsAppDrawer messageText={advisoryText} lang={lang} onLangChange={setLang} placeName={activePanchayat.name} />
             </div>
 
-            <PanchayatSelector panchayats={ALL_INDIA_PANCHAYATS} selectedId={selectedId} onSelect={setSelectedId} />
-          </aside>
+            <aside className="flex min-w-0 flex-col gap-6">
+              <TodayCard panchayat={activePanchayat} coarse={coarse} fine={fine} coarseElevationM={Math.round(coarseElev)} source={dataSource} />
+              <ActionPlan
+                crop={selectedCrop}
+                crops={cropChoices}
+                onCropChange={setSelectedCrop}
+                hourly={hourlyData}
+                sprayWindow={sprayWindow}
+                irrigation={irrigation}
+                et0={et0}
+                pest={pest}
+              />
+            </aside>
+          </div>
         </main>
       )}
 
-      <footer className="max-w-[1680px] mx-auto w-full px-4 sm:px-6 py-6 mt-6 text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-2 border-t border-white/5">
-        <span>
-          <strong className="text-slate-300">AeroAgro AI</strong> · Block-to-Panchayat weather downscaling for precision agromet advisories
-        </span>
-        <button onClick={() => setShowAbout(true)} className="flex items-center gap-1 hover:text-slate-300">
-          <Info className="w-3.5 h-3.5" /> Data sources: Open-Meteo NWP · NASA SRTM 30 m · IMD INSAT-3DR · ICAR agromet guidance
-        </button>
+      <footer className="border-t border-line/[0.07]">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-4 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <Logo className="h-8 w-8" />
+            <div>
+              <div className="font-display text-lg text-ink">AeroAgro AI</div>
+              <div className="text-xs text-muted">Weather for your village, not your district.</div>
+            </div>
+          </div>
+          <p className="max-w-lg text-xs leading-relaxed text-muted">
+            Data: Open-Meteo NWP · NASA SRTM 30 m · IMD INSAT-3DR · ICAR agromet guidance. Downscaled values are decision-support estimates, not an
+            official IMD forecast.
+          </p>
+          <div className="flex gap-2">
+            <a href={`${process.env.NEXT_PUBLIC_BASE_PATH}/aeroagro_figma_artboard.svg`} download className="btn-ghost h-9 px-3 text-xs">
+              <Download className="h-3.5 w-3.5" /> Figma file
+            </a>
+            <a href="https://github.com/barath178/panchayat-weather-downscaling" target="_blank" rel="noopener noreferrer" className="btn-ghost h-9 px-3 text-xs">
+              <Github className="h-3.5 w-3.5" /> Source
+            </a>
+            <button onClick={() => setShowAbout(true)} className="btn-ghost h-9 px-3 text-xs">
+              About
+            </button>
+          </div>
+        </div>
       </footer>
 
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
