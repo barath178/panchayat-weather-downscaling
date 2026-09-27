@@ -286,9 +286,9 @@ export function bestSprayWindow(hours: HourPoint[]): { label: string; start?: st
 // ---------- agronomy ----------
 
 /** FAO-56 Hargreaves reference evapotranspiration (mm/day). */
-export function referenceET0(latDeg: number, d: WeatherMetrics, date = new Date()) {
-  const start = new Date(date.getFullYear(), 0, 0);
-  const doy = Math.floor((date.getTime() - start.getTime()) / 86400000);
+/** `date` is null during the static first render (keeps SSR and hydration identical); mid-year is used then. */
+export function referenceET0(latDeg: number, d: WeatherMetrics, date: Date | null) {
+  const doy = date ? Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000) : 172;
   const phi = (latDeg * Math.PI) / 180;
   const dr = 1 + 0.033 * Math.cos((2 * Math.PI * doy) / 365);
   const delta = 0.409 * Math.sin((2 * Math.PI * doy) / 365 - 1.39);

@@ -54,8 +54,9 @@ type StudioTab = 'spray' | 'insurance' | 'imd' | 'profile' | 'acoustic';
 const DEFAULT_ID = 'tamilnadu_thanjavur_6'; // Thiruvaiyaru, Cauvery delta
 
 /** Climatological season for today, used when live data is unavailable. */
-function seasonForToday(): Exclude<Scenario, 'live'> {
-  const m = new Date().getMonth(); // 0 = Jan
+function seasonForToday(now: Date | null): Exclude<Scenario, 'live'> {
+  if (!now) return 'monsoon';
+  const m = now.getMonth(); // 0 = Jan
   if (m >= 5 && m <= 9) return 'monsoon';
   if (m >= 2 && m <= 4) return 'pre_monsoon';
   return 'winter_frost';
@@ -79,6 +80,9 @@ export default function AeroAgroDashboard() {
   const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('spray');
   const [activeView, setActiveView] = useState<'dashboard' | 'mobile' | 'kiosk'>('dashboard');
   const [showAbout, setShowAbout] = useState(false);
+  // Wall-clock time is only read after mount so the static HTML and first client render match.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
 
   const activePanchayat = ALL_INDIA_PANCHAYATS.find((p) => p.id === selectedId) || ALL_INDIA_PANCHAYATS[0];
 
@@ -91,7 +95,7 @@ export default function AeroAgroDashboard() {
   const live = useLiveForecast(activePanchayat, isLive);
   const { national, nationalStatus } = useLiveNational(ALL_INDIA_PANCHAYATS, isLive);
   const liveOk = isLive && live.status === 'ready' && !!live.data;
-  const fallbackScenario = isLive ? seasonForToday() : scenario;
+  const fallbackScenario = isLive ? seasonForToday(now) : scenario;
 
   // ---- Coarse → fine for the selected region ----
   const coarse: WeatherMetrics = liveOk ? live.data!.daily : scenarioBaseline(activePanchayat, fallbackScenario);
@@ -100,7 +104,7 @@ export default function AeroAgroDashboard() {
 
   const hourlyData = classifyHours(liveOk ? downscaleHourly(live.data!.hourly, coarse, fine) : synthHourly(fine));
   const sprayWindow = bestSprayWindow(hourlyData);
-  const et0 = referenceET0(activePanchayat.lat, fine);
+  const et0 = referenceET0(activePanchayat.lat, fine, now);
   const irrigation = irrigationAdvice(et0, fine);
   const pest = pestRisk(activePanchayat, selectedCrop, fine);
 

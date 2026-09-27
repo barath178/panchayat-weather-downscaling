@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Copy, Check, Send, ChevronDown, CheckCheck, Users, Languages, Volume2 } from 'lucide-react';
 import VoiceAdvisory from './VoiceAdvisory';
 import type { Lang } from '@/lib/advisory';
@@ -56,7 +56,9 @@ export default function WhatsAppDrawer({ messageText, lang, onLangChange, placeN
     setTimeout(() => setCopied('idle'), 2000);
   };
 
-  const time = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+  // Set after mount so the statically rendered HTML matches the first client render
+  const [time, setTime] = useState('');
+  useEffect(() => setTime(new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })), []);
 
   return (
     <section className="card grid gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]" aria-labelledby="share-title">
