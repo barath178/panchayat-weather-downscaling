@@ -2,99 +2,229 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MoveHorizontal, Snowflake } from 'lucide-react';
-import { buildRevealField, tempColor, NX, NY, BLOCK, RAMP_CSS } from '@/lib/revealField';
+import { buildRevealField, contourSegments, rasterize, NX, NY, BLOCK, RAMP_CSS, T_LO, T_HI } from '@/lib/revealField';
 
-const CELL = 8; // canvas px per fine cell (before DPR)
-const W = NX * CELL;
-const H = NY * CELL;
+const RW = 640; // colour raster (the field is smooth, so it scales up cleanly)
+const RH = 480;
+
+/** 1 decimal with a true minus sign and no "−0.0" */
+const deg = (v: number) => (Math.abs(v) < 0.05 ? '0.0' : v < 0 ? `−${Math.abs(v).toFixed(1)}` : v.toFixed(1));
+
+interface Layers {
+  fine: HTMLCanvasElement;
+  coarse: HTMLCanvasElement;
+  sprite: HTMLCanvasElement;
+  contours: ReturnType<typeof contourSegments>;
+  frost: { x: number; y: number; s: number }[]; // x, y in 0..1
+}
+
+function glowSprite() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(0.25, 'rgba(210,245,255,0.75)');
+  grad.addColorStop(0.6, 'rgba(120,210,255,0.22)');
+  grad.addColorStop(1, 'rgba(120,210,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  return c;
+}
 
 export default function ResolutionReveal() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const contourRef = useRef<HTMLCanvasElement | null>(null);
+  const layersRef = useRef<Layers | null>(null);
   const field = useMemo(buildRevealField, []);
-  const [split, setSplit] = useState(1); // 0 = all fine, 1 = all coarse
+  const [split, setSplit] = useState(1); // 0 = all 1.2 km, 1 = all 18 km
+  const splitRef = useRef(1);
+  splitRef.current = split;
+  const [ready, setReady] = useState(false);
+  const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<{ x: number; y: number; fine: number; coarse: number } | null>(null);
   const dragging = useRef(false);
 
-  const frostCells = useMemo(() => field.fine.reduce((n, v) => n + (v <= 2 ? 1 : 0), 0), [field]);
-  const coarseMin = useMemo(() => Math.min(...Array.from(field.coarse)), [field]);
+  const stats = useMemo(() => {
+    // coldest hollow in the half revealed by the intro sweep, away from the edges and corner labels
+    const i0 = Math.ceil(NX * 0.55);
+    let coldest = 5 * NX + i0;
+    for (let j = 5; j < NY - 6; j++)
+      for (let i = i0; i < NX - 6; i++) if (field.fine[j * NX + i] < field.fine[coldest]) coldest = j * NX + i;
+    const blocks: { x: number; y: number; t: number }[] = [];
+    for (let bj = 0; bj < NY / BLOCK; bj++)
+      for (let bi = 0; bi < NX / BLOCK; bi++)
+        blocks.push({ x: ((bi + 0.5) * BLOCK) / NX, y: ((bj + 0.5) * BLOCK) / NY, t: field.coarse[bj * BLOCK * NX + bi * BLOCK] });
+    return {
+      frost: field.fine.reduce((n, v) => n + (v <= 2 ? 1 : 0), 0),
+      coarseMin: Math.min(...blocks.map((b) => b.t)),
+      coldest: { x: ((coldest % NX) + 0.5) / NX, y: (Math.floor(coldest / NX) + 0.5) / NY, t: field.fine[coldest] },
+      blocks,
+    };
+  }, [field]);
 
-  // Intro sweep: reveal the fine grid once when the hero mounts
+  // Build the colour layers off the critical path, after first paint
   useEffect(() => {
+    const id = window.setTimeout(() => {
+      const r = rasterize(field, RW, RH);
+      const mk = (img: ImageData) => {
+        const c = document.createElement('canvas');
+        c.width = RW;
+        c.height = RH;
+        c.getContext('2d')!.putImageData(img, 0, 0);
+        return c;
+      };
+      const frost: Layers['frost'] = [];
+      field.fine.forEach((t, k) => {
+        if (t <= 1) frost.push({ x: ((k % NX) + 0.5) / NX, y: (Math.floor(k / NX) + 0.5) / NY, s: Math.min(1, Math.max(0.3, (1 - t) / 4)) });
+      });
+      layersRef.current = { fine: mk(r.fine), coarse: mk(r.coarse), sprite: glowSprite(), contours: contourSegments(r, 120), frost };
+      setReady(true);
+    }, 60);
+    return () => clearTimeout(id);
+  }, [field]);
+
+  // Canvas follows its box; contour lines are re-drawn crisp at display resolution
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const L = layersRef.current;
+    if (!ready || !L || !size.w) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const c = document.createElement('canvas');
+    c.width = Math.round(size.w * dpr);
+    c.height = Math.round(size.h * dpr);
+    const g = c.getContext('2d')!;
+    const sx = c.width / RW, sy = c.height / RH;
+    g.lineJoin = g.lineCap = 'round';
+    for (const { major, seg } of L.contours) {
+      g.strokeStyle = major ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.13)';
+      g.lineWidth = (major ? 1.2 : 0.7) * dpr;
+      g.beginPath();
+      for (let i = 0; i < seg.length; i += 4) {
+        g.moveTo(seg[i] * sx, seg[i + 1] * sy);
+        g.lineTo(seg[i + 2] * sx, seg[i + 3] * sy);
+      }
+      g.stroke();
+    }
+    contourRef.current = c;
+  }, [ready, size]);
+
+  // Render loop: frost pockets breathe while the hero is on screen
+  useEffect(() => {
+    const cv = canvasRef.current;
+    const L = layersRef.current;
+    if (!ready || !cv || !L || !size.w) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(size.w * dpr);
+    cv.height = Math.round(size.h * dpr);
+    const ctx = cv.getContext('2d')!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const W = cv.width, H = cv.height;
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
+    let visible = true;
+    let raf = 0;
+
+    const draw = (time: number) => {
+      const x = splitRef.current * W;
+      ctx.clearRect(0, 0, W, H);
+
+      // 1.2 km side: thermal relief + contours + glowing frost pockets
+      ctx.drawImage(L.fine, 0, 0, W, H);
+      if (contourRef.current) ctx.drawImage(contourRef.current, 0, 0);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, 0, W - x, H);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'lighter';
+      const pulse = reduce ? 1 : 0.72 + 0.28 * Math.sin(time / 650);
+      const base = (W / NX) * 2.6;
+      for (const f of L.frost) {
+        const r = base * (0.7 + f.s * 0.8);
+        ctx.globalAlpha = 0.34 * f.s * pulse;
+        ctx.drawImage(L.sprite, f.x * W - r / 2, f.y * H - r / 2, r, r);
+      }
+      ctx.restore();
+
+      // 18 km side: flat blocks
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, x, H);
+      ctx.clip();
+      ctx.drawImage(L.coarse, 0, 0, W, H);
+      ctx.restore();
+
+      // block boundaries
+      ctx.strokeStyle = 'rgba(10,14,12,0.55)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath();
+      for (let bi = 1; bi < NX / BLOCK; bi++) {
+        const bx = Math.round((bi * BLOCK * W) / NX);
+        ctx.moveTo(bx, 0);
+        ctx.lineTo(bx, H);
+      }
+      for (let bj = 1; bj < NY / BLOCK; bj++) {
+        const by = Math.round((bj * BLOCK * H) / NY);
+        ctx.moveTo(0, by);
+        ctx.lineTo(W, by);
+      }
+      ctx.stroke();
+
+      // scanner light spilling onto the revealed side
+      const sweep = ctx.createLinearGradient(x, 0, x + 90 * dpr, 0);
+      sweep.addColorStop(0, 'rgba(200,241,105,0.22)');
+      sweep.addColorStop(1, 'rgba(200,241,105,0)');
+      ctx.fillStyle = sweep;
+      ctx.fillRect(x, 0, 90 * dpr, H);
+
+      if (!reduce && visible) raf = requestAnimationFrame(draw);
+    };
+
+    const io = new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(draw);
+    });
+    io.observe(cv);
+    raf = requestAnimationFrame(draw);
+    return () => {
+      io.disconnect();
+      cancelAnimationFrame(raf);
+    };
+  }, [ready, size]);
+
+  // With reduced motion there is no loop, so repaint on every drag
+  useEffect(() => {
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    setSize((s) => ({ ...s }));
+  }, [split]);
+
+  // Intro sweep once the layers exist
+  useEffect(() => {
+    if (!ready) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setSplit(0.5);
       return;
     }
     let raf = 0;
-    const start = performance.now() + 500;
+    const start = performance.now() + 250;
     const tick = (now: number) => {
-      const t = Math.min(1, Math.max(0, (now - start) / 1600));
+      const t = Math.min(1, Math.max(0, (now - start) / 1700));
       const ease = 1 - Math.pow(1 - t, 3);
       if (!dragging.current) setSplit(1 - ease * 0.55);
       if (t < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // Draw
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const splitX = split * W;
-
-    for (let j = 0; j < NY; j++) {
-      for (let i = 0; i < NX; i++) {
-        const k = j * NX + i;
-        const useCoarse = i * CELL + CELL / 2 < splitX;
-        const t = useCoarse ? field.coarse[k] : field.fine[k];
-        const [r, g, b] = tempColor(t);
-        const s = field.shade[k];
-        ctx.fillStyle = `rgb(${r * s},${g * s},${b * s})`;
-        ctx.fillRect(i * CELL, j * CELL, CELL + 0.5, CELL + 0.5);
-      }
-    }
-
-    // 18 km block outlines
-    ctx.strokeStyle = 'rgba(236,242,238,0.35)';
-    ctx.lineWidth = 1;
-    for (let bi = 1; bi < NX / BLOCK; bi++) {
-      ctx.beginPath();
-      ctx.moveTo(bi * BLOCK * CELL + 0.5, 0);
-      ctx.lineTo(bi * BLOCK * CELL + 0.5, H);
-      ctx.stroke();
-    }
-    for (let bj = 1; bj < NY / BLOCK; bj++) {
-      ctx.beginPath();
-      ctx.moveTo(0, bj * BLOCK * CELL + 0.5);
-      ctx.lineTo(W, bj * BLOCK * CELL + 0.5);
-      ctx.stroke();
-    }
-
-    // Frost pockets on the fine side
-    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-    for (let j = 0; j < NY; j++)
-      for (let i = 0; i < NX; i++) {
-        const k = j * NX + i;
-        if (i * CELL + CELL / 2 >= splitX && field.fine[k] <= 0) {
-          ctx.beginPath();
-          ctx.arc(i * CELL + CELL / 2, j * CELL + CELL / 2, 1.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-  }, [split, field]);
-
-  const setFromClientX = (clientX: number) => {
-    const rect = wrapRef.current!.getBoundingClientRect();
-    setSplit(Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)));
-  };
+  }, [ready]);
 
   const onMove = (e: React.PointerEvent) => {
     const rect = wrapRef.current!.getBoundingClientRect();
@@ -106,73 +236,129 @@ export default function ResolutionReveal() {
     if (dragging.current) setSplit(Math.min(1, Math.max(0, fx)));
   };
 
+  const cold = stats.coldest;
+  const coldShown = ready && cold.x > split + 0.02;
+  const diff = hover ? hover.fine - hover.coarse : 0;
+
   return (
     <figure className="card overflow-hidden p-0">
-      <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
+      <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
         <div>
-          <figcaption className="font-display text-lg leading-tight text-ink">Same forecast. Two resolutions.</figcaption>
-          <p className="text-xs text-muted">Night-time minimum across twelve 18 km blocks · drag the handle</p>
+          <figcaption className="font-display text-lg leading-tight text-ink">Same night. Two resolutions.</figcaption>
+          <p className="text-xs text-muted">Night low across twelve 18 km blocks · drag to compare</p>
         </div>
-        <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-frost/10 px-3 py-1 text-xs font-semibold text-frost">
-          <Snowflake className="h-3.5 w-3.5" /> {frostCells} frost cells found
+        <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-frost/10 px-3 py-1 text-xs font-semibold text-frost sm:inline-flex">
+          <Snowflake className="h-3.5 w-3.5" /> {stats.frost} hidden frost cells
         </span>
       </div>
 
       <div
         ref={wrapRef}
-        className="relative aspect-[4/3] w-full cursor-ew-resize touch-none select-none"
+        className="relative aspect-[4/3] w-full cursor-ew-resize touch-none select-none overflow-hidden bg-[#1a1540]"
         onPointerDown={(e) => {
           dragging.current = true;
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-          setFromClientX(e.clientX);
+          const rect = wrapRef.current!.getBoundingClientRect();
+          setSplit(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
         }}
         onPointerMove={onMove}
         onPointerUp={() => (dragging.current = false)}
         onPointerLeave={() => setHover(null)}
       >
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ imageRendering: 'pixelated' }} aria-hidden />
+        {!ready && <div className="absolute inset-0 animate-pulse" style={{ background: RAMP_CSS, opacity: 0.25 }} />}
+        <canvas ref={canvasRef} className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
 
-        {/* Side labels */}
-        <span className="absolute left-3 top-3 rounded-lg bg-bg/80 px-2.5 py-1 text-[11px] font-semibold text-sun backdrop-blur">18 km block forecast</span>
-        <span className="absolute right-3 top-3 rounded-lg bg-bg/80 px-2.5 py-1 text-[11px] font-semibold text-accent backdrop-blur">1.2 km AeroAgro</span>
+        {/* one number per block on the 18 km side */}
+        {ready &&
+          stats.blocks.map((b, i) => (
+            <div
+              key={i}
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center transition-opacity duration-300"
+              style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, opacity: b.x < split - 0.06 ? 1 : 0 }}
+            >
+              <div className="font-display text-lg leading-none text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] sm:text-[28px]">
+                {deg(b.t)}°
+              </div>
+              <div className="mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 sm:block">whole block</div>
+            </div>
+          ))}
 
-        {/* Divider + handle */}
-        <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-accent shadow-[0_0_12px_rgb(200_241_105/0.8)]" style={{ left: `${split * 100}%` }}>
-          <div className="absolute top-1/2 left-1/2 grid h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-accent text-accent-ink shadow-glow">
+        {/* the coldest hollow, only visible at 1.2 km */}
+        <div
+          className="pointer-events-none absolute transition-opacity duration-300"
+          style={{ left: `${cold.x * 100}%`, top: `${cold.y * 100}%`, opacity: coldShown ? 1 : 0 }}
+        >
+          <span className="absolute -left-2 -top-2 h-4 w-4 animate-pulse-ring rounded-full bg-white/70" />
+          <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-white bg-frost" />
+          <span
+            className={`absolute top-2.5 whitespace-nowrap rounded-lg bg-bg/85 px-2 py-1 text-[11px] font-semibold text-frost shadow-pop backdrop-blur ${
+              cold.x > 0.7 ? 'right-2' : 'left-2'
+            }`}
+          >
+            Frost hollow {deg(cold.t)}°C
+          </span>
+        </div>
+
+        {/* labels */}
+        <span className="absolute bottom-2 left-2 rounded-md bg-bg/75 px-2 py-0.5 text-[10px] font-semibold text-sun backdrop-blur sm:bottom-3 sm:left-3 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[11px]">
+          District · 18 km
+        </span>
+        <span className="absolute bottom-2 right-2 rounded-md bg-bg/75 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur sm:bottom-3 sm:right-3 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[11px]">
+          AeroAgro · 1.2 km
+        </span>
+
+        {/* divider + handle */}
+        <div className="pointer-events-none absolute inset-y-0 w-[3px] -translate-x-1/2 bg-accent shadow-[0_0_18px_4px_rgb(200_241_105/0.55)]" style={{ left: `${split * 100}%` }}>
+          <div className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-bg/40 bg-accent text-accent-ink shadow-glow">
             <MoveHorizontal className="h-5 w-5" />
           </div>
         </div>
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 rounded-lg bg-bg/90 px-2.5 py-1.5 text-[11px] leading-tight backdrop-blur"
-            style={{ left: `calc(${hover.x * 100}% + 14px)`, top: `calc(${hover.y * 100}% + 14px)` }}
+            className="pointer-events-none absolute z-10 min-w-[128px] rounded-xl border border-white/10 bg-bg/90 px-3 py-2 text-[11px] leading-snug shadow-pop backdrop-blur"
+            style={{
+              left: hover.x > 0.72 ? undefined : `calc(${hover.x * 100}% + 16px)`,
+              right: hover.x > 0.72 ? `calc(${(1 - hover.x) * 100}% + 16px)` : undefined,
+              top: `calc(${Math.min(hover.y, 0.8) * 100}% + 12px)`,
+            }}
           >
-            <div className="text-sun">Block: {hover.coarse.toFixed(1)}°C</div>
-            <div className="text-accent">Local: {hover.fine.toFixed(1)}°C</div>
+            <div className="flex justify-between gap-3 text-sun">
+              <span>District</span>
+              <b className="tabular">{deg(hover.coarse)}°C</b>
+            </div>
+            <div className="flex justify-between gap-3 text-accent">
+              <span>Village</span>
+              <b className="tabular">{deg(hover.fine)}°C</b>
+            </div>
+            {Math.abs(diff) >= 0.5 && (
+              <div className={`mt-1 border-t border-white/10 pt-1 font-semibold ${diff < 0 ? 'text-frost' : 'text-sun'}`}>
+                {Math.abs(diff).toFixed(1)}° {diff < 0 ? 'colder' : 'warmer'} than forecast
+              </div>
+            )}
           </div>
         )}
 
-        {/* Accessible control */}
+        {/* keyboard / screen-reader control */}
         <input
           type="range"
           min={0}
           max={100}
           value={Math.round(split * 100)}
           onChange={(e) => setSplit(Number(e.target.value) / 100)}
-          aria-label="Compare 18 km block forecast with 1.2 km downscaled view"
+          aria-label="Compare 18 km district forecast with the 1.2 km AeroAgro view"
           className="absolute inset-x-0 bottom-0 h-6 w-full opacity-0"
         />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-xs text-muted">
         <div className="flex items-center gap-2">
-          <span>≤0°</span>
-          <span className="h-2 w-28 rounded-full" style={{ background: RAMP_CSS }} />
-          <span>17°C</span>
+          <span className="text-frost">{T_LO}°</span>
+          <span className="h-2 w-32 rounded-full" style={{ background: RAMP_CSS }} />
+          <span className="text-sun">{T_HI}°C</span>
         </div>
         <span>
-          Coolest block says <b className="text-ink">{coarseMin.toFixed(1)}°C</b> · valleys reach <b className="text-frost">{field.min.toFixed(1)}°C</b>
+          Coldest block says <b className="text-ink">{deg(stats.coarseMin)}°C</b> · hollows reach <b className="text-frost">{deg(cold.t)}°C</b>
         </span>
       </div>
       <p className="px-5 pb-4 text-[11px] text-muted/80">Illustrative terrain, computed with the same lapse-rate and cold-air-pooling physics as the live engine.</p>
