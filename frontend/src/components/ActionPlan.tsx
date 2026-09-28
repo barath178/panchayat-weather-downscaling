@@ -27,7 +27,7 @@ function Tile({ icon: Icon, title, verdict, tone, children }: { icon: React.Elem
   const t = TONE[tone];
   const V = t.icon;
   return (
-    <div className="rounded-2xl border border-line/[0.07] bg-surface2 p-4">
+    <div className="rounded-2xl border border-line/[0.1] bg-bg/50 p-5">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-medium text-ink2">
           <Icon className="h-4 w-4" /> {title}
@@ -48,12 +48,12 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
   const firstBad = hourly.find((h) => h.status === 'danger');
 
   return (
-    <section className="card p-5 sm:p-6" aria-labelledby="plan-title">
+    <section className="card h-full p-6 sm:p-7" aria-labelledby="plan-title">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="plan-title" className="font-display text-xl text-ink">
+        <h2 id="plan-title" className="font-display text-4xl leading-none text-ink">
           What to do today
         </h2>
-        <span className="text-xs text-muted">ICAR agromet rules</span>
+        <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">ICAR agromet rules</span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Crop">
@@ -66,7 +66,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
 
       <div className="mt-4 space-y-3">
         <Tile icon={SprayCan} title="Spraying" verdict={sprayTone === 'good' ? 'Go' : sprayTone === 'warn' ? 'Short window' : 'Hold off'} tone={sprayTone}>
-          <p className="text-base font-semibold text-ink">{sprayWindow.hours ? `Best between ${sprayWindow.label}` : 'No safe window today'}</p>
+          <p className="font-display text-3xl leading-tight text-ink">{sprayWindow.hours ? sprayWindow.label : 'No safe window'}</p>
           <div className="mt-2.5 flex gap-[3px]" aria-hidden>
             {hourly.map((h) => (
               <span key={h.time} className={`h-2 flex-1 rounded-full ${HOUR_COLOR[h.status]}`} title={`${h.time} · ${h.reason}`} />
@@ -86,7 +86,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
         </Tile>
 
         <Tile icon={ShieldCheck} title={`Crop health · ${crop}`} verdict={pest.level === 'low' ? 'Low risk' : pest.level === 'moderate' ? 'Watch' : 'High risk'} tone={pestTone}>
-          <p className="text-base font-semibold text-ink">{pest.title}</p>
+          <p className="font-display text-2xl leading-tight text-ink">{pest.title}</p>
           <p className="mt-1 text-sm leading-relaxed text-ink2">{pest.detail}</p>
         </Tile>
       </div>

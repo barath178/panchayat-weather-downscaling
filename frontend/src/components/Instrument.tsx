@@ -5,7 +5,7 @@
 
 import React from 'react';
 
-/** 01 ── LIVE DASHBOARD ─────────────── meta */
+/** Editorial section opener: (01) kicker, poster-scale serif title, and a short standfirst on the right. */
 export function SectionHead({
   index,
   kicker,
@@ -20,16 +20,46 @@ export function SectionHead({
   id?: string;
 }) {
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.16em]">
-        <span className="rounded bg-accent px-1.5 py-0.5 font-semibold text-accent-ink">{index}</span>
-        <span className="text-ink2">{kicker}</span>
-        <span className="h-px flex-1 bg-gradient-to-r from-line/20 to-line/[0.03]" aria-hidden />
-        {meta && <span className="hidden text-muted md:inline">{meta}</span>}
+    <div className="mb-10 grid grid-cols-1 gap-6 border-t border-line/[0.16] pt-6 lg:grid-cols-12 lg:items-end">
+      <div className="lg:col-span-8">
+        <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
+          ({index}) <span className="mx-1.5 text-line/40">—</span> {kicker}
+        </div>
+        <h2 id={id} className="mt-4 font-display text-[44px] leading-[0.95] tracking-[-0.015em] text-ink sm:text-6xl lg:text-7xl">
+          {title}
+        </h2>
       </div>
-      <h2 id={id} className="mt-3 font-display text-3xl text-ink sm:text-4xl">
-        {title}
-      </h2>
+      {meta && <p className="max-w-sm text-[15px] leading-relaxed text-ink2 lg:col-span-4 lg:justify-self-end">{meta}</p>}
+    </div>
+  );
+}
+
+/** Fades content up once it scrolls into view. */
+export function Reveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [shown, setShown] = React.useState(false);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+      setShown(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className={`reveal ${shown ? 'in' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
+      {children}
     </div>
   );
 }
@@ -82,32 +112,39 @@ const STATUS: Record<Telemetry['status'], [string, string]> = {
   scenario: ['SIM', 'bg-sky'],
 };
 
-/** One-line system readout under the header: data source, run time, grid, DEM and position. */
+/** Thin live ticker above the navigation: data source, run time, position and grid, scrolling. */
 export function TelemetryStrip({ t }: { t: Telemetry }) {
   const [label, dot] = STATUS[t.status];
   const dz = t.elevationM - t.cellElevationM;
   const items: [string, string][] = [
     ['NWP', t.source],
-    ['UPDATED', t.updated ?? '—'],
-    ['POS', `${t.lat.toFixed(3)}°N ${t.lng.toFixed(3)}°E`],
-    ['ELEV', `${t.elevationM.toLocaleString('en-IN')} m a.s.l.`],
-    ['NWP CELL', `${Math.round(t.cellElevationM).toLocaleString('en-IN')} m`],
+    ['Updated', t.updated ?? '—'],
+    ['Position', `${t.lat.toFixed(3)}°N ${t.lng.toFixed(3)}°E`],
+    ['Elevation', `${t.elevationM.toLocaleString('en-IN')} m a.s.l.`],
+    ['NWP cell', `${Math.round(t.cellElevationM).toLocaleString('en-IN')} m`],
     ['Δz', `${dz >= 0 ? '+' : '−'}${Math.abs(Math.round(dz))} m`],
-    ['DEM', t.dem === 'dem' ? 'GLO-90 · 225 × 1.2 km' : t.dem === 'loading' ? 'loading…' : 'offline model'],
-    ['GRID', '18 km → 1.2 km'],
-    ['REGIONS', String(t.regions)],
+    ['DEM', t.dem === 'dem' ? 'Copernicus GLO-90 · 225 cells' : t.dem === 'loading' ? 'loading…' : 'offline model'],
+    ['Grid', '18 km → 1.2 km'],
+    ['Coverage', `${t.regions} regions`],
   ];
-  return (
-    <div className="border-b border-line/[0.07] bg-surface/60">
-      <div className="mx-auto flex max-w-[1400px] items-center gap-5 overflow-x-auto whitespace-nowrap px-4 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] scrollbar-none sm:px-8">
-        <span className="flex items-center gap-1.5 font-semibold text-ink">
-          <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
+  const run = (k: string) => (
+    <div className="flex shrink-0 items-center gap-8 pr-8" aria-hidden={k === 'b'}>
+      {items.map(([name, v]) => (
+        <span key={name + k} className="text-white/45">
+          {name} <span className="text-white/80">{v}</span>
         </span>
-        {items.map(([k, v]) => (
-          <span key={k} className="text-muted">
-            {k} <span className="text-ink2">{v}</span>
-          </span>
-        ))}
+      ))}
+      <span className="text-[#D4F25A]">✦</span>
+    </div>
+  );
+  return (
+    <div className="night relative flex items-center overflow-hidden bg-[#0B110E] font-mono text-[10.5px] uppercase tracking-[0.12em]">
+      <span className="relative z-10 flex shrink-0 items-center gap-1.5 bg-[#0B110E] py-2 pl-4 pr-4 font-semibold text-white sm:pl-8">
+        <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
+      </span>
+      <div className="ticker flex w-max py-2">
+        {run('a')}
+        {run('b')}
       </div>
     </div>
   );

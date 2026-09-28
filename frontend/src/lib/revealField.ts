@@ -1,9 +1,9 @@
-// Synthetic terrain for the hero "resolution reveal": 3 × 4 coarse 18 km blocks,
+// Synthetic terrain for the hero "resolution reveal": 3 × 6 coarse 18 km blocks,
 // each split into 15 × 15 fine 1.2 km cells. Night-minimum temperature uses the same
 // physics as the real engine: lapse rate plus cold-air pooling in concave valleys.
 
 export const BLOCK = 15;
-export const NX = BLOCK * 4; // 60 fine cells across
+export const NX = BLOCK * 6; // 90 fine cells across (six 18 km blocks, cinematic 2:1)
 export const NY = BLOCK * 3; // 45 fine cells down
 
 let seed = 7;

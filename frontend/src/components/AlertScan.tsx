@@ -77,61 +77,56 @@ export default function AlertScan({ regions, regionMetrics, selectedId, onSelect
   };
 
   return (
-    <section className="card mb-6 overflow-hidden" aria-labelledby="scan-title">
-      <div className="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center">
-        <div className="flex shrink-0 items-center gap-3 lg:w-[250px]">
-          <span className="relative grid h-11 w-11 place-items-center rounded-2xl bg-accent/10">
-            <span className="absolute inset-0 animate-pulse-ring rounded-2xl bg-accent/25" />
+    <section className="mb-6" aria-labelledby="scan-title">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/[0.1] bg-line/[0.1] sm:grid-cols-4 xl:grid-cols-8">
+        <div className="col-span-2 flex items-center gap-3 bg-surface p-4 sm:col-span-4 xl:col-span-1 xl:flex-col xl:items-start xl:justify-between">
+          <span className="relative grid h-10 w-10 place-items-center rounded-full bg-accent/10">
+            <span className="absolute inset-0 animate-pulse-ring rounded-full bg-accent/25" />
             <Radar className="relative h-5 w-5 text-accent" />
           </span>
           <div>
             <h2 id="scan-title" className="text-sm font-semibold text-ink">
-              AI scan · {regions.length} villages
+              AI scan
             </h2>
-            <p className="text-xs text-muted">
-              {flagged} flagged today · {source === 'live' ? 'live data' : source === 'loading' ? 'updating…' : 'model data'}
+            <p className="text-xs leading-snug text-muted">
+              {regions.length} villages · {flagged} flagged · {source === 'live' ? 'live' : source === 'loading' ? 'updating…' : 'model'}
             </p>
           </div>
         </div>
 
-        <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          {scan.out.map(({ rule, count, worst }) => {
-            const I = rule.icon;
-            const m = worst ? regionMetrics[worst.id].fine : null;
-            return (
-              <button
-                key={rule.id}
-                disabled={!worst}
-                onClick={() => worst && onSelect(worst.id)}
-                title={worst ? `Jump to the worst-hit village: ${worst.name}` : 'No village affected'}
-                className={`group min-w-0 rounded-xl border px-3 py-2 text-left transition-colors ${
-                  worst && worst.id === selectedId ? 'border-accent/60 bg-accent/[0.06]' : 'border-line/[0.07] bg-surface2/60 hover:border-line/20'
-                } disabled:cursor-default disabled:opacity-45`}
-              >
-                <div className="flex items-center gap-1.5 text-[11px] text-muted">
-                  <I className={`h-3.5 w-3.5 shrink-0 ${count ? rule.tone : ''}`} />
-                  <span className="truncate">{rule.label}</span>
-                </div>
-                <div className="mt-1 flex items-baseline gap-2">
-                  <span className={`font-display text-xl leading-none tabular ${count ? 'text-ink' : 'text-muted'}`}>{count}</span>
-                  <span className="min-w-0 truncate text-[11px] text-ink2 group-hover:text-ink">{worst && m ? `${worst.name} · ${rule.fmt(m)}` : 'none today'}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        {scan.out.map(({ rule, count, worst }) => {
+          const I = rule.icon;
+          const m = worst ? regionMetrics[worst.id].fine : null;
+          const on = worst && worst.id === selectedId;
+          return (
+            <button
+              key={rule.id}
+              disabled={!worst}
+              onClick={() => worst && onSelect(worst.id)}
+              title={worst ? `Jump to the worst-hit village: ${worst.name}` : 'No village affected'}
+              className={`group flex min-w-0 flex-col justify-between gap-3 p-4 text-left transition-colors ${on ? 'bg-accent/[0.08]' : 'bg-surface hover:bg-surface2'} disabled:cursor-default`}
+            >
+              <span className={`flex items-center gap-1.5 text-xs ${count ? 'text-ink2' : 'text-muted'}`}>
+                <I className={`h-3.5 w-3.5 shrink-0 ${count ? rule.tone : ''}`} />
+                <span className="truncate">{rule.label}</span>
+              </span>
+              <span className={`font-display text-5xl leading-none tabular ${count ? 'text-ink' : 'text-muted/50'}`}>{count}</span>
+              <span className="block min-w-0 truncate text-[11px] text-muted group-hover:text-ink2">{worst && m ? `${worst.name} · ${rule.fmt(m)}` : 'none today'}</span>
+            </button>
+          );
+        })}
 
         <button
           onClick={nextMissed}
           disabled={!scan.missed}
-          className="flex shrink-0 items-center gap-3 rounded-2xl border border-sun/30 bg-sun/[0.07] px-4 py-3 text-left transition-colors hover:bg-sun/[0.12] disabled:opacity-50 lg:w-[210px]"
+          className="flex flex-col justify-between gap-3 bg-sun/[0.1] p-4 text-left transition-colors hover:bg-sun/[0.16] disabled:opacity-60"
           title="Cycle through villages whose alert the 18 km forecast misses"
         >
-          <EyeOff className="h-5 w-5 shrink-0 text-sun" />
-          <span>
-            <span className="block font-display text-2xl leading-none text-ink tabular">{scan.missed}</span>
-            <span className="block text-[11px] leading-snug text-ink2">alerts the district forecast misses</span>
+          <span className="flex items-center gap-1.5 text-xs text-sun">
+            <EyeOff className="h-3.5 w-3.5" /> Missed
           </span>
+          <span className="font-display text-5xl leading-none text-ink tabular">{scan.missed}</span>
+          <span className="text-[11px] leading-snug text-ink2">alerts the district forecast misses</span>
         </button>
       </div>
     </section>

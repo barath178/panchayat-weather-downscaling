@@ -1,71 +1,58 @@
-// AeroAgro AI · Figma plugin
-// Generates the "Field Instrument" design system and product screens as native, editable Figma
-// layers: colour variables, text styles, variant components, auto-layout screens, native charts.
-// DATA is a live engine snapshot (Open-Meteo + Copernicus DEM, run through the real downscaler);
-// IMAGES are PNG renders of the live canvases. Both are injected by scripts/build_figma_plugin.mjs.
+// AeroAgro AI · Figma plugin · "Monsoon Almanac" design system
+// Generates the design system and product screens as native, editable Figma layers:
+// a colour-variable collection with Paper and Night modes, text styles, variant components,
+// auto-layout screens and native charts. Night bands simply switch variable mode.
+// DATA is a live engine snapshot; IMAGES are renders of the live canvases.
+// Both are injected by scripts/build_figma_plugin.mjs.
 
 /* global DATA, IMAGES, figma */
 
-// ---------------------------------------------------------------- tokens
-const TOKENS = {
-  bg: '#0A0E0C',
-  surface: '#111714',
-  surface2: '#18201C',
-  raised: '#1F2924',
-  line: '#E2F0E7',
-  ink: '#ECF2EE',
-  ink2: '#B8C4BD',
-  muted: '#808E86',
-  accent: '#C8F169',
-  accentInk: '#0C120A',
-  sky: '#7DC4FF',
-  sun: '#F6B94C',
-  alert: '#FF7A66',
-  frost: '#A5D8FF',
-  good: '#2FB344',
-  warn: '#F2B01E',
-  bad: '#E5484D',
+// ---------------------------------------------------------------- tokens (two themes, one set of names)
+const PAPER = {
+  bg: '#F3EFE6', surface: '#FBF9F4', surface2: '#EBE6DA', raised: '#E2DCCD', line: '#141C16',
+  ink: '#121814', ink2: '#3C4640', muted: '#707872', accent: '#1E6334', accentInk: '#F7F5EE', marker: '#D4F25A',
+  sky: '#1D68B2', sun: '#B06808', alert: '#C43A22', frost: '#266EBE', good: '#1E803E', warn: '#A66C00', bad: '#C43030',
+  btn: '#121814', btnInk: '#F3EFE6',
 };
-const TOKEN_NOTES = {
-  bg: 'Page · field at night',
-  surface: 'Cards',
-  surface2: 'Inset tiles',
-  raised: 'Selected / hover',
-  line: 'Hairlines at 6–14 %',
-  ink: 'Primary text',
-  ink2: 'Secondary text',
-  muted: 'Labels, captions',
-  accent: 'New-leaf lime · the one accent',
-  accentInk: 'Text on accent',
-  sky: 'Rain, water, cold',
-  sun: 'Heat, 18 km block',
-  alert: 'Hazard',
-  frost: 'Frost',
-  good: 'Status · safe',
-  warn: 'Status · caution',
-  bad: 'Status · stop',
+const NIGHT = {
+  bg: '#0B110E', surface: '#111814', surface2: '#18201B', raised: '#1F2923', line: '#E2F0E7',
+  ink: '#EEF2EC', ink2: '#B8C4BD', muted: '#808E86', accent: '#C8F169', accentInk: '#0C120A', marker: '#C8F169',
+  sky: '#7DC4FF', sun: '#F6B94C', alert: '#FF7A66', frost: '#A5D8FF', good: '#2FB344', warn: '#F2B01E', bad: '#E5484D',
+  btn: '#C8F169', btnInk: '#0C120A',
 };
-const V = {}; // variables by token key
-const S = {}; // text styles by key
-const FONT = {}; // resolved fonts by role
+const NOTES = {
+  bg: 'Page', surface: 'Card stock', surface2: 'Inset', raised: 'Pressed', line: 'Hairlines at 8–16 %', ink: 'Text',
+  ink2: 'Secondary text', muted: 'Labels', accent: 'Field green / lime', accentInk: 'On accent', marker: 'Highlighter',
+  sky: 'Rain, cold', sun: 'Heat, 18 km block', alert: 'Hazard', frost: 'Frost', good: 'Safe', warn: 'Caution', bad: 'Stop',
+  btn: 'Primary button', btnInk: 'On button',
+};
+
+let THEME = 'paper';
+const T = () => (THEME === 'night' ? NIGHT : PAPER);
+const V = {};
+let COLLECTION = null;
+const MODES = {};
+const S = {};
+const FONT = {};
 
 const hexToRgb = (h) => ({ r: parseInt(h.slice(1, 3), 16) / 255, g: parseInt(h.slice(3, 5), 16) / 255, b: parseInt(h.slice(5, 7), 16) / 255 });
 
 function paint(key, opacity) {
-  const hex = TOKENS[key] || key;
+  const hex = T()[key] || key;
   let p = { type: 'SOLID', color: hexToRgb(hex), opacity: opacity == null ? 1 : opacity };
-  if (V[key] && figma.variables && figma.variables.setBoundVariableForPaint) {
+  // Bind to the variable so the colour follows the frame's mode (Paper / Night)
+  const bindable = V[key] && (THEME === 'paper' || MODES.night);
+  if (bindable && figma.variables && figma.variables.setBoundVariableForPaint) {
     try {
       p = figma.variables.setBoundVariableForPaint(p, 'color', V[key]);
     } catch (e) {
-      /* unbound fallback */
+      /* raw colour fallback */
     }
   }
   return p;
 }
 
 function gradient(stops, angle) {
-  // angle 0 = left→right, 90 = top→bottom
   const a = ((angle || 0) * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   return {
@@ -75,10 +62,30 @@ function gradient(stops, angle) {
       [-s, c, (1 + s - c) / 2],
     ],
     gradientStops: stops.map(([pos, hex, op]) => {
-      const { r, g, b } = hexToRgb(TOKENS[hex] || hex);
+      const { r, g, b } = hexToRgb(T()[hex] || hex);
       return { position: pos, color: { r, g, b, a: op == null ? 1 : op } };
     }),
   };
+}
+
+/** Build inside a night band: raw colours switch now; bound colours switch through the frame's variable mode. */
+async function night(fn) {
+  const prev = THEME;
+  THEME = 'night';
+  try {
+    return await fn();
+  } finally {
+    THEME = prev;
+  }
+}
+function setNightMode(node) {
+  if (COLLECTION && MODES.night && node.setExplicitVariableModeForCollection) {
+    try {
+      node.setExplicitVariableModeForCollection(COLLECTION, MODES.night);
+    } catch (e) {
+      /* raw colours already applied */
+    }
+  }
 }
 
 // ---------------------------------------------------------------- fonts
@@ -89,56 +96,63 @@ async function resolveFonts() {
     for (const family of families) for (const style of styles) if (has(family, style)) return { family, style };
     return null;
   };
-  const inter = (style) => pick(['Inter'], [style, style.replace('SemiBold', 'Semi Bold'), 'Regular']) || { family: 'Inter', style: 'Regular' };
-  FONT.display = pick(['Fraunces'], ['Regular', '9pt Regular', 'Light']) || inter('Regular');
-  FONT.displayItalic = pick(['Fraunces'], ['Italic', '9pt Italic', 'Light Italic']) || pick(['Inter'], ['Italic']) || FONT.display;
-  FONT.sans = pick(['Plus Jakarta Sans', 'Inter'], ['Regular']) || inter('Regular');
-  FONT.sansMedium = pick(['Plus Jakarta Sans', 'Inter'], ['Medium']) || FONT.sans;
-  FONT.sansSemi = pick(['Plus Jakarta Sans', 'Inter'], ['SemiBold', 'Semi Bold', 'Bold']) || FONT.sans;
-  FONT.sansBold = pick(['Plus Jakarta Sans', 'Inter'], ['Bold', 'ExtraBold']) || FONT.sansSemi;
-  FONT.mono = pick(['JetBrains Mono', 'Roboto Mono', 'IBM Plex Mono', 'Source Code Pro'], ['Regular']) || inter('Regular');
-  FONT.monoBold = pick(['JetBrains Mono', 'Roboto Mono', 'IBM Plex Mono', 'Source Code Pro'], ['Bold', 'SemiBold', 'Medium']) || FONT.mono;
+  const INTER = { family: 'Inter', style: 'Regular' };
+  FONT.display = pick(['Instrument Serif', 'Fraunces', 'Playfair Display'], ['Regular']) || INTER;
+  FONT.displayItalic = pick(['Instrument Serif', 'Fraunces', 'Playfair Display'], ['Italic']) || FONT.display;
+  FONT.sans = pick(['Inter Tight', 'Inter'], ['Regular']) || INTER;
+  FONT.sansMedium = pick(['Inter Tight', 'Inter'], ['Medium']) || FONT.sans;
+  FONT.sansSemi = pick(['Inter Tight', 'Inter'], ['SemiBold', 'Semi Bold', 'Bold']) || FONT.sans;
+  FONT.mono = pick(['JetBrains Mono', 'Roboto Mono', 'IBM Plex Mono'], ['Regular']) || INTER;
+  FONT.monoBold = pick(['JetBrains Mono', 'Roboto Mono', 'IBM Plex Mono'], ['Bold', 'SemiBold', 'Medium']) || FONT.mono;
   FONT.deva = pick(['Poppins', 'Mukta', 'Hind', 'Noto Sans Devanagari'], ['Regular']);
-  FONT.malayalam = pick(['Noto Sans Malayalam', 'Manjari', 'Baloo Chettan 2'], ['Regular']);
-  const load = Object.values(FONT).filter(Boolean);
-  for (const f of load) await figma.loadFontAsync(f);
+  FONT.malayalam = pick(['Noto Sans Malayalam', 'Manjari'], ['Regular']);
+  await figma.loadFontAsync(INTER);
+  for (const f of Object.values(FONT).filter(Boolean)) await figma.loadFontAsync(f);
 }
 
-// ---------------------------------------------------------------- variables & styles
+// ---------------------------------------------------------------- variables & text styles
 async function setupVariables() {
   if (!figma.variables || !figma.variables.createVariableCollection) return;
   try {
-    const existing = (await figma.variables.getLocalVariableCollectionsAsync()).find((c) => c.name === 'AeroAgro · Field Instrument');
-    const col = existing || figma.variables.createVariableCollection('AeroAgro · Field Instrument');
-    const mode = col.modes[0].modeId;
-    col.renameMode(mode, 'Night');
+    const name = 'AeroAgro · Monsoon Almanac';
+    const col = (await figma.variables.getLocalVariableCollectionsAsync()).find((c) => c.name === name) || figma.variables.createVariableCollection(name);
+    MODES.paper = col.modes[0].modeId;
+    col.renameMode(MODES.paper, 'Paper');
+    const existingNight = col.modes.find((m) => m.name === 'Night');
+    try {
+      MODES.night = existingNight ? existingNight.modeId : col.addMode('Night');
+    } catch (e) {
+      MODES.night = null; // plan without extra modes: night bands fall back to raw colours
+    }
     const vars = await figma.variables.getLocalVariablesAsync('COLOR');
-    for (const [k, hex] of Object.entries(TOKENS)) {
-      const name = `color/${k}`;
-      let v = vars.find((x) => x.name === name && x.variableCollectionId === col.id);
-      if (!v) v = figma.variables.createVariable(name, col, 'COLOR');
-      v.setValueForMode(mode, Object.assign(hexToRgb(hex), { a: 1 }));
-      v.description = TOKEN_NOTES[k] || '';
+    for (const k of Object.keys(PAPER)) {
+      const vname = `color/${k}`;
+      let v = vars.find((x) => x.name === vname && x.variableCollectionId === col.id);
+      if (!v) v = figma.variables.createVariable(vname, col, 'COLOR');
+      v.setValueForMode(MODES.paper, Object.assign(hexToRgb(PAPER[k]), { a: 1 }));
+      if (MODES.night) v.setValueForMode(MODES.night, Object.assign(hexToRgb(NIGHT[k]), { a: 1 }));
+      v.description = NOTES[k] || '';
       V[k] = v;
     }
+    COLLECTION = col;
   } catch (e) {
     console.warn('Variables unavailable, using raw colours', e);
   }
 }
 
 const TEXT_STYLES = [
-  ['display/xl', 'display', 64, 1.02, -2],
-  ['display/l', 'display', 40, 1.08, -1],
-  ['display/m', 'display', 28, 1.15, -0.5],
-  ['display/s', 'display', 20, 1.2, 0],
-  ['body/l', 'sans', 17, 1.6, 0],
-  ['body/m', 'sans', 14, 1.55, 0],
-  ['body/m-strong', 'sansSemi', 14, 1.4, 0],
-  ['body/s', 'sans', 12, 1.45, 0],
-  ['mono/label', 'mono', 10, 1.4, 16],
-  ['mono/data', 'mono', 11, 1.45, 2],
+  ['display/poster', 'display', 128, 0.9, -2.5],
+  ['display/xl', 'display', 72, 0.95, -1.5],
+  ['display/l', 'display', 48, 1.0, -1],
+  ['display/m', 'display', 32, 1.05, -0.5],
+  ['display/s', 'display', 24, 1.1, 0],
+  ['body/l', 'sans', 18, 1.55, 0],
+  ['body/m', 'sans', 15, 1.55, 0],
+  ['body/m-strong', 'sansSemi', 15, 1.4, 0],
+  ['body/s', 'sans', 12.5, 1.45, 0],
+  ['mono/label', 'mono', 11, 1.4, 18],
+  ['mono/data', 'mono', 11.5, 1.45, 0],
   ['mono/readout', 'monoBold', 13, 1.3, 0],
-  ['mono/figure', 'monoBold', 26, 1.1, -2],
 ];
 
 async function setupTextStyles() {
@@ -193,7 +207,10 @@ function frame(name, o) {
     f.strokeWeight = o.stroke[2] || 1;
     f.strokeAlign = 'INSIDE';
   }
-  if (o.shadow) f.effects = [{ type: 'DROP_SHADOW', color: { r: 0, g: 0, b: 0, a: 0.55 }, offset: { x: 0, y: 18 }, radius: 40, spread: -16, visible: true, blendMode: 'NORMAL' }];
+  if (o.shadow)
+    f.effects = [
+      { type: 'DROP_SHADOW', color: { r: 0.07, g: 0.09, b: 0.08, a: THEME === 'night' ? 0.6 : 0.16 }, offset: { x: 0, y: 18 }, radius: 40, spread: -22, visible: true, blendMode: 'NORMAL' },
+    ];
   return f;
 }
 
@@ -217,7 +234,6 @@ async function text(str, style, color, o) {
     }
   }
   if (o.size) t.fontSize = o.size;
-  if (o.upper) t.textCase = 'UPPER';
   if (o.align) t.textAlignHorizontal = o.align;
   t.fills = [paint(color || 'ink', o.opacity)];
   if (o.w) {
@@ -227,12 +243,20 @@ async function text(str, style, color, o) {
   return t;
 }
 
+/** Title with an italic, accent-coloured tail: "One village. |Its own forecast." */
+async function title(plain, accent, style, o) {
+  const t = await text(plain + accent, style, 'ink', o);
+  if (accent) {
+    t.setRangeFontName(plain.length, plain.length + accent.length, FONT.displayItalic);
+    t.setRangeFills(plain.length, plain.length + accent.length, [paint('accent')]);
+  }
+  return t;
+}
+
 function add(parent, child, o) {
   parent.appendChild(child);
   o = o || {};
   const row = parent.layoutMode === 'HORIZONTAL';
-  // "fill width": grow along a row, stretch across a column. Try the modern sizing API first;
-  // a hugging parent can refuse it, so fall back to the legacy properties, which apply once it is sized.
   if (o.fill) {
     try {
       child.layoutSizingHorizontal = 'FILL';
@@ -250,11 +274,6 @@ function add(parent, child, o) {
     }
   }
   if (o.grow) child.layoutGrow = 1;
-  if (o.abs) {
-    child.layoutPositioning = 'ABSOLUTE';
-    child.x = o.abs[0];
-    child.y = o.abs[1];
-  }
   return child;
 }
 
@@ -266,29 +285,6 @@ function rect(w, h, fill, o) {
   if (o.radius != null) r.cornerRadius = o.radius;
   if (o.name) r.name = o.name;
   return r;
-}
-
-/** Eight accent corner ticks, pinned to the corners so they follow resizing. */
-function hudCorners(target) {
-  const L = 12, T = 1.5;
-  const spots = [
-    [0, 0, L, T, 'MIN', 'MIN'],
-    [0, 0, T, L, 'MIN', 'MIN'],
-    [target.width - L, 0, L, T, 'MAX', 'MIN'],
-    [target.width - T, 0, T, L, 'MAX', 'MIN'],
-    [0, target.height - T, L, T, 'MIN', 'MAX'],
-    [0, target.height - L, T, L, 'MIN', 'MAX'],
-    [target.width - L, target.height - T, L, T, 'MAX', 'MAX'],
-    [target.width - T, target.height - L, T, L, 'MAX', 'MAX'],
-  ];
-  for (const [x, y, w, h, hc, vc] of spots) {
-    const r = rect(w, h, 'accent', { opacity: 0.6, name: 'hud-tick' });
-    target.appendChild(r);
-    if (target.layoutMode && target.layoutMode !== 'NONE') r.layoutPositioning = 'ABSOLUTE';
-    r.x = x;
-    r.y = y;
-    r.constraints = { horizontal: hc, vertical: vc };
-  }
 }
 
 function svg(markup, name) {
@@ -306,23 +302,28 @@ const ICON = {
   spark: '<path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/>',
   drop: '<path d="M12 2.7l5.7 5.7a8 8 0 1 1-11.3 0z"/>',
   wind: '<path d="M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2"/>',
-  snow: '<path d="M2 12h20M12 2v20M20 16l-4-4 4-4M4 8l4 4-4 4M16 4l-4 4-4-4M8 20l4-4 4 4"/>',
   mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/>',
   send: '<path d="m22 2-7 20-4-9-9-4zM22 2 11 13"/>',
   radar: '<path d="M19.1 4.9A10 10 0 1 1 12 2M12 6a6 6 0 1 0 6 6M12 12l7-7"/><circle cx="12" cy="12" r="2"/>',
   spray: '<path d="M3 3h.01M7 5h.01M11 7h.01M3 7h.01M7 9h.01M3 11h.01"/><rect x="15" y="5" width="4" height="4"/><path d="m19 9 2 2v10c0 .6-.4 1-1 1h-6c-.6 0-1-.4-1-1V11l2-2M13 16h8"/>',
   shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+  phone: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>',
+  tv: '<rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/>',
+  pin: '<path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
+  cloud: '<path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M8 19v1M12 19v2M16 19v1"/>',
+  arrow: '<path d="M7 17 17 7M7 7h10v10"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  locate: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/>',
 };
 function icon(key, color, size) {
   const s = size || 16;
-  const n = svg(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${TOKENS[color] || color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[key]}</svg>`,
+  return svg(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${T()[color] || color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[key]}</svg>`,
     `icon/${key}`
   );
-  return n;
 }
 
-function image(key, w, h, name) {
+function image(key, w, h, name, radius) {
   const r = figma.createRectangle();
   r.name = name || key;
   r.resize(w, h);
@@ -330,7 +331,12 @@ function image(key, w, h, name) {
     const img = figma.createImage(figma.base64Decode(IMAGES[key]));
     r.fills = [{ type: 'IMAGE', imageHash: img.hash, scaleMode: 'FILL' }];
   } else r.fills = [paint('surface2')];
+  if (radius) r.cornerRadius = radius;
   return r;
+}
+
+function rule(w) {
+  return rect(w, 1, 'line', { opacity: 0.16, name: 'rule' });
 }
 
 const f1 = (n) => (Math.abs(n) < 0.05 ? '0.0' : n < 0 ? `−${Math.abs(n).toFixed(1)}` : n.toFixed(1));
@@ -339,313 +345,249 @@ const sgn = (n) => `${n >= 0 ? '+' : '−'}${Math.abs(n).toFixed(1)}`;
 // ---------------------------------------------------------------- components
 const COMP = {};
 
-async function buildComponents(page) {
-  const board = frame('Components', { dir: 'col', gap: 48, pad: 64, fill: paint('bg') });
-  page.appendChild(board);
-  add(board, await text('Components', 'display/l', 'ink'));
-  add(board, await text('Variant components used by every screen. Built from the colour variables and AeroAgro text styles, so a token change restyles the whole file.', 'body/m', 'ink2', { w: 760 }));
+function componentFrame(name, o) {
+  const c = figma.createComponent();
+  c.name = name;
+  c.fills = o && o.fill ? [o.fill] : [];
+  if (o && o.dir) {
+    c.layoutMode = o.dir === 'row' ? 'HORIZONTAL' : 'VERTICAL';
+    c.primaryAxisSizingMode = 'AUTO';
+    c.counterAxisSizingMode = 'AUTO';
+    c.itemSpacing = o.gap || 0;
+    const p = o.pad || 0;
+    const [pt, pr, pb, pl] = Array.isArray(p) ? (p.length === 2 ? [p[0], p[1], p[0], p[1]] : p) : [p, p, p, p];
+    c.paddingTop = pt;
+    c.paddingRight = pr;
+    c.paddingBottom = pb;
+    c.paddingLeft = pl;
+    c.counterAxisAlignItems = o.align || 'MIN';
+    if (o.w) {
+      if (o.dir === 'row') c.primaryAxisSizingMode = 'FIXED';
+      else c.counterAxisSizingMode = 'FIXED';
+      c.resize(o.w, 10);
+    }
+  }
+  if (o && o.radius != null) c.cornerRadius = o.radius;
+  if (o && o.stroke) {
+    c.strokes = [paint(o.stroke[0], o.stroke[1])];
+    c.strokeWeight = 1;
+  }
+  return c;
+}
 
-  const row = async (title) => {
-    const r = frame(title, { dir: 'col', gap: 16 });
-    add(r, await text(title, 'mono/label', 'muted'));
-    const items = frame(`${title} · set`, { dir: 'row', gap: 24, align: 'CENTER' });
+async function buildComponents(page) {
+  const board = frame('Components', { dir: 'col', gap: 56, pad: 80, fill: paint('bg'), w: 1440 });
+  page.appendChild(board);
+  add(board, await text('(C) — COMPONENTS', 'mono/label', 'muted'));
+  add(board, await title('Parts that ', 'build every page.', 'display/xl', { w: 1100 }));
+  add(board, await text('Variant components bound to the colour variables and AeroAgro text styles. Switch a frame to the Night mode and every instance follows.', 'body/l', 'ink2', { w: 760 }));
+
+  const row = async (label) => {
+    const r = frame(label, { dir: 'col', gap: 18 });
+    add(r, rule(1280));
+    add(r, await text(label, 'mono/label', 'muted'));
+    const items = frame(`${label} · set`, { dir: 'row', gap: 24, align: 'CENTER' });
     add(r, items);
     add(board, r);
     return items;
   };
 
-  // Button
+  // Button · Kind
   const btns = [];
   for (const kind of ['Primary', 'Ghost']) {
-    const c = figma.createComponent();
-    c.name = `Kind=${kind}`;
-    c.layoutMode = 'HORIZONTAL';
-    c.primaryAxisSizingMode = 'AUTO';
-    c.counterAxisSizingMode = 'AUTO';
-    c.itemSpacing = 8;
-    c.paddingLeft = c.paddingRight = 16;
-    c.paddingTop = c.paddingBottom = 10;
-    c.cornerRadius = 10;
-    c.counterAxisAlignItems = 'CENTER';
-    c.fills = [paint(kind === 'Primary' ? 'accent' : 'surface2')];
-    if (kind === 'Ghost') {
-      c.strokes = [paint('line', 0.1)];
-      c.strokeWeight = 1;
-    }
-    add(c, icon(kind === 'Primary' ? 'file' : 'spark', kind === 'Primary' ? 'accentInk' : 'ink', 16));
-    const t = await text(kind === 'Primary' ? 'Agromet bulletin' : 'Ask AeroAgro', 'body/m-strong', kind === 'Primary' ? 'accentInk' : 'ink');
+    const c = componentFrame(`Kind=${kind}`, { dir: 'row', gap: 10, pad: [14, 24], align: 'CENTER', radius: 999, fill: kind === 'Primary' ? paint('btn') : undefined, stroke: kind === 'Ghost' ? ['line', 0.16] : null });
+    add(c, icon(kind === 'Primary' ? 'locate' : 'file', kind === 'Primary' ? 'btnInk' : 'ink', 18));
+    const t = await text(kind === 'Primary' ? 'Use my location' : 'Agromet bulletin', 'body/m-strong', kind === 'Primary' ? 'btnInk' : 'ink');
     t.name = 'Label';
     add(c, t);
     btns.push(c);
   }
-  const btnSet = figma.combineAsVariants(btns, await row('Button'));
-  btnSet.name = 'Button';
-  btnSet.layoutMode = 'HORIZONTAL';
-  btnSet.itemSpacing = 16;
-  COMP.button = btnSet;
+  COMP.button = figma.combineAsVariants(btns, await row('Button · Kind'));
+  COMP.button.name = 'Button';
+  COMP.button.layoutMode = 'HORIZONTAL';
+  COMP.button.itemSpacing = 16;
 
-  // Chip
+  // Chip · State
   const chips = [];
   for (const state of ['Off', 'On']) {
-    const c = figma.createComponent();
-    c.name = `State=${state}`;
-    c.layoutMode = 'HORIZONTAL';
-    c.primaryAxisSizingMode = c.counterAxisSizingMode = 'AUTO';
-    c.paddingLeft = c.paddingRight = 10;
-    c.paddingTop = c.paddingBottom = 6;
-    c.cornerRadius = 6;
-    c.fills = [paint(state === 'On' ? 'accent' : 'surface2')];
-    c.strokes = [paint(state === 'On' ? 'accent' : 'line', state === 'On' ? 1 : 0.1)];
-    c.strokeWeight = 1;
-    const t = await text('Night low', 'body/s', state === 'On' ? 'accentInk' : 'ink2', { font: 'sansMedium' });
+    const c = componentFrame(`State=${state}`, { dir: 'row', pad: [7, 14], radius: 999, fill: state === 'On' ? paint('btn') : undefined, stroke: state === 'Off' ? ['line', 0.14] : null });
+    const t = await text('Munnar', 'body/s', state === 'On' ? 'btnInk' : 'ink2', { font: 'sansMedium' });
     t.name = 'Label';
     add(c, t);
     chips.push(c);
   }
-  const chipSet = figma.combineAsVariants(chips, await row('Chip'));
-  chipSet.name = 'Chip';
-  chipSet.layoutMode = 'HORIZONTAL';
-  chipSet.itemSpacing = 16;
-  COMP.chip = chipSet;
+  COMP.chip = figma.combineAsVariants(chips, await row('Chip · State'));
+  COMP.chip.name = 'Chip';
+  COMP.chip.layoutMode = 'HORIZONTAL';
+  COMP.chip.itemSpacing = 16;
 
-  // Verdict tile
-  const verdicts = [];
-  for (const [tone, color, word, headline] of [
-    ['Good', 'good', 'Go', 'Best between 08:00–10:00'],
-    ['Warn', 'warn', 'Increase', '5.2 mm deficit · drip after 17:00'],
-    ['Bad', 'bad', 'Stop', 'Rain within 2 h · wash-off'],
+  // Verdict tile · Tone
+  const tiles = [];
+  for (const [tone, color, word, head] of [
+    ['Good', 'good', 'Go', '08:00–10:00'],
+    ['Warn', 'warn', 'Short window', '10:00–12:00'],
+    ['Bad', 'bad', 'Hold off', 'No safe window'],
   ]) {
-    const c = figma.createComponent();
-    c.name = `Tone=${tone}`;
-    c.layoutMode = 'VERTICAL';
-    c.primaryAxisSizingMode = 'AUTO';
-    c.counterAxisSizingMode = 'FIXED';
-    c.resize(320, 10);
-    c.itemSpacing = 10;
-    c.paddingLeft = c.paddingRight = c.paddingTop = c.paddingBottom = 16;
-    c.cornerRadius = 12;
-    c.fills = [paint('surface2')];
-    c.strokes = [paint(color, 0.35)];
-    c.strokeWeight = 1;
-    const head = frame('Head', { dir: 'row', gap: 8, align: 'CENTER' });
-    add(head, icon('spray', 'ink2', 16));
-    add(head, await text('Spraying', 'body/m-strong', 'ink'), { grow: true });
-    const pill = frame('Verdict', { dir: 'row', pad: [3, 8], radius: 999, fill: paint(color, 0.16) });
+    const c = componentFrame(`Tone=${tone}`, { dir: 'col', gap: 12, pad: 20, radius: 18, w: 360, fill: paint('bg', 0.5), stroke: ['line', 0.1] });
+    const h = frame('Head', { dir: 'row', gap: 8, align: 'CENTER' });
+    add(h, icon('spray', 'ink2', 16));
+    add(h, await text('Spraying', 'body/m', 'ink2'), { grow: true });
+    const pill = frame('Verdict', { dir: 'row', pad: [4, 10], radius: 999, fill: paint(color, 0.15) });
     const pt = await text(word, 'body/s', color, { font: 'sansSemi' });
     pt.name = 'Verdict label';
     add(pill, pt);
-    add(head, pill);
-    add(c, head, { fill: true });
-    const h = await text(headline, 'body/m-strong', 'ink');
-    h.name = 'Headline';
+    add(h, pill);
     add(c, h, { fill: true });
-    verdicts.push(c);
+    const ht = await text(head, 'display/m', 'ink');
+    ht.name = 'Headline';
+    add(c, ht);
+    tiles.push(c);
   }
-  const vSet = figma.combineAsVariants(verdicts, await row('Verdict tile'));
-  vSet.name = 'Verdict tile';
-  vSet.layoutMode = 'HORIZONTAL';
-  vSet.itemSpacing = 16;
-  COMP.verdict = vSet;
+  COMP.verdict = figma.combineAsVariants(tiles, await row('Verdict tile · Tone'));
+  COMP.verdict.name = 'Verdict tile';
+  COMP.verdict.layoutMode = 'HORIZONTAL';
+  COMP.verdict.itemSpacing = 16;
 
   // Section head
-  const sh = figma.createComponent();
-  sh.name = 'Section head';
-  sh.layoutMode = 'VERTICAL';
-  sh.primaryAxisSizingMode = 'AUTO';
-  sh.counterAxisSizingMode = 'FIXED';
-  sh.resize(1000, 10);
-  sh.itemSpacing = 12;
-  sh.fills = [];
-  const kick = frame('Kicker', { dir: 'row', gap: 12, align: 'CENTER' });
-  const idx = frame('Index', { dir: 'row', pad: [2, 6], radius: 4, fill: paint('accent') });
-  const it = await text('02', 'mono/label', 'accentInk', { font: 'monoBold' });
-  it.name = 'Index';
-  add(idx, it);
-  add(kick, idx);
-  const kt = await text('Downscaling engine', 'mono/label', 'ink2');
-  kt.name = 'Kicker';
-  add(kick, kt);
-  add(kick, rect(10, 1, 'line', { opacity: 0.18, name: 'Rule' }), { grow: true });
-  const mt = await text('Physics-informed · explainable', 'mono/label', 'muted');
-  mt.name = 'Meta';
-  add(kick, mt);
-  add(sh, kick, { fill: true });
-  const ht = await text('From block to panchayat, shown working', 'display/l', 'ink');
-  ht.name = 'Title';
-  add(sh, ht);
+  const sh = componentFrame('Section head', { dir: 'col', gap: 18, w: 1280 });
+  add(sh, rule(1280), { fill: true });
+  const body = frame('Body', { dir: 'row', gap: 40, align: 'MAX' });
+  const left = frame('Left', { dir: 'col', gap: 16 });
+  const k = await text('(01) — YOUR VILLAGE, TODAY', 'mono/label', 'muted');
+  k.name = 'Kicker';
+  add(left, k);
+  const tt = await title('One village. ', 'Its own forecast.', 'display/xl');
+  tt.name = 'Title';
+  add(left, tt);
+  add(body, left, { grow: true });
+  const meta = await text('Pick any of 303 regions. Everything is re-computed for that exact place.', 'body/m', 'ink2', { w: 360 });
+  meta.name = 'Meta';
+  add(body, meta);
+  add(sh, body, { fill: true });
   add(await row('Section head'), sh);
   COMP.section = sh;
 
-  // Readout
-  const ro = figma.createComponent();
-  ro.name = 'Readout';
-  ro.layoutMode = 'VERTICAL';
-  ro.primaryAxisSizingMode = 'AUTO';
-  ro.counterAxisSizingMode = 'FIXED';
-  ro.resize(200, 10);
-  ro.itemSpacing = 4;
-  ro.paddingLeft = ro.paddingRight = 12;
-  ro.paddingTop = ro.paddingBottom = 10;
-  ro.cornerRadius = 8;
-  ro.fills = [];
-  ro.strokes = [paint('line', 0.08)];
-  ro.strokeWeight = 1;
-  const rl = await text('Block forecast', 'body/s', 'muted');
-  rl.name = 'Label';
-  add(ro, rl);
-  const rv = await text('17.2 °C', 'mono/readout', 'sun');
-  rv.name = 'Value';
-  add(ro, rv);
-  add(await row('Readout'), ro);
-  COMP.readout = ro;
+  // Card
+  const card = componentFrame('Card', { dir: 'col', gap: 12, pad: 28, w: 420, radius: 20, fill: paint('surface'), stroke: ['line', 0.08] });
+  card.effects = [{ type: 'DROP_SHADOW', color: { r: 0.07, g: 0.09, b: 0.08, a: 0.16 }, offset: { x: 0, y: 18 }, radius: 40, spread: -22, visible: true, blendMode: 'NORMAL' }];
+  add(card, await text('PRINT', 'mono/label', 'muted'));
+  add(card, await text('Agromet bulletin', 'display/m', 'ink'));
+  add(card, await text('Five-day GKMS-format advisory with SMS text and QR.', 'body/m', 'ink2', { w: 364 }));
+  add(await row('Card'), card);
+  COMP.card = card;
 
-  // Scale bar & north arrow
-  const sb = figma.createComponent();
-  sb.name = 'Scale bar';
-  sb.fills = [];
-  sb.resize(120, 18);
-  for (let i = 0; i < 4; i++) {
-    const seg = rect(30, 5, i % 2 ? '#FFFFFF' : '#000000', { opacity: i % 2 ? 0.85 : 0.6 });
-    sb.appendChild(seg);
-    seg.x = i * 30;
-    seg.y = 0;
-  }
-  const sbBorder = figma.createRectangle();
-  sbBorder.resize(120, 5);
-  sbBorder.fills = [];
-  sbBorder.strokes = [paint('#FFFFFF', 0.7)];
-  sbBorder.strokeWeight = 1;
-  sb.appendChild(sbBorder);
-  const s0 = await text('0', 'mono/data', '#FFFFFF', { size: 9 });
-  sb.appendChild(s0);
-  s0.x = 0;
-  s0.y = 6;
-  const s1 = await text('6 km', 'mono/data', '#FFFFFF', { size: 9 });
-  s1.name = 'Distance';
-  sb.appendChild(s1);
-  s1.x = 120 - s1.width;
-  s1.y = 6;
-  const na = figma.createComponent();
-  na.name = 'North arrow';
-  na.fills = [];
-  na.resize(20, 28);
-  const arrow = svg('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="28" viewBox="0 0 20 28"><path d="M10 2 L16 18 L10 14.5 L4 18 Z" fill="#FFFFFF" fill-opacity=".9"/><path d="M10 2 L10 14.5 L4 18 Z" fill="#000000" fill-opacity=".35"/></svg>', 'arrow');
-  na.appendChild(arrow);
-  const nt = await text('N', 'mono/data', '#FFFFFF', { size: 8 });
-  na.appendChild(nt);
-  nt.x = 7;
-  nt.y = 18;
-  const carto = await row('Cartographic furniture');
-  add(carto, sb);
-  add(carto, na);
-  COMP.scale = sb;
-  COMP.north = na;
-
-  // HUD panel
-  const hp = figma.createComponent();
-  hp.name = 'HUD panel';
-  hp.resize(360, 200);
-  hp.cornerRadius = 14;
-  hp.fills = [paint('surface')];
-  hp.strokes = [paint('line', 0.08)];
-  hp.strokeWeight = 1;
-  hudCorners(hp);
-  const hpl = await text('FIG 2.1 · LIVE COPERNICUS GLO-90 DEM', 'mono/label', 'muted');
-  hp.appendChild(hpl);
-  hpl.x = 20;
-  hpl.y = 20;
-  add(await row('HUD panel (corner ticks follow resizing)'), hp);
-  COMP.hud = hp;
-
+  // Night-mode specimen of the same components
+  await night(async () => {
+    const nb = frame('Night mode specimen', { dir: 'row', gap: 24, pad: 32, radius: 20, fill: paint('bg'), align: 'CENTER' });
+    setNightMode(nb);
+    add(nb, COMP.button.children.find((c) => c.name === 'Kind=Primary').createInstance());
+    add(nb, COMP.chip.children.find((c) => c.name === 'State=On').createInstance());
+    add(nb, COMP.verdict.children.find((c) => c.name === 'Tone=Good').createInstance());
+    add(nb, await text('Same components, Night mode →', 'mono/label', 'muted'));
+    add(await row('Variable mode · Night'), nb);
+  });
   return board;
 }
 
-// ---------------------------------------------------------------- foundations page
+// ---------------------------------------------------------------- foundations
 async function buildFoundations(page) {
-  const board = frame('Foundations', { dir: 'col', gap: 56, pad: 64, fill: paint('bg'), w: 1440 });
+  const board = frame('Foundations', { dir: 'col', gap: 64, pad: 80, fill: paint('bg'), w: 1440 });
   page.appendChild(board);
-  add(board, await text('Foundations · Field Instrument', 'display/l', 'ink'));
+  add(board, await text('(F) — FOUNDATIONS · MONSOON ALMANAC', 'mono/label', 'muted'));
+  add(board, await title('An almanac for people, ', 'an instrument for data.', 'display/xl', { w: 1200 }));
   add(
     board,
     await text(
-      'A night-time field instrument: one lime accent on green-black, serif headlines for the human story, monospace for every measured number. Every colour below is a Figma variable; every type ramp entry is a text style.',
+      'Paper sections carry the human story: big serif, calm type, one highlighter. Night bands carry the instruments: maps, the engine, field tools. Both are the same variables in two modes.',
       'body/l',
       'ink2',
-      { w: 900 }
+      { w: 820 }
     )
   );
 
-  // colour
-  const colours = frame('Colour variables', { dir: 'col', gap: 16 });
-  add(colours, await text('Colour · variables (collection “AeroAgro · Field Instrument”, mode Night)', 'mono/label', 'muted'));
+  // colour: paper / night pairs
+  const cw = frame('Colour', { dir: 'col', gap: 18 });
+  add(cw, rule(1280));
+  add(cw, await text('Colour · variables in two modes (Paper / Night)', 'mono/label', 'muted'));
   const grid = frame('Swatches', { dir: 'row', gap: 16 });
   grid.layoutWrap = 'WRAP';
   grid.counterAxisSpacing = 16;
   grid.primaryAxisSizingMode = 'FIXED';
-  grid.resize(1312, 10);
-  for (const [k, hex] of Object.entries(TOKENS)) {
-    const sw = frame(`swatch/${k}`, { dir: 'col', gap: 0, radius: 10, clip: true, stroke: ['line', 0.1], w: 150, fill: paint('surface') });
-    add(sw, rect(150, 72, k), { fill: true });
+  grid.resize(1280, 10);
+  for (const k of Object.keys(PAPER)) {
+    const sw = frame(`swatch/${k}`, { dir: 'col', radius: 14, clip: true, w: 148, fill: paint('surface'), stroke: ['line', 0.1] });
+    const pair = frame('pair', { dir: 'row', h: 64, w: 148 });
+    add(pair, rect(74, 64, PAPER[k]), { grow: true });
+    add(pair, rect(74, 64, NIGHT[k]), { grow: true });
+    add(sw, pair, { fill: true });
     const meta = frame('meta', { dir: 'col', gap: 2, pad: 10 });
     add(meta, await text(k, 'body/m-strong', 'ink'));
-    add(meta, await text(hex, 'mono/data', 'muted'));
-    add(meta, await text(TOKEN_NOTES[k], 'body/s', 'ink2', { w: 130 }));
+    add(meta, await text(`${PAPER[k]} · ${NIGHT[k]}`, 'mono/data', 'muted', { size: 9.5 }));
+    add(meta, await text(NOTES[k], 'body/s', 'ink2', { w: 128 }));
     add(sw, meta, { fill: true });
     add(grid, sw);
   }
-  add(colours, grid);
-  add(board, colours, { fill: true });
+  add(cw, grid);
+  add(board, cw);
 
   // thermal ramp
-  const ramp = frame('Night thermal ramp', { dir: 'col', gap: 10 });
-  add(ramp, await text('Data ramp · night minimum −3 → 17 °C (frost burns white, warm valleys glow amber)', 'mono/label', 'muted'));
-  const bar = rect(900, 16, gradient([[0, '#FFFFFF'], [0.15, '#C8F2FF'], [0.25, '#76D6FF'], [0.35, '#40A4F5'], [0.45, '#426CDE'], [0.55, '#604AC4'], [0.65, '#8A40A8'], [0.75, '#B84680'], [0.85, '#E0645A'], [1, '#F6B94C']], 0), { radius: 8, name: 'ramp' });
-  add(ramp, bar);
-  add(board, ramp);
+  const rp = frame('Thermal ramp', { dir: 'col', gap: 12 });
+  add(rp, rule(1280));
+  add(rp, await text('Data ramp · night minimum −3 → 17 °C: frost burns white, warm valleys glow amber', 'mono/label', 'muted'));
+  add(
+    rp,
+    rect(900, 18, gradient([[0, '#FFFFFF'], [0.15, '#C8F2FF'], [0.25, '#76D6FF'], [0.35, '#40A4F5'], [0.45, '#426CDE'], [0.55, '#604AC4'], [0.65, '#8A40A8'], [0.75, '#B84680'], [0.85, '#E0645A'], [1, '#F6B94C']], 0), { radius: 9 })
+  );
+  add(board, rp);
 
   // type
-  const type = frame('Type ramp', { dir: 'col', gap: 18 });
-  add(type, await text('Typography · text styles', 'mono/label', 'muted'));
+  const ty = frame('Type', { dir: 'col', gap: 22 });
+  add(ty, rule(1280));
+  add(ty, await text('Typography · Instrument Serif / Inter Tight / JetBrains Mono', 'mono/label', 'muted'));
   const samples = {
-    'display/xl': 'Weather for your village',
-    'display/l': 'From block to panchayat',
-    'display/m': 'The week ahead in Munnar',
+    'display/poster': 'Weather for your village',
+    'display/xl': 'One village. Its own forecast.',
+    'display/l': 'What to do today',
+    'display/m': '08:00–10:00',
     'display/s': 'Why your village differs',
-    'body/l': 'AeroAgro sharpens 18 km forecasts into 1.2 km microclimates.',
+    'body/l': 'AeroAgro re-draws the 18 km forecast at 1.2 km from real terrain.',
     'body/m': 'Spraying stops above 15 km/h wind or when rain is due within two hours.',
-    'body/m-strong': 'Best between 08:00–10:00',
-    'body/s': 'Crop water demand (FAO-56 reference ET) 3.4 mm/day',
-    'mono/label': 'Fig 2.1 · Live Copernicus GLO-90 DEM',
+    'body/m-strong': 'District forecast 18 km → your village 1.2 km',
+    'body/s': 'Crop water demand (FAO-56 reference ET) 2.7 mm/day',
+    'mono/label': '(03) — The downscaling engine',
     'mono/data': 'ΔT = −Γn·Δz = −6.5 K/km × 0.062 km',
     'mono/readout': '17.2 → 16.8 °C',
-    'mono/figure': '10.5 °C',
   };
   for (const [name, role, size] of TEXT_STYLES) {
-    const r = frame(name, { dir: 'row', gap: 24, align: 'CENTER' });
-    const meta = await text(`${name}\n${FONT[role].family} ${FONT[role].style} · ${size}`, 'mono/data', 'muted', { w: 260 });
-    add(r, meta);
-    add(r, await text(samples[name], name, name.startsWith('mono/label') ? 'muted' : 'ink'));
-    add(type, r);
+    const r = frame(name, { dir: 'row', gap: 28, align: 'CENTER' });
+    add(r, await text(`${name}\n${FONT[role].family} ${FONT[role].style} · ${size}`, 'mono/data', 'muted', { w: 250 }));
+    add(r, await text(samples[name], name, 'ink'));
+    add(ty, r);
   }
-  add(board, type);
+  add(board, ty);
 
-  // spacing & radius
-  const sp = frame('Spacing', { dir: 'col', gap: 12 });
-  add(sp, await text('Spacing · 4 pt base · radius 6 / 10 / 14', 'mono/label', 'muted'));
-  const bars = frame('scale', { dir: 'row', gap: 20, align: 'MAX' });
-  for (const n of [4, 8, 12, 16, 24, 32, 48, 64]) {
+  // space & shape
+  const sp = frame('Space', { dir: 'col', gap: 14 });
+  add(sp, rule(1280));
+  add(sp, await text('Space · 4 pt base · shape: card 20, pill 999, figure 22', 'mono/label', 'muted'));
+  const bars = frame('scale', { dir: 'row', gap: 22, align: 'MAX' });
+  for (const n of [4, 8, 12, 16, 24, 32, 48, 64, 96]) {
     const col = frame(`space/${n}`, { dir: 'col', gap: 6, align: 'CENTER' });
     add(col, rect(n, n, 'accent', { opacity: 0.85 }));
     add(col, await text(String(n), 'mono/data', 'muted'));
     add(bars, col);
   }
-  for (const r of [6, 10, 14]) {
-    const col = frame(`radius/${r}`, { dir: 'col', gap: 6, align: 'CENTER' });
-    const box = rect(56, 56, 'surface2', { radius: r });
-    box.strokes = [paint('accent', 0.6)];
+  for (const [r, label] of [
+    [20, 'card'],
+    [999, 'pill'],
+    [22, 'figure'],
+  ]) {
+    const col = frame(`radius/${label}`, { dir: 'col', gap: 6, align: 'CENTER' });
+    const box = rect(label === 'pill' ? 96 : 64, label === 'pill' ? 40 : 64, 'surface', { radius: r });
+    box.strokes = [paint('line', 0.2)];
     box.strokeWeight = 1;
     add(col, box);
-    add(col, await text(`r ${r}`, 'mono/data', 'muted'));
+    add(col, await text(label, 'mono/data', 'muted'));
     add(bars, col);
   }
   add(sp, bars);
@@ -653,340 +595,496 @@ async function buildFoundations(page) {
   return board;
 }
 
-// ---------------------------------------------------------------- screen pieces
+// ---------------------------------------------------------------- screen sections
 function inst(set, variant) {
   const node = variant ? set.children.find((c) => c.name === variant) || set.defaultVariant : set.defaultVariant || set;
   return node.createInstance();
 }
-
-async function setLabel(instance, name, value) {
-  const t = instance.findOne((n) => n.type === 'TEXT' && n.name === name);
+async function setLabel(node, name, value) {
+  const t = node.findOne((n) => n.type === 'TEXT' && n.name === name);
   if (t) t.characters = value;
-}
-
-async function header(w) {
-  const h = frame('Header', { dir: 'row', gap: 16, pad: [14, 32], align: 'CENTER', w, fill: paint('bg', 0.92) });
-  h.strokes = [paint('line', 0.07)];
-  h.strokeWeight = 1;
-  h.strokeTopWeight = 0;
-  h.strokeLeftWeight = 0;
-  h.strokeRightWeight = 0;
-  const logo = frame('Logo', { dir: 'row', gap: 10, align: 'CENTER' });
-  const mark = frame('Mark', { w: 32, h: 32, radius: 9, fill: paint('accent') });
-  const leaf = svg('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0C120A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 24V13.5M16 13.5c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM16 16.5c0-2.8-2-4.6-5-4.6 0 2.8 2 4.6 5 4.6z"/></svg>', 'leaf');
-  mark.appendChild(leaf);
-  add(logo, mark);
-  add(logo, await text('AeroAgro AI', 'display/s', 'ink'));
-  add(h, logo);
-  if (w > 600) {
-    const search = frame('Search', { dir: 'row', gap: 10, pad: [10, 14], radius: 10, fill: paint('surface'), stroke: ['line', 0.1], w: 440, align: 'CENTER' });
-    add(search, await text('Search village, district or crop', 'body/m', 'muted'), { grow: true });
-    add(search, await text('/', 'mono/data', 'muted'));
-    add(h, search);
-  }
-  add(h, frame('spacer', { dir: 'row' }), { grow: true });
-  const live = frame('Scenario', { dir: 'row', gap: 8, pad: [9, 12], radius: 10, fill: paint('surface'), stroke: ['line', 0.1], align: 'CENTER' });
-  add(live, rect(8, 8, 'good', { radius: 4 }));
-  add(live, await text('Live today', 'body/m-strong', 'ink'));
-  add(h, live);
-  return h;
-}
-
-async function telemetry(w) {
-  const t = frame('Telemetry strip', { dir: 'row', gap: 20, pad: [6, 32], align: 'CENTER', w, fill: paint('surface', 0.6), clip: true });
-  const r = DATA.region;
-  const dz = r.elevationM - DATA.cellElevationM;
-  const items = [
-    ['● LIVE', ''],
-    ['NWP', 'OPEN-METEO BEST MATCH'],
-    ['POS', `${r.lat.toFixed(3)}°N ${r.lng.toFixed(3)}°E`],
-    ['ELEV', `${r.elevationM.toLocaleString('en-IN')} M A.S.L.`],
-    ['NWP CELL', `${DATA.cellElevationM} M`],
-    ['ΔZ', `${dz >= 0 ? '+' : '−'}${Math.abs(dz)} M`],
-    ['DEM', 'GLO-90 · 225 × 1.2 KM'],
-    ['GRID', '18 KM → 1.2 KM'],
-  ];
-  for (const [k, v] of items) {
-    const it = frame(k, { dir: 'row', gap: 6 });
-    add(it, await text(k, 'mono/label', k.startsWith('●') ? 'good' : 'muted'));
-    if (v) add(it, await text(v, 'mono/label', 'ink2'));
-    add(t, it);
-  }
   return t;
 }
 
-async function sectionHead(index, kicker, title, meta, w) {
+async function sectionHead(kicker, plain, accent, meta, w) {
   const s = COMP.section.createInstance();
   s.resize(w, s.height);
-  await setLabel(s, 'Index', index);
   await setLabel(s, 'Kicker', kicker);
   await setLabel(s, 'Meta', meta);
-  await setLabel(s, 'Title', title);
+  const t = await setLabel(s, 'Title', plain + accent);
+  if (t) {
+    t.setRangeFontName(0, plain.length, FONT.display);
+    t.setRangeFills(0, plain.length, [paint('ink')]);
+    t.setRangeFontName(plain.length, plain.length + accent.length, FONT.displayItalic);
+    t.setRangeFills(plain.length, plain.length + accent.length, [paint('accent')]);
+  }
   return s;
 }
 
-async function hudPanel(name, w, fig, title) {
-  const p = frame(name, { dir: 'col', gap: 14, pad: 24, radius: 14, fill: paint('surface'), stroke: ['line', 0.08], w });
-  add(p, await text(fig, 'mono/label', 'muted'));
-  if (title) add(p, await text(title, 'display/m', 'ink', { w: w - 48 }));
-  return p;
+async function ticker(w) {
+  return night(async () => {
+    const t = frame('Live ticker', { dir: 'row', gap: 28, pad: [9, 32], align: 'CENTER', w, fill: paint('bg'), clip: true });
+    setNightMode(t);
+    const r = DATA.region;
+    const dz = r.elevationM - DATA.cellElevationM;
+    add(t, await text('● LIVE', 'mono/label', 'good'));
+    for (const [k, v] of [
+      ['NWP', 'OPEN-METEO BEST MATCH'],
+      ['POSITION', `${r.lat.toFixed(3)}°N ${r.lng.toFixed(3)}°E`],
+      ['ELEVATION', `${r.elevationM.toLocaleString('en-IN')} M A.S.L.`],
+      ['NWP CELL', `${DATA.cellElevationM} M`],
+      ['ΔZ', `${dz >= 0 ? '+' : '−'}${Math.abs(dz)} M`],
+      ['DEM', 'COPERNICUS GLO-90 · 225 CELLS'],
+      ['GRID', '18 KM → 1.2 KM'],
+    ]) {
+      const it = frame(k, { dir: 'row', gap: 6 });
+      add(it, await text(k, 'mono/label', 'muted'));
+      add(it, await text(v, 'mono/label', 'ink2'));
+      add(t, it);
+    }
+    return t;
+  });
 }
 
-async function todayCard(w) {
+async function nav(w, compact) {
+  const n = frame('Navigation', { dir: 'row', gap: 32, pad: compact ? [14, 20] : [18, 64], align: 'CENTER', w, fill: paint('bg', 0.92) });
+  const logo = frame('Logo', { dir: 'row', gap: 10, align: 'CENTER' });
+  const mark = frame('Mark', { w: 34, h: 34, radius: 10, fill: paint('accent') });
+  mark.appendChild(
+    svg(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 32 32" fill="none" stroke="${PAPER.accentInk}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 24V13.5M16 13.5c0-3.6 2.6-6 6.5-6 0 3.6-2.6 6-6.5 6zM16 16.5c0-2.8-2-4.6-5-4.6 0 2.8 2 4.6 5 4.6z"/></svg>`,
+      'leaf'
+    )
+  );
+  add(logo, mark);
+  add(logo, await title('AeroAgro ', 'AI', 'display/s'));
+  add(n, logo);
+  if (!compact) {
+    const links = frame('Links', { dir: 'row', gap: 28 });
+    for (const l of ['Village', 'All India', 'Engine', 'Ask', 'Tools']) add(links, await text(l, 'body/m', 'ink2'));
+    add(n, links);
+  }
+  add(n, frame('spacer', { dir: 'row' }), { grow: true });
+  const live = frame('Scenario', { dir: 'row', gap: 8, pad: [10, 16], radius: 999, fill: paint('surface'), stroke: ['line', 0.14], align: 'CENTER' });
+  add(live, rect(8, 8, 'good', { radius: 4 }));
+  add(live, await text('Live today', 'body/m-strong', 'ink'));
+  add(n, live);
+  return n;
+}
+
+async function heroPoster(w, compact) {
+  const pad = compact ? 20 : 64;
+  const h = frame('Hero · poster', { dir: 'col', gap: compact ? 24 : 40, pad: [compact ? 40 : 88, pad, compact ? 48 : 96, pad], w, fill: paint('bg') });
+  const top = frame('Kicker row', { dir: 'row', gap: 12, align: 'CENTER' });
+  add(top, await text('MOES · BLOCK → PANCHAYAT DOWNSCALING', 'mono/label', 'muted'), { grow: true });
+  if (!compact) add(top, await text('● LIVE FOR 303 REGIONS', 'mono/label', 'good'));
+  add(h, top, { fill: true });
+  const size = compact ? 52 : 128;
+  add(h, await text('Weather for your village,', 'display/poster', 'ink', { size, w: w - 2 * pad }));
+  const line2 = frame('Line 2 · highlighter', {
+    dir: 'row',
+    pad: [0, 8],
+    fill: gradient([[0, '#FFFFFF', 0], [0.58, '#FFFFFF', 0], [0.58, PAPER.marker, 0.9], [0.9, PAPER.marker, 0.9], [0.9, '#FFFFFF', 0]], 90),
+  });
+  add(line2, await text('not your district.', 'display/poster', 'ink', { font: 'displayItalic', size }));
+  add(h, line2);
+  const row = frame('Standfirst + search', { dir: compact ? 'col' : 'row', gap: compact ? 20 : 64, align: compact ? 'MIN' : 'MAX' });
+  add(row, await text('AeroAgro takes the 18 km forecast every district receives and re-draws it at 1.2 km from real terrain, then tells each farmer exactly when to spray, water and protect their crop.', 'body/l', 'ink2', { w: compact ? w - 40 : 520 }));
+  const s = frame('Search group', { dir: 'col', gap: 14 });
+  const bar = frame('Search bar', { dir: 'row', gap: 12 });
+  const field = frame('Search field', { dir: 'row', gap: 10, pad: [16, 18], radius: 999, fill: paint('surface'), stroke: ['line', 0.14], align: 'CENTER', w: compact ? w - 40 : 400 });
+  add(field, icon('search', 'muted', 18));
+  add(field, await text('Find your village, district or crop', 'body/m', 'muted'));
+  add(bar, field);
+  if (!compact) add(bar, inst(COMP.button, 'Kind=Primary'));
+  add(s, bar);
+  const chips = frame('Examples', { dir: 'row', gap: 8, align: 'CENTER' });
+  add(chips, await text('TRY', 'mono/label', 'muted'));
+  for (const c of compact ? ['Ooty', 'Munnar', 'Jaisalmer'] : ['Ooty', 'Munnar', 'Kotgarh apples', 'Jaisalmer', 'Cauvery delta']) {
+    const i = inst(COMP.chip, 'State=Off');
+    await setLabel(i, 'Label', c);
+    add(chips, i);
+  }
+  add(s, chips);
+  add(row, s);
+  add(h, row);
+  return h;
+}
+
+async function figureBand(w, compact) {
+  return night(async () => {
+    const pad = compact ? 20 : 64;
+    const b = frame('Figure band · night', { dir: 'col', gap: 22, pad: [compact ? 48 : 96, pad], w, fill: paint('bg') });
+    setNightMode(b);
+    const cap = frame('Caption', { dir: 'row', gap: 20, align: 'MAX' });
+    const cl = frame('Caption left', { dir: 'col', gap: 8 });
+    add(cl, await text('FIG. 1 — NIGHT MINIMUM, SIX DISTRICT BLOCKS', 'mono/label', 'muted'));
+    add(cl, await title('The same night, ', 'at two resolutions.', compact ? 'display/s' : 'display/m'));
+    add(cap, cl, { grow: true });
+    if (!compact) {
+      const leg = frame('Legend', { dir: 'row', gap: 10, align: 'CENTER' });
+      add(leg, await text('−3°', 'mono/data', 'frost'));
+      add(leg, rect(160, 8, gradient([[0, '#FFFFFF'], [0.25, '#76D6FF'], [0.45, '#426CDE'], [0.65, '#8A40A8'], [0.85, '#E0645A'], [1, '#F6B94C']], 0), { radius: 4 }));
+      add(leg, await text('17°C', 'mono/data', 'sun'));
+      add(cap, leg);
+    }
+    add(b, cap, { fill: true });
+    const iw = w - 2 * pad;
+    add(b, image('thermal', iw, iw / 2, 'Fig 1 · 18 km blocks vs 1.2 km thermal field', 22));
+    if (!compact) {
+      add(b, rule(iw));
+      const facts = frame('Facts', { dir: 'row', gap: 40 });
+      for (const [big, k, v, color] of [
+        ['18 km', 'What the district forecast sees', 'One number for 324 km²: no frost warning.', 'sun'],
+        ['1.2 km', 'What AeroAgro sees', 'Lapse rate and cold-air pooling on real terrain.', 'accent'],
+        ['−1.0 °C', 'What the farmer needed to know', 'Frost cells in hollows the district number averages away.', 'frost'],
+      ]) {
+        const c = frame(k, { dir: 'col', gap: 6, w: (iw - 80) / 3 });
+        add(c, await text(big, 'display/l', color));
+        add(c, await text(k, 'body/m-strong', 'ink'));
+        add(c, await text(v, 'body/m', 'ink2', { w: (iw - 80) / 3 }));
+        add(facts, c);
+      }
+      add(b, facts);
+    }
+    return b;
+  });
+}
+
+async function statsRow(w) {
+  const r = frame('Numbers', { dir: 'row', gap: 0, pad: [48, 64], w, fill: paint('bg') });
+  r.strokes = [paint('line', 0.14)];
+  r.strokeWeight = 1;
+  r.strokeTopWeight = 0;
+  r.strokeLeftWeight = 0;
+  r.strokeRightWeight = 0;
+  for (const [i, [v, k, d]] of [
+    ['303', 'REGIONS', 'districts, metros and hill panchayats'],
+    ['15×', 'SHARPER', '18 km blocks resolved into 1.2 km cells'],
+    ['3', 'LANGUAGES', 'English, Hindi and Tamil, read aloud'],
+    ['₹0', 'RUNNING COST', 'free, keyless open data'],
+  ].entries()) {
+    const c = frame(k, { dir: 'col', gap: 8, pad: [0, i ? 32 : 0, 0, i ? 32 : 0] });
+    if (i) {
+      c.strokes = [paint('line', 0.14)];
+      c.strokeWeight = 1;
+      c.strokeTopWeight = c.strokeRightWeight = c.strokeBottomWeight = 0;
+    }
+    add(c, await text(v, 'display/xl', 'ink', { font: v === '₹0' ? 'monoBold' : undefined, size: v === '₹0' ? 60 : undefined }));
+    add(c, await text(k, 'mono/label', 'ink'));
+    add(c, await text(d, 'body/s', 'muted', { w: 240 }));
+    add(r, c, { grow: true });
+  }
+  return r;
+}
+
+async function villageSheet(w) {
   const f = DATA.fine, c = DATA.coarse, r = DATA.region;
-  const card = frame('Today card', { dir: 'col', gap: 0, radius: 14, clip: true, fill: paint('surface'), stroke: ['line', 0.08], w });
-  const sky = frame('Sky', { dir: 'col', gap: 10, pad: 24, fill: gradient([[0, '#20343F'], [0.85, '#11191C']], 70) });
-  add(sky, await text('Today in', 'mono/label', 'muted'));
-  add(sky, await text(r.name, 'display/m', 'ink', { w: w - 48 }));
-  const where = frame('Place', { dir: 'row', gap: 6, align: 'CENTER' });
-  // Regional script gets its own run in a font that has the glyphs
+  const card = frame('Village sheet', { dir: 'col', gap: 0, pad: 40, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], w, shadow: true });
+  const top = frame('Top', { dir: 'row', align: 'CENTER' });
+  add(top, await text('MONDAY, 28 SEPTEMBER', 'mono/label', 'muted'), { grow: true });
+  const pill = frame('Live', { dir: 'row', gap: 6, pad: [4, 10], radius: 999, stroke: ['line', 0.14], align: 'CENTER' });
+  add(pill, rect(6, 6, 'good', { radius: 3 }));
+  add(pill, await text('LIVE', 'mono/label', 'ink2'));
+  add(top, pill);
+  add(card, top, { fill: true });
+  const name = await text(r.name, 'display/xl', 'ink', { size: 60, w: w - 80 });
+  name.name = 'Village name';
+  add(card, frame('gap', { h: 14, w: 1 }));
+  add(card, name);
+  const where = frame('Where', { dir: 'row', gap: 6, align: 'CENTER', pad: [10, 0, 2, 0] });
   if (r.regional && FONT.malayalam && /[ഀ-ൿ]/.test(r.regional)) add(where, await text(`${r.regional} ·`, 'body/m', 'ink2', { font: 'malayalam' }));
   add(where, await text(`${r.district}, ${r.state}`, 'body/m', 'ink2'));
-  add(sky, where);
-  const big = frame('Temperature', { dir: 'row', gap: 6, align: 'MAX' });
-  add(big, await text(`${Math.round(f.tempMax)}°`, 'display/xl', 'ink', { size: 72 }));
-  add(big, await text(`/ ${Math.round(f.tempMin)}°`, 'display/m', 'ink2'));
-  add(sky, big);
-  add(sky, await text(f.rainfallMm >= 2 ? 'Passing showers' : 'Pleasant', 'body/m-strong', 'ink'));
-  const chips = frame('Metrics', { dir: 'row', gap: 8 });
-  for (const [ic, label, v] of [
-    ['rain', 'Rain', `${f.rainfallMm} mm`],
-    ['wind', 'Wind', `${f.windSpeedKmh} km/h`],
-    ['drop', 'Humidity', `${f.relativeHumidity}%`],
-  ]) {
-    const m = frame(label, { dir: 'col', gap: 2, pad: [10, 12], radius: 10, fill: paint('#000000', 0.2) });
-    const l = frame('l', { dir: 'row', gap: 6, align: 'CENTER' });
-    add(l, icon(ic, 'ink2', 13));
-    add(l, await text(label, 'body/s', 'ink2'));
-    add(m, l);
-    add(m, await text(v, 'mono/readout', 'ink'));
-    add(chips, m, { grow: true });
-  }
-  add(sky, chips, { fill: true });
-  add(card, sky, { fill: true });
+  add(card, where);
+  add(card, await text(`${r.lat.toFixed(3)}°N ${r.lng.toFixed(3)}°E · ${r.elevationM.toLocaleString('en-IN')} m a.s.l. · ${r.terrain}`, 'mono/data', 'muted', { w: w - 80 }));
 
-  const tbl = frame('Block vs village', { dir: 'col', gap: 8, pad: 24 });
-  add(tbl, await text('District forecast vs your village', 'body/m-strong', 'ink'));
-  const rows = [
-    ['', '18 km block', '1.2 km local', 'Δ'],
-    ['Night low', `${c.tempMin}°`, `${f.tempMin}°`, sgn(f.tempMin - c.tempMin)],
-    ['Day high', `${c.tempMax}°`, `${f.tempMax}°`, sgn(f.tempMax - c.tempMax)],
-    ['Rain', `${c.rainfallMm} mm`, `${f.rainfallMm} mm`, sgn(f.rainfallMm - c.rainfallMm)],
-    ['Wind', `${c.windSpeedKmh} km/h`, `${f.windSpeedKmh} km/h`, sgn(f.windSpeedKmh - c.windSpeedKmh)],
-  ];
-  for (const [i, rr] of rows.entries()) {
-    const line = frame(`row ${i}`, { dir: 'row', gap: 8, pad: [6, 0] });
+  const big = frame('Numbers', { dir: 'row', gap: 22, align: 'MAX', pad: [28, 0, 0, 0] });
+  add(big, await text(`${Math.round(f.tempMax)}°`, 'display/poster', 'ink', { size: 176 }));
+  const low = frame('Low', { dir: 'col', gap: 6, pad: [0, 0, 18, 0] });
+  add(low, await text(`${Math.round(f.tempMin)}°`, 'display/l', 'muted'));
+  add(low, await text('NIGHT LOW', 'mono/label', 'muted'));
+  add(big, low);
+  add(big, frame('spacer', { dir: 'row' }), { grow: true });
+  const cond = frame('Condition', { dir: 'col', gap: 6, align: 'MAX', pad: [0, 0, 18, 0] });
+  add(cond, icon('cloud', 'ink', 44));
+  add(cond, await text(f.rainfallMm >= 2 ? 'Passing showers' : 'Pleasant', 'body/m-strong', 'ink'));
+  add(cond, await text(`Light rain, about ${f.rainfallMm} mm`, 'body/s', 'ink2'));
+  add(big, cond);
+  add(card, big, { fill: true });
+
+  const m = frame('Metrics', { dir: 'row', pad: [0, 0] });
+  m.strokes = [paint('line', 0.14)];
+  m.strokeWeight = 1;
+  m.strokeLeftWeight = m.strokeRightWeight = 0;
+  for (const [i, [k, v, u]] of [
+    ['RAIN', f.rainfallMm, 'mm'],
+    ['WIND', f.windSpeedKmh, 'km/h'],
+    ['HUMIDITY', f.relativeHumidity, '%'],
+  ].entries()) {
+    const cell = frame(k, { dir: 'col', gap: 4, pad: [16, 16, 16, i ? 16 : 0] });
     if (i) {
-      line.strokes = [paint('line', 0.07)];
-      line.strokeWeight = 1;
-      line.strokeBottomWeight = line.strokeLeftWeight = line.strokeRightWeight = 0;
+      cell.strokes = [paint('line', 0.14)];
+      cell.strokeWeight = 1;
+      cell.strokeTopWeight = cell.strokeRightWeight = cell.strokeBottomWeight = 0;
     }
-    const widths = [0, 100, 100, 60];
-    for (const [k, cell] of rr.entries()) {
-      const t = await text(cell, i === 0 ? 'mono/label' : k === 0 ? 'body/m' : 'mono/data', i === 0 ? (k === 2 ? 'accent' : 'muted') : k === 2 ? 'ink' : k === 3 ? 'sky' : 'ink2', { align: k ? 'RIGHT' : 'LEFT' });
-      if (k) {
-        t.textAutoResize = 'HEIGHT';
-        t.resize(widths[k], t.height);
-      }
-      add(line, t, k ? {} : { grow: true });
-    }
-    add(tbl, line, { fill: true });
+    add(cell, await text(k, 'mono/label', 'muted'));
+    const val = frame('value', { dir: 'row', gap: 4, align: 'MAX' });
+    add(val, await text(String(v), 'display/m', 'ink'));
+    add(val, await text(u, 'body/s', 'muted'));
+    add(cell, val);
+    add(m, cell, { grow: true });
   }
-  add(card, tbl, { fill: true });
-  hudCorners(card);
+  add(card, frame('gap', { h: 28, w: 1 }));
+  add(card, m, { fill: true });
+
+  const cmp = frame('District vs village', { dir: 'col', gap: 0, pad: [24, 0, 0, 0] });
+  const hd = frame('Head', { dir: 'row', align: 'CENTER', pad: [0, 0, 10, 0] });
+  add(hd, await text('District forecast 18 km → your village 1.2 km', 'body/m-strong', 'ink'), { grow: true });
+  add(hd, await text(`Δz +${r.elevationM - DATA.cellElevationM} m`, 'mono/data', 'muted'));
+  add(cmp, hd, { fill: true });
+  for (const [k, cv, fv, unit, up, down] of [
+    ['Night low', c.tempMin, f.tempMin, '°C', 'sun', 'frost'],
+    ['Day high', c.tempMax, f.tempMax, '°C', 'sun', 'frost'],
+    ['Rain', c.rainfallMm, f.rainfallMm, 'mm', 'sky', 'sun'],
+    ['Wind', c.windSpeedKmh, f.windSpeedKmh, 'km/h', 'alert', 'sky'],
+  ]) {
+    const d = Math.round((fv - cv) * 10) / 10;
+    const line = frame(k, { dir: 'row', gap: 16, pad: [10, 0], align: 'CENTER' });
+    line.strokes = [paint('line', 0.1)];
+    line.strokeWeight = 1;
+    line.strokeBottomWeight = line.strokeLeftWeight = line.strokeRightWeight = 0;
+    add(line, await text(k, 'body/m', 'ink2'), { grow: true });
+    add(line, await text(`${cv} ${unit}`, 'mono/data', 'muted'));
+    add(line, await text(`${fv} ${unit}`, 'mono/readout', 'ink'));
+    add(line, await text(Math.abs(d) < 0.1 ? 'same' : sgn(d), 'mono/readout', Math.abs(d) < 0.1 ? 'muted' : d > 0 ? up : down, { align: 'RIGHT', w: 56 }));
+    add(cmp, line, { fill: true });
+  }
+  add(card, cmp, { fill: true });
   return card;
 }
 
-async function dayCard(d, i, best, lo, hi, maxRain) {
-  const card = frame(`Day ${i + 1} · ${d.label}`, { dir: 'col', gap: 6, pad: [14, 8], radius: 12, align: 'CENTER', w: 112, fill: paint(best ? 'accent' : 'surface2', best ? 0.06 : 0.6), stroke: [best ? 'accent' : 'line', best ? 0.7 : 0.07] });
-  if (best) {
-    const tag = frame('Best tag', { dir: 'row', pad: [2, 6], radius: 999, fill: paint('accent') });
-    add(tag, await text('Best to spray', 'mono/label', 'accentInk', { size: 8 }));
-    add(card, tag);
+async function actionPlan(w) {
+  const card = frame('What to do today', { dir: 'col', gap: 16, pad: 32, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], w, shadow: true });
+  const h = frame('Head', { dir: 'row', align: 'CENTER' });
+  add(h, await text('What to do today', 'display/l', 'ink'), { grow: true });
+  add(h, await text('ICAR AGROMET RULES', 'mono/label', 'muted'));
+  add(card, h, { fill: true });
+  const crops = frame('Crops', { dir: 'row', gap: 8 });
+  crops.layoutWrap = 'WRAP';
+  crops.counterAxisSpacing = 8;
+  crops.primaryAxisSizingMode = 'FIXED';
+  crops.resize(w - 64, 10);
+  for (const [i, cn] of DATA.region.crops.slice(0, 5).entries()) {
+    const ch = inst(COMP.chip, i === 0 ? 'State=On' : 'State=Off');
+    await setLabel(ch, 'Label', cn);
+    add(crops, ch);
   }
-  add(card, await text(d.label, 'body/m-strong', i === 0 ? 'accent' : 'ink'));
-  add(card, await text(d.date, 'body/s', 'muted'));
-  add(card, await text(`${Math.round(d.fine.tempMax)}°`, 'mono/readout', 'ink'));
-  // temperature range: village gradient bar + dashed block ghost
-  const track = frame('Range', { w: 40, h: 72 });
-  const y = (t) => ((hi - t) / (hi - lo || 1)) * 72;
-  const ghost = figma.createRectangle();
-  ghost.resize(5, Math.max(2, y(d.coarse.tempMin) - y(d.coarse.tempMax)));
-  ghost.x = 11;
-  ghost.y = y(d.coarse.tempMax);
-  ghost.cornerRadius = 3;
-  ghost.fills = [];
-  ghost.strokes = [paint('sun', 0.6)];
-  ghost.dashPattern = [2, 2];
-  ghost.strokeWeight = 1;
-  track.appendChild(ghost);
-  const bar = rect(8, Math.max(2, y(d.fine.tempMin) - y(d.fine.tempMax)), gradient([[0, 'sun'], [1, 'sky']], 90), { radius: 4, name: 'village range' });
-  bar.x = 20;
-  bar.y = y(d.fine.tempMax);
-  track.appendChild(bar);
-  add(card, track);
-  add(card, await text(`${Math.round(d.fine.tempMin)}°`, 'mono/data', 'ink2'));
-  const rain = frame('Rain bars', { w: 40, h: 36 });
-  for (const [k, v, fill] of [
-    [0, d.coarse.rainfallMm, 'sun'],
-    [1, d.fine.rainfallMm, 'sky'],
-  ]) {
-    const hgt = Math.max(2, (v / maxRain) * 36);
-    const r = rect(9, hgt, fill, { opacity: k ? 1 : 0.35, radius: 2 });
-    r.x = 9 + k * 13;
-    r.y = 36 - hgt;
-    rain.appendChild(r);
-  }
-  add(card, rain);
-  add(card, await text(`${d.fine.rainfallMm} mm`, 'mono/data', 'sky'));
-  const ok = d.spray.hours > 0;
-  const chip = frame('Spray', { dir: 'row', pad: [4, 6], radius: 6, justify: 'CENTER', fill: paint(ok ? (d.spray.hours >= 3 ? 'good' : 'warn') : 'bad', 0.15) });
-  add(chip, await text(ok ? `${d.spray.start.slice(0, 2)}–${d.spray.end.slice(0, 2)} h` : 'Rain', 'mono/data', ok ? (d.spray.hours >= 3 ? 'good' : 'warn') : 'bad'));
-  add(card, chip, { fill: true });
+  add(card, crops);
+  const sprayTone = DATA.spray.hours >= 3 ? 'Tone=Good' : DATA.spray.hours > 0 ? 'Tone=Warn' : 'Tone=Bad';
+  const v1 = inst(COMP.verdict, sprayTone);
+  await setLabel(v1, 'Headline', DATA.spray.hours > 0 ? DATA.spray.label : 'No safe window');
+  add(card, v1, { fill: true });
+  const v2 = inst(COMP.verdict, 'Tone=Good');
+  await setLabel(v2, 'Headline', DATA.irrigation.action);
+  await setLabel(v2, 'Verdict label', 'Water');
+  add(card, v2, { fill: true });
+  const v3 = inst(COMP.verdict, DATA.pest.level === 'high' ? 'Tone=Bad' : DATA.pest.level === 'moderate' ? 'Tone=Warn' : 'Tone=Good');
+  await setLabel(v3, 'Headline', DATA.pest.title);
+  await setLabel(v3, 'Verdict label', DATA.pest.level === 'low' ? 'Low risk' : DATA.pest.level === 'moderate' ? 'Watch' : 'High risk');
+  add(card, v3, { fill: true });
   return card;
 }
 
 async function weekStrip(w) {
-  const panel = await hudPanel('Week forecast', w, 'Fig 1.2 · 7-day village outlook · live', `The week ahead in ${DATA.region.name}`);
-  const stats = frame('Stats', { dir: 'row', gap: 8 });
-  const best = DATA.bestSprayDay;
-  for (const [label, value, sub] of [
-    ['Week rain', `${DATA.weekRain} mm`, `block ${DATA.weekRainBlock} mm`],
-    ['Rainy days', `${DATA.week.filter((d) => d.fine.rainfallMm >= 2.5).length} of 7`, '2.5 mm+ days (IMD)'],
-    ['Best spray day', best >= 0 ? DATA.week[best].label : 'None', best >= 0 ? DATA.week[best].spray.label : '—'],
-    ['Dry spell', DATA.dry ? `${DATA.dry[1] - DATA.dry[0] + 1} days` : 'None', DATA.dry ? '' : 'harvest under cover'],
-  ]) {
-    const s = frame(label, { dir: 'col', gap: 2, pad: [10, 12], radius: 10, fill: paint('surface2') });
-    add(s, await text(label, 'body/s', 'muted'));
-    add(s, await text(value, 'mono/readout', 'ink'));
-    add(s, await text(sub, 'body/s', 'muted'));
-    add(stats, s, { grow: true });
-  }
-  add(panel, stats, { fill: true });
-  const days = frame('Days', { dir: 'row', gap: 8 });
+  const card = frame('7-day outlook', { dir: 'col', gap: 20, pad: 32, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], w, shadow: true });
+  const h = frame('Head', { dir: 'row', align: 'MAX' });
+  const hl = frame('title', { dir: 'col', gap: 6 });
+  add(hl, await text('FIG 1.2 · 7-DAY VILLAGE OUTLOOK · LIVE', 'mono/label', 'muted'));
+  add(hl, await text(`The week ahead in ${DATA.region.name}`, 'display/m', 'ink'));
+  add(h, hl, { grow: true });
+  const b = inst(COMP.button, 'Kind=Primary');
+  await setLabel(b, 'Label', 'Agromet bulletin');
+  add(h, b);
+  add(card, h, { fill: true });
+  const days = frame('Days', { dir: 'row', gap: 10 });
   const lo = Math.min(...DATA.week.flatMap((d) => [d.fine.tempMin, d.coarse.tempMin]));
   const hi = Math.max(...DATA.week.flatMap((d) => [d.fine.tempMax, d.coarse.tempMax]));
   const maxRain = Math.max(5, ...DATA.week.map((d) => Math.max(d.fine.rainfallMm, d.coarse.rainfallMm)));
-  for (const [i, d] of DATA.week.entries()) add(days, await dayCard(d, i, i === best, lo, hi, maxRain), { grow: true });
-  add(panel, days, { fill: true });
-  hudCorners(panel);
-  return panel;
-}
-
-async function waterfall(w) {
-  const panel = await hudPanel('Explain panel', w, 'Fig 2.2 · Explainable AI', 'Why your village differs');
-  const c = DATA.coarse.tempMin, f = DATA.fine.tempMin;
-  const steps = DATA.steps.tmin;
-  const lead = [...steps].sort((a, b) => Math.abs(b.value) - Math.abs(a.value))[0];
-  const note = frame('Reasoning', { dir: 'col', pad: 14, radius: 12, fill: paint('accent', 0.06), stroke: ['accent', 0.25] });
-  add(note, await text(`${DATA.region.name}: ${Math.abs(f - c).toFixed(1)} °C ${f < c ? 'cooler' : 'warmer'} than the district forecast. The biggest factor is ${lead ? lead.label.toLowerCase() : 'none'} (${lead ? sgn(lead.value) : '0.0'} °C).`, 'body/m', 'ink2', { w: w - 76 }));
-  add(panel, note, { fill: true });
-
-  const rows = [{ label: 'Block forecast · 18 km', eq: 'NWP grid-cell mean', from: c, to: c, kind: 'start' }];
-  let v = c;
-  for (const s of steps) {
-    rows.push({ label: s.label, eq: s.eq || s.why, from: v, to: v + s.value, kind: 'step' });
-    v += s.value;
-  }
-  rows.push({ label: 'Your village · 1.2 km', eq: 'T = T₀ + ΣΔT', from: f, to: f, kind: 'end' });
-  const all = rows.flatMap((r) => [r.from, r.to]);
-  const pad = Math.max(0.6, (Math.max(...all) - Math.min(...all)) * 0.25);
-  const lo = Math.min(...all) - pad, hi = Math.max(...all) + pad;
-  const trackW = w - 48 - 200 - 70 - 24;
-  const x = (n) => ((n - lo) / (hi - lo)) * trackW;
-  for (const r of rows) {
-    const line = frame(r.label, { dir: 'row', gap: 12, align: 'CENTER' });
-    const lab = frame('label', { dir: 'col', gap: 2, w: 200 });
-    add(lab, await text(r.label, r.kind === 'step' ? 'body/m' : 'body/m-strong', r.kind === 'step' ? 'ink2' : 'ink'));
-    add(lab, await text(r.eq, 'mono/data', 'muted', { size: 9.5, w: 200 }));
-    add(line, lab);
-    const track = frame('track', { w: trackW, h: 26, radius: 6, fill: paint('surface2') });
-    const isStep = r.kind === 'step';
-    const a = isStep ? x(Math.min(r.from, r.to)) : 0;
-    const bw = isStep ? Math.max(2, Math.abs(x(r.to) - x(r.from))) : x(r.to);
-    const color = r.kind === 'start' ? 'sun' : r.kind === 'end' ? 'accent' : r.to < r.from ? 'sky' : 'sun';
-    const bar = rect(bw, 18, isStep ? paint(color) : gradient([[0, color, 0.2], [1, color, 1]], 0), { radius: 4 });
-    bar.x = a;
-    bar.y = 4;
+  for (const [i, d] of DATA.week.entries()) {
+    const best = i === DATA.bestSprayDay;
+    const col = frame(`Day ${i + 1}`, { dir: 'col', gap: 8, pad: [16, 8], radius: 16, align: 'CENTER', fill: paint(best ? 'marker' : 'bg', best ? 0.35 : 0.5), stroke: [best ? 'ink' : 'line', best ? 0.5 : 0.08] });
+    add(col, await text(d.label, 'body/m-strong', i === 0 ? 'accent' : 'ink'));
+    add(col, await text(d.date, 'body/s', 'muted'));
+    add(col, await text(`${Math.round(d.fine.tempMax)}°`, 'display/s', 'ink'));
+    const track = frame('Range', { w: 40, h: 64 });
+    const y = (t) => ((hi - t) / (hi - lo || 1)) * 64;
+    const bar = rect(8, Math.max(3, y(d.fine.tempMin) - y(d.fine.tempMax)), gradient([[0, 'sun'], [1, 'sky']], 90), { radius: 4 });
+    bar.x = 16;
+    bar.y = y(d.fine.tempMax);
     track.appendChild(bar);
-    add(line, track);
-    add(line, await text(isStep ? sgn(r.to - r.from) : f1(r.to), 'mono/readout', r.kind === 'end' ? 'accent' : r.kind === 'start' ? 'sun' : 'ink2', { align: 'RIGHT', w: 70 }));
-    add(panel, line);
+    add(col, track);
+    add(col, await text(`${Math.round(d.fine.tempMin)}°`, 'mono/data', 'ink2'));
+    const rb = frame('Rain', { w: 40, h: 30 });
+    const rh = Math.max(2, (d.fine.rainfallMm / maxRain) * 30);
+    const rr = rect(10, rh, 'sky', { radius: 2 });
+    rr.x = 15;
+    rr.y = 30 - rh;
+    rb.appendChild(rr);
+    add(col, rb);
+    add(col, await text(`${d.fine.rainfallMm} mm`, 'mono/data', 'sky'));
+    const ok = d.spray.hours > 0;
+    const sp = frame('Spray', { dir: 'row', pad: [4, 8], radius: 999, fill: paint(ok ? (d.spray.hours >= 3 ? 'good' : 'warn') : 'bad', 0.15) });
+    add(sp, await text(ok ? `${d.spray.start.slice(0, 2)}–${d.spray.end.slice(0, 2)} h` : 'Rain', 'mono/data', ok ? (d.spray.hours >= 3 ? 'good' : 'warn') : 'bad', { size: 10 }));
+    add(col, sp);
+    add(days, col, { grow: true });
   }
-  const model = frame('Model', { dir: 'col', gap: 2, pad: 14, radius: 10, fill: paint('bg', 0.5), stroke: ['line', 0.08] });
-  add(model, await text('Model · night low', 'mono/label', 'muted'));
-  add(model, await text('T₁.₂ = T₁₈ + Σ ΔTᵢ', 'mono/data', 'ink2', { size: 12 }));
-  add(model, await text(`     = ${f1(c)}${steps.map((s) => ` ${s.value < 0 ? '−' : '+'} ${Math.abs(s.value).toFixed(1)}`).join('')}`, 'mono/data', 'ink2', { size: 12 }));
-  add(model, await text(`     = ${f1(f)} °C`, 'mono/readout', 'accent'));
-  add(panel, model, { fill: true });
-  hudCorners(panel);
-  return panel;
+  add(card, days, { fill: true });
+  return card;
 }
 
-async function gridPanel(w) {
-  const g = DATA.grid.tempMin;
-  const panel = await hudPanel('Block grid panel', w, 'Fig 2.1 · Live Copernicus GLO-90 DEM', '225 village cells inside one forecast block');
-  const chips = frame('Variables', { dir: 'row', gap: 6 });
-  for (const [i, label] of ['Night low', 'Day high', 'Rain', 'Wind', 'Terrain'].entries()) {
-    const c = inst(COMP.chip, i === 0 ? 'State=On' : 'State=Off');
-    await setLabel(c, 'Label', label);
-    add(chips, c);
+async function scanGrid(w) {
+  const g = frame('AI scan', { dir: 'row', gap: 1, radius: 18, clip: true, fill: paint('line', 0.1), w });
+  const cells = [
+    ['AI scan', '303 villages · 43 flagged', null, 'radar'],
+    ['Heavy rain', '0', 'none today', null],
+    ['Moderate rain', '6', 'Ramanagara Silk City', null],
+    ['Frost', '0', 'none today', null],
+    ['Heat stress', '4', 'Kadapa Red Sandstone', null],
+    ['Spray drift', '15', 'Dausa Aravalli Gap', null],
+    ['Fungal weather', '18', 'Kodagu Madikeri Hills', null],
+    ['Missed', '13', 'alerts the district forecast misses', 'missed'],
+  ];
+  for (const [k, v, sub, kind] of cells) {
+    const c = frame(k, { dir: 'col', gap: 12, pad: 18, fill: paint(kind === 'missed' ? 'sun' : 'surface', kind === 'missed' ? 0.12 : 1) });
+    if (kind === 'radar') {
+      const ic = frame('icon', { dir: 'row', pad: 10, radius: 999, fill: paint('accent', 0.12) });
+      add(ic, icon('radar', 'accent', 20));
+      add(c, ic);
+      add(c, await text(k, 'body/m-strong', 'ink'));
+      add(c, await text(v, 'body/s', 'muted', { w: 120 }));
+    } else {
+      add(c, await text(k, 'body/s', kind === 'missed' ? 'sun' : 'ink2'));
+      add(c, await text(v, 'display/l', v === '0' ? 'muted' : 'ink'));
+      add(c, await text(sub, 'body/s', 'muted', { size: 11, w: 124 }));
+    }
+    add(g, c, { grow: true });
   }
-  add(panel, chips);
+  return g;
+}
+
+async function engineBlock(w) {
+  const g = DATA.grid.tempMin;
+  const wrap = frame('Engine panels', { dir: 'row', gap: 24 });
+  // Grid card
+  const gc = frame('Fig 2.1 · DEM grid', { dir: 'col', gap: 14, pad: 28, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], w: 700 });
+  add(gc, await text('FIG 2.1 · LIVE COPERNICUS GLO-90 DEM', 'mono/label', 'muted'));
+  add(gc, await text('225 village cells inside one forecast block', 'display/m', 'ink', { w: 640 }));
   const body = frame('Body', { dir: 'row', gap: 24 });
-  const map = frame('Map with references', { w: 388, h: 388 });
-  const img = image('grid', 368, 368, 'DEM grid render · 15 × 15 cells');
-  img.cornerRadius = 6;
+  const map = frame('Grid with references', { w: 392, h: 392 });
+  const img = image('grid', 372, 372, 'DEM grid · 15 × 15 cells', 8);
   map.appendChild(img);
   img.x = 20;
   img.y = 20;
   for (let i = 0; i < 15; i++) {
     const col = await text(String.fromCharCode(65 + i), 'mono/data', 'muted', { size: 9 });
     map.appendChild(col);
-    col.x = 20 + i * (368 / 15) + 368 / 30 - col.width / 2;
-    col.y = 4;
-    const row = await text(String(i + 1), 'mono/data', 'muted', { size: 9 });
-    map.appendChild(row);
-    row.x = 2;
-    row.y = 20 + i * (368 / 15) + 368 / 30 - row.height / 2;
+    col.x = 20 + i * (372 / 15) + 372 / 30 - col.width / 2;
+    col.y = 3;
+    const rw = await text(String(i + 1), 'mono/data', 'muted', { size: 9 });
+    map.appendChild(rw);
+    rw.x = 2;
+    rw.y = 20 + i * (372 / 15) + 372 / 30 - rw.height / 2;
   }
   add(body, map);
-  const stats = frame('Stats', { dir: 'col', gap: 8 });
-  const hero = frame('Spread', { dir: 'col', gap: 4, pad: 14, radius: 10, fill: paint('surface2') });
-  add(hero, await text('Hidden inside the block', 'body/s', 'muted'));
-  add(hero, await text(`${(g.hi - g.lo).toFixed(1)} °C`, 'mono/figure', 'accent'));
-  add(hero, await text('spread the 18 km forecast cannot see', 'body/s', 'ink2'));
-  add(stats, hero, { fill: true });
-  for (const [label, value, tone] of [
+  const st = frame('Stats', { dir: 'col', gap: 10 });
+  const spread = frame('Spread', { dir: 'col', gap: 4, pad: 16, radius: 14, fill: paint('surface2') });
+  add(spread, await text('Hidden inside the block', 'body/s', 'muted'));
+  add(spread, await text(`${(g.hi - g.lo).toFixed(1)} °C`, 'display/l', 'accent'));
+  add(spread, await text('spread the 18 km forecast cannot see', 'body/s', 'ink2'));
+  add(st, spread, { fill: true });
+  for (const [k, v, tone] of [
     ['Block forecast', `${g.coarse} °C`, 'sun'],
     ['Your village cell', `${g.village} °C`, 'accent'],
     ['Lowest', `${g.lo} °C · ${g.loElev} m`, 'ink'],
     ['Highest', `${g.hi} °C · ${g.hiElev} m`, 'ink'],
   ]) {
-    const r = COMP.readout.createInstance();
-    await setLabel(r, 'Label', label);
-    await setLabel(r, 'Value', value);
-    const vt = r.findOne((n) => n.name === 'Value');
-    if (vt) vt.fills = [paint(tone)];
-    add(stats, r, { fill: true });
+    const r = frame(k, { dir: 'col', gap: 2, pad: [10, 12], radius: 10, stroke: ['line', 0.08] });
+    add(r, await text(k, 'body/s', 'muted'));
+    add(r, await text(v, 'mono/readout', tone));
+    add(st, r, { fill: true });
   }
-  add(body, stats, { grow: true });
-  add(panel, body, { fill: true });
-  hudCorners(panel);
-  return panel;
+  const dl = frame('Downloads', { dir: 'row', gap: 6, align: 'CENTER' });
+  add(dl, await text('DATA', 'mono/label', 'muted'));
+  for (const l of ['CSV', 'GeoJSON', 'PNG']) {
+    const ch = inst(COMP.chip, 'State=Off');
+    await setLabel(ch, 'Label', l);
+    add(dl, ch);
+  }
+  add(st, dl);
+  add(body, st, { grow: true });
+  add(gc, body, { fill: true });
+  add(wrap, gc);
+
+  // Explain card (waterfall)
+  const ew = w - 700 - 24;
+  const ec = frame('Fig 2.2 · Explainable AI', { dir: 'col', gap: 14, pad: 28, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], w: ew });
+  add(ec, await text('FIG 2.2 · EXPLAINABLE AI', 'mono/label', 'muted'));
+  add(ec, await text('Why your village differs', 'display/m', 'ink'));
+  const c0 = DATA.coarse.tempMin, fz = DATA.fine.tempMin, steps = DATA.steps.tmin;
+  const lead = [...steps].sort((a, b) => Math.abs(b.value) - Math.abs(a.value))[0];
+  const note = frame('Reasoning', { dir: 'col', pad: 14, radius: 14, fill: paint('accent', 0.07), stroke: ['accent', 0.25] });
+  add(note, await text(`${DATA.region.name}: ${Math.abs(fz - c0).toFixed(1)} °C ${fz < c0 ? 'cooler' : 'warmer'} than the district forecast. The biggest factor is ${lead ? lead.label.toLowerCase() : 'none'}.`, 'body/m', 'ink2', { w: ew - 84 }));
+  add(ec, note, { fill: true });
+  const rows = [{ label: 'Block forecast · 18 km', eq: 'NWP grid-cell mean', from: c0, to: c0, kind: 'start' }];
+  let v = c0;
+  for (const s of steps) {
+    rows.push({ label: s.label, eq: s.eq || s.why, from: v, to: v + s.value, kind: 'step' });
+    v += s.value;
+  }
+  rows.push({ label: 'Your village · 1.2 km', eq: 'T = T₀ + ΣΔT', from: fz, to: fz, kind: 'end' });
+  const all = rows.flatMap((r) => [r.from, r.to]);
+  const pd = Math.max(0.6, (Math.max(...all) - Math.min(...all)) * 0.25);
+  const lo = Math.min(...all) - pd, hi = Math.max(...all) + pd;
+  const trackW = ew - 56 - 190 - 64 - 24;
+  const x = (n) => ((n - lo) / (hi - lo)) * trackW;
+  for (const r of rows) {
+    const line = frame(r.label, { dir: 'row', gap: 12, align: 'CENTER' });
+    const lab = frame('label', { dir: 'col', gap: 2, w: 190 });
+    add(lab, await text(r.label, r.kind === 'step' ? 'body/m' : 'body/m-strong', r.kind === 'step' ? 'ink2' : 'ink'));
+    add(lab, await text(r.eq, 'mono/data', 'muted', { size: 9.5, w: 190 }));
+    add(line, lab);
+    const track = frame('track', { w: trackW, h: 26, radius: 6, fill: paint('surface2') });
+    const isStep = r.kind === 'step';
+    const color = r.kind === 'start' ? 'sun' : r.kind === 'end' ? 'accent' : r.to < r.from ? 'sky' : 'sun';
+    const bar = rect(isStep ? Math.max(2, Math.abs(x(r.to) - x(r.from))) : x(r.to), 18, isStep ? paint(color) : gradient([[0, color, 0.2], [1, color, 1]], 0), { radius: 4 });
+    bar.x = isStep ? x(Math.min(r.from, r.to)) : 0;
+    bar.y = 4;
+    track.appendChild(bar);
+    add(line, track);
+    add(line, await text(isStep ? sgn(r.to - r.from) : f1(r.to), 'mono/readout', r.kind === 'end' ? 'accent' : r.kind === 'start' ? 'sun' : 'ink2', { align: 'RIGHT', w: 64 }));
+    add(ec, line);
+  }
+  const model = frame('Model', { dir: 'col', gap: 2, pad: 14, radius: 12, fill: paint('bg', 0.5), stroke: ['line', 0.08] });
+  add(model, await text('MODEL · NIGHT LOW', 'mono/label', 'muted'));
+  add(model, await text('T₁.₂ = T₁₈ + Σ ΔTᵢ', 'mono/data', 'ink2', { size: 12 }));
+  add(model, await text(`     = ${f1(c0)}${steps.map((s) => ` ${s.value < 0 ? '−' : '+'} ${Math.abs(s.value).toFixed(1)}`).join('')}`, 'mono/data', 'ink2', { size: 12 }));
+  add(model, await text(`     = ${f1(fz)} °C`, 'mono/readout', 'accent'));
+  add(ec, model, { fill: true });
+  add(wrap, ec);
+  return wrap;
 }
 
 async function pipeline(w) {
   const r = DATA.region;
-  const p = frame('Pipeline', { dir: 'row', gap: 1, radius: 10, clip: true, fill: paint('line', 0.08), w });
+  const p = frame('Pipeline', { dir: 'row', gap: 1, radius: 18, clip: true, fill: paint('line', 0.08), w });
   for (const [i, [ic, k, t, d]] of [
     ['rain', 'IN', 'NWP block forecast', `Open-Meteo · cell ${DATA.cellElevationM} m`],
     ['layers', 'TERRAIN', 'DEM + covariates', `GLO-90 · slope ${r.slopeDeg}° · D ${r.drainage}`],
     ['cpu', 'MODEL', 'Physics inference', 'Γ lapse · pooling · orographic · OI'],
     ['file', 'OUT', 'Village advisory', `${r.elevationM} m · Δx 1.2 km · 7 days`],
   ].entries()) {
-    const cell = frame(k, { dir: 'row', gap: 12, pad: [12, 16], fill: paint('surface'), align: 'CENTER' });
-    const ib = frame('icon', { dir: 'row', pad: 8, radius: 6, fill: paint(i === 3 ? 'accent' : 'surface2') });
+    const cell = frame(k, { dir: 'row', gap: 12, pad: [14, 18], fill: paint('surface'), align: 'CENTER' });
+    const ib = frame('icon', { dir: 'row', pad: 9, radius: 999, fill: paint(i === 3 ? 'accent' : 'surface2') });
     add(ib, icon(ic, i === 3 ? 'accentInk' : 'ink2', 16));
     add(cell, ib);
     const tx = frame('text', { dir: 'col', gap: 1 });
@@ -1000,42 +1098,37 @@ async function pipeline(w) {
 }
 
 async function chatPanel(w, h) {
-  const panel = frame('Ask AeroAgro', { dir: 'col', gap: 0, radius: 14, clip: true, fill: paint('surface'), stroke: ['line', 0.08], w, h });
-  const head = frame('Header', { dir: 'row', gap: 12, pad: [16, 20], align: 'CENTER' });
-  const av = frame('Avatar', { dir: 'row', pad: 12, radius: 12, fill: paint('bg'), stroke: ['accent', 0.8, 1.5] });
+  const panel = frame('Ask AeroAgro', { dir: 'col', radius: 20, clip: true, fill: paint('surface'), stroke: ['line', 0.08], w, h, shadow: true });
+  const head = frame('Header', { dir: 'row', gap: 12, pad: [18, 22], align: 'CENTER' });
+  const av = frame('Avatar', { dir: 'row', pad: 11, radius: 999, fill: paint('bg'), stroke: ['accent', 0.8, 1.5] });
   add(av, icon('spark', 'accent', 18));
   add(head, av);
   const ht = frame('Title', { dir: 'col', gap: 2 });
   add(ht, await text('Ask AeroAgro', 'display/s', 'ink'));
-  add(ht, await text(`Farm assistant for ${DATA.region.name} · answers from the village forecast`, 'body/s', 'muted'));
+  add(ht, await text(`Farm assistant for ${DATA.region.name} · answers computed on the device`, 'body/s', 'muted'));
   add(head, ht, { grow: true });
   add(panel, head, { fill: true });
-  const conv = frame('Conversation', { dir: 'col', gap: 14, pad: [16, 20] });
+  const conv = frame('Conversation', { dir: 'col', gap: 14, pad: [8, 22] });
   for (const m of DATA.chat) {
     const u = frame('User', { dir: 'row', justify: 'MAX' });
-    const ub = frame('bubble', { dir: 'row', pad: [10, 14], radius: 14, fill: paint('raised') });
+    const ub = frame('bubble', { dir: 'row', pad: [10, 14], radius: 16, fill: paint('btn') });
     const isDeva = /[ऀ-ॿ]/.test(m.q);
-    add(ub, await text(m.q, 'body/m', 'ink', isDeva && FONT.deva ? { font: 'deva' } : {}));
+    add(ub, await text(m.q, 'body/m', 'btnInk', isDeva && FONT.deva ? { font: 'deva' } : {}));
     add(u, ub);
     add(conv, u, { fill: true });
     const a = frame('AI', { dir: 'row', gap: 10 });
-    const aic = frame('ai', { dir: 'row', pad: 6, radius: 8, fill: paint('accent', 0.15) });
+    const aic = frame('ai', { dir: 'row', pad: 6, radius: 999, fill: paint('accent', 0.15) });
     add(aic, icon('spark', 'accent', 14));
     add(a, aic);
     const col = frame('answer', { dir: 'col', gap: 6 });
-    const ab = frame('bubble', { dir: 'col', pad: [10, 14], radius: 14, fill: paint('surface2'), stroke: ['line', 0.08] });
-    const answerDeva = /[ऀ-ॿ]/.test(m.a);
-    add(ab, await text(m.a, 'body/m', 'ink2', Object.assign({ w: w - 110 }, answerDeva && FONT.deva ? { font: 'deva' } : {})));
+    const ab = frame('bubble', { dir: 'col', pad: [10, 14], radius: 16, fill: paint('surface2') });
+    const deva = /[ऀ-ॿ]/.test(m.a);
+    add(ab, await text(m.a, 'body/m', 'ink2', Object.assign({ w: w - 118 }, deva && FONT.deva ? { font: 'deva' } : {})));
     add(col, ab);
     const src = frame('sources', { dir: 'row', gap: 6 });
     for (const s of m.sources.slice(0, 3)) {
-      const c = frame(s, { dir: 'row', pad: [2, 8], radius: 999, stroke: ['line', 0.1] });
+      const c = frame(s, { dir: 'row', pad: [2, 8], radius: 999, stroke: ['line', 0.12] });
       add(c, await text(s, 'body/s', 'muted', { size: 10 }));
-      add(src, c);
-    }
-    if (m.action) {
-      const c = frame('action', { dir: 'row', pad: [2, 10], radius: 999, fill: paint('accent', 0.15) });
-      add(c, await text(`${m.action} ↗`, 'body/s', 'accent', { size: 10, font: 'sansSemi' }));
       add(src, c);
     }
     add(col, src);
@@ -1043,222 +1136,213 @@ async function chatPanel(w, h) {
     add(conv, a, { fill: true });
   }
   add(panel, conv, { fill: true, grow: true });
-  const input = frame('Input', { dir: 'row', gap: 8, pad: 12, align: 'CENTER' });
-  const mic = frame('Mic', { dir: 'row', pad: 12, radius: 10, fill: paint('surface2'), stroke: ['line', 0.1] });
+  const input = frame('Input', { dir: 'row', gap: 8, pad: 14, align: 'CENTER' });
+  const mic = frame('Mic', { dir: 'row', pad: 12, radius: 999, stroke: ['line', 0.14] });
   add(mic, icon('mic', 'ink2', 16));
   add(input, mic);
-  const field = frame('Field', { dir: 'row', pad: [12, 14], radius: 10, fill: paint('bg', 0.6), stroke: ['line', 0.1] });
+  const field = frame('Field', { dir: 'row', pad: [12, 16], radius: 999, fill: paint('bg', 0.6), stroke: ['line', 0.12] });
   add(field, await text('Ask about spraying, rain, irrigation, frost…', 'body/m', 'muted'));
   add(input, field, { grow: true });
-  const send = frame('Send', { dir: 'row', pad: 12, radius: 10, fill: paint('accent') });
-  add(send, icon('send', 'accentInk', 16));
+  const send = frame('Send', { dir: 'row', pad: 12, radius: 999, fill: paint('btn') });
+  add(send, icon('send', 'btnInk', 16));
   add(input, send);
   add(panel, input, { fill: true });
-  hudCorners(panel);
   return panel;
+}
+
+async function deliverCards(w) {
+  const col = frame('Reach', { dir: 'col', gap: 16, w });
+  for (const [k, t, d, ic] of [
+    ['PRINT', 'Agromet bulletin', 'Five-day GKMS-format advisory with SMS text and QR.', 'file'],
+    ['PHONE', 'Farmer app view', 'The same advice on a simple phone screen, with voice.', 'phone'],
+    ['WALL', 'Village kiosk', 'Large type and a WhatsApp QR for the panchayat office.', 'tv'],
+  ]) {
+    const c = frame(t, { dir: 'row', gap: 18, pad: 24, radius: 20, fill: paint('surface'), stroke: ['line', 0.08], shadow: true });
+    const ib = frame('icon', { dir: 'row', pad: 14, radius: 999, fill: paint('btn') });
+    add(ib, icon(ic, 'btnInk', 20));
+    add(c, ib);
+    const tx = frame('text', { dir: 'col', gap: 4 });
+    add(tx, await text(k, 'mono/label', 'muted'));
+    add(tx, await text(t, 'display/m', 'ink'));
+    add(tx, await text(d, 'body/m', 'ink2', { w: w - 150 }));
+    add(c, tx, { grow: true });
+    add(c, icon('arrow', 'muted', 20));
+    add(col, c, { fill: true });
+  }
+  return col;
+}
+
+async function footer(w) {
+  return night(async () => {
+    const f = frame('Footer · night', { dir: 'col', gap: 40, pad: [80, 64, 0, 64], w, fill: paint('bg'), clip: true });
+    setNightMode(f);
+    const top = frame('Top', { dir: 'row', gap: 64 });
+    const l = frame('Left', { dir: 'col', gap: 18, w: 520 });
+    add(l, await title('Weather for your village, ', 'not your district.', 'display/m', { w: 520 }));
+    add(l, await text('Data: Open-Meteo NWP · Copernicus GLO-90 DEM · IMD INSAT-3DR · ICAR agromet guidance. Decision-support estimates, not an official IMD forecast.', 'body/s', 'muted', { w: 440 }));
+    add(top, l);
+    for (const [h, links] of [
+      ['PRODUCT', ['Your village', 'All India', 'Engine', 'Ask AeroAgro', 'Field tools']],
+      ['BUILD', ['Source code', 'Figma plugin', 'About the project']],
+      ['DATA', ['Open-Meteo', 'Copernicus DEM', 'IMD satellite']],
+    ]) {
+      const c = frame(h, { dir: 'col', gap: 10 });
+      add(c, await text(h, 'mono/label', 'muted'));
+      for (const x of links) add(c, await text(x, 'body/m', 'ink2'));
+      add(top, c, { grow: true });
+    }
+    add(f, top, { fill: true });
+    const mark = await title('AeroAgro', '.', 'display/poster', { size: 260 });
+    add(f, mark);
+    return f;
+  });
 }
 
 // ---------------------------------------------------------------- screens
 async function buildDesktop(page) {
-  const W = 1440;
-  const s = frame('Desktop · Dashboard (1440)', { dir: 'col', gap: 0, fill: paint('bg'), w: W });
+  const W = 1440, C = W - 128;
+  const s = frame('Desktop · 1440 · Monsoon Almanac', { dir: 'col', fill: paint('bg'), w: W });
   page.appendChild(s);
-  add(s, await header(W), { fill: true });
-  add(s, await telemetry(W), { fill: true });
+  add(s, await ticker(W), { fill: true });
+  add(s, await nav(W), { fill: true });
+  add(s, await heroPoster(W), { fill: true });
+  add(s, await figureBand(W), { fill: true });
+  add(s, await statsRow(W), { fill: true });
 
-  // hero
-  const hero = frame('Hero', { dir: 'row', gap: 56, pad: [64, 64], align: 'CENTER' });
-  const left = frame('Copy', { dir: 'col', gap: 22, w: 620 });
-  const pill = frame('Live pill', { dir: 'row', gap: 8, pad: [5, 12], radius: 999, fill: paint('accent', 0.1), stroke: ['accent', 0.25], align: 'CENTER' });
-  add(pill, rect(8, 8, 'accent', { radius: 4 }));
-  add(pill, await text('Live microclimate forecasts for Indian farms', 'body/s', 'accent', { font: 'sansMedium' }));
-  add(left, pill);
-  const h1 = await text('Weather for your village, not your district.', 'display/xl', 'ink', { w: 620 });
-  const cut = 'Weather for your village, '.length;
-  h1.setRangeFontName(cut, h1.characters.length, FONT.displayItalic);
-  h1.setRangeFills(cut, h1.characters.length, [paint('accent')]);
-  add(left, h1);
-  add(left, await text('AeroAgro sharpens 18 km forecasts into 1.2 km microclimates using terrain physics, then tells each farmer exactly when to spray, water and protect their crop.', 'body/l', 'ink2', { w: 600 }));
-  const stats = frame('Stats', { dir: 'row', gap: 40 });
-  for (const [v, l] of [
-    ['303', 'districts & metros'],
-    ['225×', 'finer than an 18 km grid'],
-    ['3', 'languages, with voice'],
-    ['₹0', 'data cost · open APIs'],
-  ]) {
-    const st = frame(l, { dir: 'col', gap: 2 });
-    add(st, await text(v, 'mono/figure', 'ink'));
-    add(st, await text(l, 'body/s', 'muted'));
-    add(stats, st);
-  }
-  add(left, stats);
-  add(hero, left);
-  const fig = frame('Fig 0.1 · Resolution comparison', { dir: 'col', gap: 0, radius: 14, clip: true, fill: paint('surface'), stroke: ['line', 0.08], w: 622 });
-  const cap = frame('Caption', { dir: 'col', gap: 4, pad: [16, 20] });
-  add(cap, await text('Fig 0.1 · Resolution comparison', 'mono/label', 'muted'));
-  add(cap, await text('Same night. Two resolutions.', 'display/s', 'ink'));
-  add(fig, cap, { fill: true });
-  add(fig, image('thermal', 622, 467, 'Thermal map · 18 km blocks vs 1.2 km'));
-  const legend = frame('Legend', { dir: 'row', gap: 10, pad: [12, 20], align: 'CENTER' });
-  add(legend, await text('−3°', 'mono/data', 'frost'));
-  add(legend, rect(140, 8, gradient([[0, '#FFFFFF'], [0.25, '#76D6FF'], [0.45, '#426CDE'], [0.65, '#8A40A8'], [0.85, '#E0645A'], [1, '#F6B94C']], 0), { radius: 4 }));
-  add(legend, await text('17°C', 'mono/data', 'sun'));
-  add(fig, legend, { fill: true });
-  hudCorners(fig);
-  add(hero, fig);
-  add(s, hero);
+  const v = frame('(01) Your village · paper', { dir: 'col', gap: 24, pad: [112, 64], fill: paint('bg') });
+  add(v, await sectionHead('(01) — YOUR VILLAGE, TODAY', 'One village. ', 'Its own forecast.', 'Pick any of 303 regions. Everything here is re-computed for that exact place.', C));
+  const row = frame('Sheet + plan', { dir: 'row', gap: 24 });
+  add(row, await villageSheet(760));
+  add(row, await actionPlan(C - 760 - 24));
+  add(v, row);
+  add(v, await weekStrip(C));
+  add(s, v, { fill: true });
 
-  // 01 dashboard
-  const d1 = frame('01 · Live dashboard', { dir: 'col', gap: 24, pad: [48, 64] });
-  add(d1, await sectionHead('01', 'Live dashboard', 'India, one village at a time', '303 regions · 1.2 km downscaled view', W - 128));
-  const row1 = frame('Map + today', { dir: 'row', gap: 24 });
-  const colL = frame('Left', { dir: 'col', gap: 24, w: W - 128 - 24 - 420 });
-  const map = image('map', W - 128 - 24 - 420, 520, 'Live map · 303 regions');
-  map.cornerRadius = 14;
-  add(colL, map);
-  add(colL, await weekStrip(W - 128 - 24 - 420), { fill: true });
-  add(row1, colL);
-  const colR = frame('Right', { dir: 'col', gap: 24, w: 420 });
-  add(colR, await todayCard(420), { fill: true });
-  const v1 = inst(COMP.verdict, 'Tone=Good');
-  await setLabel(v1, 'Headline', DATA.spray.hours > 0 ? `Best between ${DATA.spray.label}` : 'No safe window today');
-  add(colR, v1, { fill: true });
-  const v2 = inst(COMP.verdict, DATA.irrigation.deficit > 5 ? 'Tone=Warn' : 'Tone=Good');
-  await setLabel(v2, 'Headline', `${DATA.irrigation.action} · ET ${DATA.et0} mm/day`);
-  const v2t = v2.findOne((n) => n.type === 'TEXT' && n.name === 'Verdict label');
-  if (v2t) v2t.characters = DATA.irrigation.deficit > 5 ? 'Increase' : 'Normal';
-  add(colR, v2, { fill: true });
-  add(row1, colR);
-  add(d1, row1);
-  add(s, d1);
+  const mapBand = await night(async () => {
+    const b = frame('(02) All India · night', { dir: 'col', gap: 24, pad: [112, 64], fill: paint('bg') });
+    setNightMode(b);
+    add(b, await sectionHead('(02) — ALL INDIA', '303 regions, ', 'one glance.', 'Every dot is downscaled live. The AI scan flags hazards the district forecast misses.', C));
+    add(b, await scanGrid(C));
+    add(b, image('map', C, 540, 'Live map · 303 regions', 20));
+    return b;
+  });
+  add(s, mapBand, { fill: true });
 
-  // 02 engine
-  const d2 = frame('02 · Downscaling engine', { dir: 'col', gap: 24, pad: [48, 64] });
-  add(d2, await sectionHead('02', 'Downscaling engine', 'From block to panchayat, shown working', 'Physics-informed · explainable · runs in the browser', W - 128));
-  add(d2, await pipeline(W - 128), { fill: true });
-  const row2 = frame('Engine panels', { dir: 'row', gap: 24 });
-  add(row2, await gridPanel(700));
-  add(row2, await waterfall(W - 128 - 24 - 700));
-  add(d2, row2);
-  add(s, d2);
+  const engBand = await night(async () => {
+    const b = frame('(03) Engine · night', { dir: 'col', gap: 24, pad: [112, 64], fill: paint('bg') });
+    setNightMode(b);
+    add(b, await sectionHead('(03) — THE DOWNSCALING ENGINE', 'From block to panchayat, ', 'shown working.', 'Real terrain heights, transparent physics and an equation behind every number.', C));
+    add(b, await pipeline(C));
+    add(b, await engineBlock(C));
+    return b;
+  });
+  add(s, engBand, { fill: true });
 
-  // 03 assistant
-  const d3 = frame('03 · Field tools & assistant', { dir: 'col', gap: 24, pad: [48, 64, 80, 64] });
-  add(d3, await sectionHead('03', 'Field tools & assistant', 'Decide, verify, ask', 'Hourly spray · PMFBY · satellite · voice', W - 128));
-  add(d3, await chatPanel(620, 720));
-  add(s, d3);
+  const ask = frame('(04) Ask · paper', { dir: 'col', gap: 24, pad: [112, 64], fill: paint('bg') });
+  add(ask, await sectionHead('(04) — ASK & REACH EVERY FARMER', 'Ask it like you’d ', 'ask a neighbour.', 'Type or speak in English, Hindi or Tamil. Answers come from this village’s forecast.', C));
+  const ar = frame('Ask + reach', { dir: 'row', gap: 24 });
+  add(ar, await chatPanel(760, 720));
+  add(ar, await deliverCards(C - 760 - 24));
+  add(ask, ar);
+  add(s, ask, { fill: true });
+  add(s, await footer(W), { fill: true });
   return s;
 }
 
 async function buildMobile(page) {
   const W = 390;
-  const s = frame('Mobile · Farmer (390)', { dir: 'col', gap: 16, fill: paint('bg'), w: W, pad: [0, 0, 32, 0] });
+  const s = frame('Mobile · 390', { dir: 'col', fill: paint('bg'), w: W });
   page.appendChild(s);
-  s.x = 1600;
-  add(s, await header(W), { fill: true });
-  const body = frame('Body', { dir: 'col', gap: 16, pad: [0, 16] });
-  add(body, await todayCard(W - 32), { fill: true });
-  const v = inst(COMP.verdict, 'Tone=Good');
-  await setLabel(v, 'Headline', DATA.spray.hours > 0 ? `Best between ${DATA.spray.label}` : 'No safe window today');
+  add(s, await ticker(W), { fill: true });
+  add(s, await nav(W, true), { fill: true });
+  add(s, await heroPoster(W, true), { fill: true });
+  add(s, await figureBand(W, true), { fill: true });
+  const body = frame('Village', { dir: 'col', gap: 16, pad: [40, 16] });
+  const sheet = await villageSheet(W - 32);
+  add(body, sheet, { fill: true });
+  const v = inst(COMP.verdict, DATA.spray.hours >= 3 ? 'Tone=Good' : DATA.spray.hours > 0 ? 'Tone=Warn' : 'Tone=Bad');
+  await setLabel(v, 'Headline', DATA.spray.hours > 0 ? DATA.spray.label : 'No safe window');
   add(body, v, { fill: true });
-  const days = frame('Next days', { dir: 'row', gap: 8 });
-  const lo = Math.min(...DATA.week.flatMap((d) => [d.fine.tempMin, d.coarse.tempMin]));
-  const hi = Math.max(...DATA.week.flatMap((d) => [d.fine.tempMax, d.coarse.tempMax]));
-  const maxRain = Math.max(5, ...DATA.week.map((d) => Math.max(d.fine.rainfallMm, d.coarse.rainfallMm)));
-  for (const [i, d] of DATA.week.slice(0, 3).entries()) add(days, await dayCard(d, i, i === DATA.bestSprayDay, lo, hi, maxRain), { grow: true });
-  add(body, days, { fill: true });
-  add(body, await chatPanel(W - 32, 560), { fill: true });
+  add(body, await chatPanel(W - 32, 620), { fill: true });
   add(s, body, { fill: true });
   return s;
 }
 
 async function buildArchitecture(page) {
-  const board = frame('Architecture', { w: 1440, h: 820, fill: paint('bg') });
+  const board = frame('Architecture', { w: 1440, h: 860, fill: paint('bg') });
   page.appendChild(board);
-  const title = await text('System architecture · data → physics → farmer', 'display/l', 'ink');
-  board.appendChild(title);
-  title.x = 64;
-  title.y = 56;
-  const sub = await text('Everything runs client-side on free, keyless open data. Solid arrows: data flow. Numbers are live values for the snapshot region.', 'body/m', 'ink2', { w: 900 });
+  const kick = await text('(A) — ARCHITECTURE', 'mono/label', 'muted');
+  board.appendChild(kick);
+  kick.x = 80;
+  kick.y = 64;
+  const tt = await title('Data → physics → ', 'farmer.', 'display/xl', { w: 1100 });
+  board.appendChild(tt);
+  tt.x = 80;
+  tt.y = 96;
+  const sub = await text('A static site on a CDN: every forecast is fetched and downscaled in the browser from free, keyless open data. No server to attack, no keys to leak.', 'body/l', 'ink2', { w: 900 });
   board.appendChild(sub);
-  sub.x = 64;
-  sub.y = 116;
+  sub.x = 80;
+  sub.y = 200;
 
-  const node = async (x, y, w, fig, head, lines, accent) => {
-    const n = frame(head, { dir: 'col', gap: 6, pad: 16, radius: 12, fill: paint(accent ? 'accent' : 'surface', accent ? 0.08 : 1), stroke: [accent ? 'accent' : 'line', accent ? 0.6 : 0.1], w });
-    add(n, await text(fig, 'mono/label', accent ? 'accent' : 'muted'));
-    add(n, await text(head, 'body/m-strong', 'ink'));
-    for (const l of lines) add(n, await text(l, 'mono/data', 'ink2', { size: 10.5, w: w - 32 }));
+  const node = async (x, y, w, fig, head, lines, hero) => {
+    const n = frame(head, { dir: 'col', gap: 6, pad: 18, radius: 18, fill: paint(hero ? 'btn' : 'surface'), stroke: ['line', hero ? 0 : 0.1], w });
+    add(n, await text(fig, 'mono/label', hero ? 'btnInk' : 'muted', hero ? { opacity: 0.7 } : {}));
+    add(n, await text(head, 'display/s', hero ? 'btnInk' : 'ink'));
+    for (const l of lines) add(n, await text(l, 'mono/data', hero ? 'btnInk' : 'ink2', { size: 10.5, w: w - 36, opacity: hero ? 0.85 : 1 }));
     board.appendChild(n);
     n.x = x;
     n.y = y;
     return n;
   };
   const arrow = (a, b) => {
-    const x1 = a.x + a.width, y1 = a.y + a.height / 2, x2 = b.x, y2 = b.y + b.height / 2;
-    const mx = (x1 + x2) / 2;
+    const x1 = a.x + a.width, y1 = a.y + a.height / 2, x2 = b.x, y2 = b.y + b.height / 2, mx = (x1 + x2) / 2;
     const v = figma.createVector();
     v.vectorPaths = [{ windingRule: 'NONZERO', data: `M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2 - 7} ${y2}` }];
-    v.strokes = [paint('accent', 0.8)];
+    v.strokes = [paint('ink', 0.5)];
     v.strokeWeight = 1.5;
     v.strokeCap = 'ROUND';
     v.fills = [];
     v.name = `${a.name} → ${b.name}`;
     board.appendChild(v);
-    const head = figma.createVector();
-    head.vectorPaths = [{ windingRule: 'NONZERO', data: `M ${x2 - 8} ${y2 - 4.5} L ${x2} ${y2} L ${x2 - 8} ${y2 + 4.5} Z` }];
-    head.fills = [paint('accent', 0.9)];
-    head.strokes = [];
-    head.name = 'arrowhead';
-    board.appendChild(head);
+    const hd = figma.createVector();
+    hd.vectorPaths = [{ windingRule: 'NONZERO', data: `M ${x2 - 8} ${y2 - 4.5} L ${x2} ${y2} L ${x2 - 8} ${y2 + 4.5} Z` }];
+    hd.fills = [paint('ink', 0.6)];
+    hd.strokes = [];
+    hd.name = 'arrowhead';
+    board.appendChild(hd);
   };
   const r = DATA.region;
-  const nwp = await node(64, 200, 300, 'SOURCE · 01', 'Open-Meteo NWP', ['forecast API · best match', 'elevation = nan → raw grid-cell mean', `cell height ${DATA.cellElevationM} m`, 'hourly 06–19 h + 7 daily'], false);
-  const dem = await node(64, 400, 300, 'SOURCE · 02', 'Copernicus GLO-90 DEM', ['Open-Meteo elevation API', '225 points · 3 × 100 batch', `relief ${DATA.grid.elevation.lo}–${DATA.grid.elevation.hi} m`], false);
-  const reg = await node(64, 580, 300, 'SOURCE · 03', 'Region registry', ['303 panchayats / districts', 'elevation · slope · drainage D', 'terrain class · crops'], false);
-  const eng = await node(520, 300, 380, 'MODEL', 'Physics-informed downscaler', ['ΔT = −Γ·Δz  (Γd 5.0 · Γn 6.5/4.5 K/km)', 'pooling −k·D·(1−θ/40), TPI hollows', 'rain × (1 + 0.6Δz⁺ + 0.6 sin θ)', 'OI blend: Lh = 250/σz km, Lz 150 m', `${r.name}: ${DATA.coarse.tempMin} → ${DATA.fine.tempMin} °C`], true);
-  const outs = [
-    ['OUT · 1', 'Dashboard + 1.2 km grid', ['map layer · explain waterfall']],
-    ['OUT · 2', '7-day outlook + bulletin', ['GKMS format · SMS · QR']],
-    ['OUT · 3', 'Ask AeroAgro', ['EN · हिन्दी · தமிழ் · voice']],
-    ['OUT · 4', 'WhatsApp · kiosk · PMFBY', ['evidence report · SHA-256']],
-  ];
-  const outNodes = [];
-  for (const [i, [fig, head, lines]] of outs.entries()) outNodes.push(await node(1056, 190 + i * 150, 320, fig, head, lines, false));
-  for (const src of [nwp, dem, reg]) arrow(src, eng);
-  for (const o of outNodes) arrow(eng, o);
+  const a = await node(80, 300, 320, 'SOURCE · 01', 'Open-Meteo NWP', ['forecast API · best match', 'elevation = nan → raw block value', `cell height ${DATA.cellElevationM} m`], false);
+  const b = await node(80, 480, 320, 'SOURCE · 02', 'Copernicus GLO-90', ['elevation API · 225 points', `relief ${DATA.grid.elevation.lo}–${DATA.grid.elevation.hi} m`], false);
+  const c = await node(80, 640, 320, 'SOURCE · 03', 'Region registry', ['303 regions · slope · drainage', 'terrain class · crops'], false);
+  const e = await node(540, 420, 380, 'MODEL', 'Physics downscaler', ['ΔT = −Γ·Δz (5.0 day · 6.5/4.5 night)', 'pooling −k·D·(1−θ/40), TPI hollows', 'rain × (1 + 0.6Δz⁺ + 0.6 sin θ)', 'OI blend Lh = 250/σz km, Lz 150 m', `${r.name}: ${DATA.coarse.tempMin} → ${DATA.fine.tempMin} °C`], true);
+  const outs = [];
+  for (const [i, [fig, head, lines]] of [
+    ['OUT · 1', 'Village sheet + grid', ['CSV · GeoJSON · PNG export']],
+    ['OUT · 2', 'Outlook + bulletin', ['GKMS format · SMS · QR']],
+    ['OUT · 3', 'Ask AeroAgro', ['EN · HI · TA · voice']],
+    ['OUT · 4', 'WhatsApp · kiosk · PMFBY', ['evidence · SHA-256']],
+  ].entries())
+    outs.push(await node(1060, 290 + i * 140, 300, fig, head, lines, false));
+  for (const src of [a, b, c]) arrow(src, e);
+  for (const o of outs) arrow(e, o);
   return board;
 }
 
 async function buildCover(page) {
-  const c = frame('Cover', { w: 1440, h: 900, fill: paint('bg'), clip: true });
+  const c = frame('Cover', { dir: 'col', gap: 36, pad: [96, 96], w: 1440, fill: paint('bg') });
   page.appendChild(c);
-  const img = image('thermal', 760, 571, 'cover art');
-  img.opacity = 0.9;
-  c.appendChild(img);
-  img.x = 1440 - 760 + 60;
-  img.y = 170;
-  const fade = rect(900, 900, gradient([[0, 'bg', 1], [0.55, 'bg', 1], [1, 'bg', 0]], 0));
-  c.appendChild(fade);
-  fade.x = 0;
-  fade.y = 0;
-  const col = frame('Title block', { dir: 'col', gap: 22, w: 760 });
-  c.appendChild(col);
-  col.x = 96;
-  col.y = 150;
-  add(col, await text('AeroAgro AI · design file', 'mono/label', 'accent'));
-  const h = await text('Weather for your village, not your district.', 'display/xl', 'ink', { w: 720, size: 76 });
-  const cut = 'Weather for your village, '.length;
-  h.setRangeFontName(cut, h.characters.length, FONT.displayItalic);
-  h.setRangeFills(cut, h.characters.length, [paint('accent')]);
-  add(col, h);
-  add(col, await text('Field Instrument design system · MoES problem statement: downscaling weather forecasts from block to panchayat level for agro-meteorological advisories.', 'body/l', 'ink2', { w: 640 }));
-  const meta = frame('Meta', { dir: 'col', gap: 4 });
-  add(meta, await text(`Snapshot · ${DATA.region.name}, ${DATA.region.district} · ${DATA.snapshot.at.slice(0, 16).replace('T', ' ')} UTC`, 'mono/data', 'muted'));
-  add(meta, await text(DATA.snapshot.source, 'mono/data', 'muted', { w: 700 }));
-  add(meta, await text('Live site · aeroagro.vercel.app', 'mono/data', 'accent'));
-  add(col, meta);
-  hudCorners(c);
+  const top = frame('Top', { dir: 'row', align: 'CENTER' });
+  add(top, await text('AEROAGRO AI · DESIGN FILE · MONSOON ALMANAC', 'mono/label', 'muted'), { grow: true });
+  add(top, await text(`SNAPSHOT · ${DATA.region.name.toUpperCase()} · ${DATA.snapshot.at.slice(0, 10)}`, 'mono/label', 'muted'));
+  add(c, top, { fill: true });
+  add(c, await text('Weather for your village,', 'display/poster', 'ink', { size: 132, w: 1248 }));
+  const line2 = frame('Line 2 · highlighter', { dir: 'row', pad: [0, 8], fill: gradient([[0, '#FFFFFF', 0], [0.58, '#FFFFFF', 0], [0.58, PAPER.marker, 0.9], [0.9, PAPER.marker, 0.9], [0.9, '#FFFFFF', 0]], 90) });
+  add(line2, await text('not your district.', 'display/poster', 'ink', { font: 'displayItalic', size: 132 }));
+  add(c, line2);
+  add(c, await text('MoES problem statement: downscaling weather forecasts from block to panchayat level for agro-meteorological advisory services.', 'body/l', 'ink2', { w: 760 }));
+  add(c, image('thermal', 1248, 624, 'Fig 1 · resolution comparison', 22));
+  add(c, await text('aeroagro.vercel.app', 'mono/label', 'accent'));
   return c;
 }
 
@@ -1275,15 +1359,14 @@ async function run() {
     pg.name = `AeroAgro · ${name}`;
     pages[name] = pg;
   }
-  const steps = [
+  for (const [name, fn] of [
     ['Foundations', buildFoundations],
     ['Components', buildComponents],
     ['Cover', buildCover],
     ['Desktop', buildDesktop],
     ['Mobile', buildMobile],
     ['Architecture', buildArchitecture],
-  ];
-  for (const [name, fn] of steps) {
+  ]) {
     await figma.setCurrentPageAsync(pages[name]);
     figma.notify(`AeroAgro: building ${name}…`, { timeout: 1200 });
     const node = await fn(pages[name]);
@@ -1291,7 +1374,7 @@ async function run() {
   }
   await figma.setCurrentPageAsync(pages.Cover);
   figma.viewport.scrollAndZoomIntoView(pages.Cover.children);
-  figma.closePlugin('AeroAgro design system generated · 6 pages, variables, text styles and components');
+  figma.closePlugin('AeroAgro · Monsoon Almanac generated: 6 pages, Paper/Night variables, text styles, components');
 }
 
 run().catch((e) => {

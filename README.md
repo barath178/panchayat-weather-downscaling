@@ -25,6 +25,8 @@ Share any village directly with `?v=<region id>`, e.g. `?v=kerala_idukki_227` fo
 
 ![Downscaling engine: 1.2 km DEM grid and explainable waterfall for Munnar](design/screens/downscaling-engine.png)
 
+See [docs/EVALUATION.md](docs/EVALUATION.md) for the requirement-by-requirement compliance check, judging criteria and the security audit.
+
 ## Features
 
 | | |
@@ -115,7 +117,7 @@ Open [`index.html`](index.html) directly in a browser. No install needed.
 
 ### Figma plugin: native design system (recommended)
 
-[`design/figma-plugin`](design/figma-plugin) is a Figma plugin that builds the whole "Field Instrument" design as **native, editable layers**: 17 colour variables, 12 text styles, variant components (Button, Chip, Verdict tile), a HUD panel with constraint-pinned corner ticks, and full Desktop (1440) and Mobile (390) screens plus an architecture diagram, filled with a live engine snapshot for Munnar. In the Figma desktop app: **Plugins → Development → Import plugin from manifest…** → `design/figma-plugin/manifest.json`, then run it. See its [README](design/figma-plugin/README.md).
+[`design/figma-plugin`](design/figma-plugin) is a Figma plugin that builds the whole "Monsoon Almanac" design as **native, editable layers**: 20 colour variables with **Paper and Night modes**, 12 text styles, variant components (Button, Chip, Verdict tile), and full Desktop (1440) and Mobile (390) screens plus an architecture diagram, filled with a live engine snapshot for Munnar. In the Figma desktop app: **Plugins → Development → Import plugin from manifest…** → `design/figma-plugin/manifest.json`, then run it. See its [README](design/figma-plugin/README.md).
 
 ### SVG artboard (legacy)
 

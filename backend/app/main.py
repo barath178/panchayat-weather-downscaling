@@ -1,26 +1,76 @@
-from fastapi import FastAPI, HTTPException, Query
+import os
+import time
+from collections import defaultdict, deque
+from typing import Deque, Dict, Literal
+
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from app.services.open_meteo import OpenMeteoService
 from app.ml.downscaler import TabularDownscalerML
 from app.services.advisory import AgrometAdvisoryService
 
+IS_PRODUCTION = os.getenv("AEROAGRO_ENV", "development") == "production"
+
 app = FastAPI(
     title="AeroAgro AI API",
     description="Microclimate Weather Downscaling (Block to Panchayat) & Agromet Advisory Engine",
-    version="1.0.0"
+    version="1.0.0",
+    # Interactive docs are handy locally but are reconnaissance surface in production.
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
 )
 
-# Enable CORS for Next.js frontend
+# CORS: an explicit allowlist, no credentials. ("*" together with credentials makes Starlette
+# reflect any Origin, letting any website make credentialed calls.)
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "AEROAGRO_ALLOWED_ORIGINS",
+        "https://aeroagro.vercel.app,https://barath178.github.io,http://localhost:3000",
+    ).split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+    max_age=600,
 )
+
+# Per-IP sliding-window rate limit: each request can trigger an outbound Open-Meteo call,
+# so unbounded traffic would both exhaust the free quota and slow every user down.
+RATE_LIMIT = int(os.getenv("AEROAGRO_RATE_LIMIT_PER_MIN", "60"))
+_hits: Dict[str, Deque[float]] = defaultdict(deque)
+MAX_BODY_BYTES = 4096
+
+
+@app.middleware("http")
+async def guard(request: Request, call_next):
+    if request.url.path != "/health":
+        ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        q = _hits[ip]
+        while q and now - q[0] > 60:
+            q.popleft()
+        if len(q) >= RATE_LIMIT:
+            return JSONResponse({"detail": "Too many requests"}, status_code=429, headers={"Retry-After": "60"})
+        q.append(now)
+    if int(request.headers.get("content-length") or 0) > MAX_BODY_BYTES:
+        return JSONResponse({"detail": "Request body too large"}, status_code=413)
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    return response
 
 # In-memory spatial catalog of Panchayats (Synced with Supabase PostGIS)
 PILOT_PANCHAYATS = [
@@ -142,9 +192,10 @@ PILOT_PANCHAYATS = [
 downscaler_ml = TabularDownscalerML()
 
 class AdvisoryRequest(BaseModel):
-    panchayat_id: str
-    crop_name: str = "Table Grapes"
-    language: str = "en"
+    # Strictly shaped inputs: ids are slugs, crop names are short plain text, languages are an allowlist.
+    panchayat_id: str = Field(..., min_length=1, max_length=64, pattern=r"^[a-z0-9_]+$")
+    crop_name: str = Field("Table Grapes", min_length=1, max_length=64, pattern=r"^[A-Za-z0-9 ()\-.,']+$")
+    language: Literal["en", "mr"] = "en"
 
 @app.get("/health")
 def health_check():
@@ -159,8 +210,9 @@ def get_panchayats():
 
 @app.get("/api/v1/downscale")
 def downscale_block(
-    block_lat: float = Query(18.4520, description="Block Center Latitude"),
-    block_lng: float = Query(73.6550, description="Block Center Longitude")
+    # Bounded to India's extent: rejects junk and stops the API being used as a global proxy.
+    block_lat: float = Query(18.4520, ge=6.0, le=37.5, description="Block Center Latitude"),
+    block_lng: float = Query(73.6550, ge=68.0, le=97.5, description="Block Center Longitude")
 ):
     """
     1. Ingests coarse weather from Open-Meteo

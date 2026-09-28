@@ -5,7 +5,7 @@ import { MoveHorizontal, Snowflake } from 'lucide-react';
 import { buildRevealField, contourSegments, rasterize, NX, NY, BLOCK, RAMP_CSS, T_LO, T_HI } from '@/lib/revealField';
 import { NorthArrow, ScaleBar } from './Instrument';
 
-const RW = 640; // colour raster (the field is smooth, so it scales up cleanly)
+const RW = 960; // colour raster (the field is smooth, so it scales up cleanly)
 const RH = 480;
 
 /** 1 decimal with a true minus sign and no "−0.0" */
@@ -241,22 +241,31 @@ export default function ResolutionReveal() {
   const coldShown = ready && cold.x > split + 0.02;
   const diff = hover ? hover.fine - hover.coarse : 0;
 
+
+
   return (
-    <figure className="card hud overflow-hidden p-0">
-      <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
+    <figure className="w-full">
+      {/* caption row */}
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="eyebrow mb-1">Fig 0.1 · Resolution comparison</div>
-          <figcaption className="font-display text-lg leading-tight text-ink">Same night. Two resolutions.</figcaption>
-          <p className="text-xs text-muted">Night low across twelve 18 km blocks · drag to compare</p>
+          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Fig. 1 — Night minimum, six district blocks</div>
+          <figcaption className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
+            The same night, <em className="text-accent">at two resolutions.</em>
+          </figcaption>
         </div>
-        <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-frost/10 px-3 py-1 text-xs font-semibold text-frost sm:inline-flex">
-          <Snowflake className="h-3.5 w-3.5" /> {stats.frost} hidden frost cells
-        </span>
+        <div className="flex items-center gap-3 text-xs text-muted">
+          <span className="text-frost">{T_LO}°</span>
+          <span className="h-2 w-40 rounded-full" style={{ background: RAMP_CSS }} />
+          <span className="text-sun">{T_HI}°C</span>
+          <span className="ml-2 hidden items-center gap-1.5 rounded-full border border-frost/30 px-3 py-1 font-semibold text-frost sm:inline-flex">
+            <Snowflake className="h-3.5 w-3.5" /> {stats.frost} hidden frost cells
+          </span>
+        </div>
       </div>
 
       <div
         ref={wrapRef}
-        className="relative aspect-[4/3] w-full cursor-ew-resize touch-none select-none overflow-hidden bg-[#1a1540]"
+        className="relative aspect-[2/1] w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-[22px] bg-[#1a1540] ring-1 ring-white/10"
         onPointerDown={(e) => {
           dragging.current = true;
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -268,7 +277,7 @@ export default function ResolutionReveal() {
         onPointerLeave={() => setHover(null)}
       >
         {!ready && <div className="absolute inset-0 animate-pulse" style={{ background: RAMP_CSS, opacity: 0.25 }} />}
-        <canvas ref={canvasRef} className={`absolute inset-0 h-full w-full transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
+        <canvas ref={canvasRef} className={`absolute inset-0 h-full w-full transition-opacity duration-700 ${ready ? 'opacity-100' : 'opacity-0'}`} aria-hidden />
 
         {/* one number per block on the 18 km side */}
         {ready &&
@@ -276,69 +285,55 @@ export default function ResolutionReveal() {
             <div
               key={i}
               className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center transition-opacity duration-300"
-              style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, opacity: b.x < split - 0.06 ? 1 : 0 }}
+              style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, opacity: b.x < split - 0.05 ? 1 : 0 }}
             >
-              <div className="font-display text-lg leading-none text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] sm:text-[28px]">
-                {deg(b.t)}°
-              </div>
-              <div className="mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-white/55 sm:block">whole block</div>
+              <div className="font-display text-base leading-none text-white/90 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)] sm:text-[34px]">{deg(b.t)}°</div>
+              <div className="mt-1.5 hidden font-mono text-[9px] uppercase tracking-[0.18em] text-white/55 md:block">whole block</div>
             </div>
           ))}
 
         {/* the coldest hollow, only visible at 1.2 km */}
-        <div
-          className="pointer-events-none absolute transition-opacity duration-300"
-          style={{ left: `${cold.x * 100}%`, top: `${cold.y * 100}%`, opacity: coldShown ? 1 : 0 }}
-        >
+        <div className="pointer-events-none absolute transition-opacity duration-300" style={{ left: `${cold.x * 100}%`, top: `${cold.y * 100}%`, opacity: coldShown ? 1 : 0 }}>
           <span className="absolute -left-2 -top-2 h-4 w-4 animate-pulse-ring rounded-full bg-white/70" />
           <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-white bg-frost" />
-          <span
-            className={`absolute top-2.5 whitespace-nowrap rounded-lg bg-bg/85 px-2 py-1 text-[11px] font-semibold text-frost shadow-pop backdrop-blur ${
-              cold.x > 0.7 ? 'right-2' : 'left-2'
-            }`}
-          >
+          <span className={`absolute top-3 whitespace-nowrap rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white shadow-pop backdrop-blur ${cold.x > 0.75 ? 'right-2' : 'left-2'}`}>
             Frost hollow {deg(cold.t)}°C
           </span>
         </div>
 
         {/* cartographic furniture */}
-        <ScaleBar km={18} widthPct={25} className="absolute left-2.5 top-2.5" />
-        <NorthArrow className="absolute right-2.5 top-2" />
+        <ScaleBar km={18} widthPct={100 / 6} className="absolute left-3 top-3 hidden sm:block" />
+        <NorthArrow className="absolute right-3 top-2.5" />
 
-        {/* labels */}
-        <span className="absolute bottom-2 left-2 rounded-md bg-bg/75 px-2 py-0.5 text-[10px] font-semibold text-sun backdrop-blur sm:bottom-3 sm:left-3 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[11px]">
-          District · 18 km
-        </span>
-        <span className="absolute bottom-2 right-2 rounded-md bg-bg/75 px-2 py-0.5 text-[10px] font-semibold text-accent backdrop-blur sm:bottom-3 sm:right-3 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[11px]">
-          AeroAgro · 1.2 km
-        </span>
+        <span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#F6B94C] backdrop-blur">District forecast · 18 km</span>
+        <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#D4F25A] backdrop-blur">AeroAgro · 1.2 km</span>
 
         {/* divider + handle */}
-        <div className="pointer-events-none absolute inset-y-0 w-[3px] -translate-x-1/2 bg-accent shadow-[0_0_18px_4px_rgb(200_241_105/0.55)]" style={{ left: `${split * 100}%` }}>
-          <div className="absolute left-1/2 top-1/2 grid h-11 w-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 border-bg/40 bg-accent text-accent-ink shadow-glow">
+        <div className="pointer-events-none absolute inset-y-0 w-[2px] -translate-x-1/2 bg-[#D4F25A] shadow-[0_0_24px_6px_rgb(212_242_90/0.45)]" style={{ left: `${split * 100}%` }}>
+          <div className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#D4F25A] text-[#0C120A] shadow-[0_0_0_6px_rgb(0_0_0/0.25)]">
             <MoveHorizontal className="h-5 w-5" />
           </div>
         </div>
 
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 min-w-[128px] rounded-xl border border-white/10 bg-bg/90 px-3 py-2 text-[11px] leading-snug shadow-pop backdrop-blur"
+            className="pointer-events-none absolute z-10 min-w-[140px] rounded-2xl border border-white/10 bg-black/70 px-3.5 py-2.5 text-[11px] leading-snug text-white shadow-pop backdrop-blur"
             style={{
               left: hover.x > 0.72 ? undefined : `calc(${hover.x * 100}% + 16px)`,
               right: hover.x > 0.72 ? `calc(${(1 - hover.x) * 100}% + 16px)` : undefined,
-              top: `calc(${Math.min(hover.y, 0.8) * 100}% + 12px)`,
+              top: `calc(${Math.min(hover.y, 0.75) * 100}% + 12px)`,
             }}
           >
-            <div className="flex justify-between gap-3 text-sun">
+            <div className="flex justify-between gap-3 text-[#F6B94C]">
               <span>District</span>
               <b className="tabular">{deg(hover.coarse)}°C</b>
             </div>
-            <div className="flex justify-between gap-3 text-accent">
+            <div className="flex justify-between gap-3 text-[#D4F25A]">
               <span>Village</span>
               <b className="tabular">{deg(hover.fine)}°C</b>
             </div>
             {Math.abs(diff) >= 0.5 && (
-              <div className={`mt-1 border-t border-white/10 pt-1 font-semibold ${diff < 0 ? 'text-frost' : 'text-sun'}`}>
+              <div className={`mt-1 border-t border-white/10 pt-1 font-semibold ${diff < 0 ? 'text-[#A5D8FF]' : 'text-[#F6B94C]'}`}>
                 {Math.abs(diff).toFixed(1)}° {diff < 0 ? 'colder' : 'warmer'} than forecast
               </div>
             )}
@@ -357,17 +352,20 @@ export default function ResolutionReveal() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-xs text-muted">
-        <div className="flex items-center gap-2">
-          <span className="text-frost">{T_LO}°</span>
-          <span className="h-2 w-32 rounded-full" style={{ background: RAMP_CSS }} />
-          <span className="text-sun">{T_HI}°C</span>
-        </div>
-        <span>
-          Coldest block says <b className="text-ink">{deg(stats.coarseMin)}°C</b> · hollows reach <b className="text-frost">{deg(cold.t)}°C</b>
-        </span>
+      {/* three-part caption, magazine style */}
+      <div className="mt-6 grid gap-6 border-t border-line/[0.14] pt-6 sm:grid-cols-3">
+        {[
+          ['18 km', 'What the district forecast sees', `One number for 324 km². The coldest block says ${deg(stats.coarseMin)} °C: no frost warning.`],
+          ['1.2 km', 'What AeroAgro sees', 'Lapse rate and cold-air pooling on real terrain: 225 cells inside every block.'],
+          [`${deg(cold.t)} °C`, 'What the farmer needed to know', `${stats.frost} cells fall to frost range in hollows the district number averages away.`],
+        ].map(([big, k, v], i) => (
+          <div key={k}>
+            <div className={`font-display text-4xl ${i === 2 ? 'text-frost' : i === 1 ? 'text-accent' : 'text-sun'}`}>{big}</div>
+            <div className="mt-1 text-sm font-semibold text-ink">{k}</div>
+            <p className="mt-1 text-sm leading-relaxed text-ink2">{v}</p>
+          </div>
+        ))}
       </div>
-      <p className="px-5 pb-4 text-[11px] text-muted/80">Illustrative terrain, computed with the same lapse-rate and cold-air-pooling physics as the live engine.</p>
     </figure>
   );
 }

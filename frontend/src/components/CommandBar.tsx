@@ -72,7 +72,7 @@ function ScenarioMenu({ value, onChange, dataSource }: { value: Scenario; onChan
         aria-haspopup="menu"
         aria-expanded={open}
         title={dataSource.label}
-        className="flex h-10 items-center gap-2 rounded-xl border border-line/10 bg-surface px-3 text-sm font-medium text-ink hover:border-line/20"
+        className="flex h-10 items-center gap-2 rounded-full border border-line/[0.14] bg-surface px-4 text-sm font-medium text-ink hover:border-line/30"
       >
         <span className={`h-2 w-2 rounded-full ${DOT[dataSource.kind]}`} />
         <span className="whitespace-nowrap">{current.label}</span>
@@ -110,16 +110,31 @@ function ScenarioMenu({ value, onChange, dataSource }: { value: Scenario; onChan
 
 export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion }: CommandBarProps) {
   return (
-    <header className="z-[1100] border-b border-line/[0.07] bg-bg/80 backdrop-blur-xl md:sticky md:top-0">
+    <header className="z-[1100] border-b border-line/[0.1] bg-bg/85 backdrop-blur-xl md:sticky md:top-0">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 sm:px-8">
         <a href="#top" className="flex items-center gap-2.5" aria-label="AeroAgro AI home">
           <Logo className="h-8 w-8" />
-          <span className="font-display text-xl text-ink">
-            AeroAgro<span className="text-accent"> AI</span>
+          <span className="font-display text-2xl leading-none text-ink">
+            AeroAgro<span className="italic text-accent"> AI</span>
           </span>
         </a>
 
-        <div className={`order-last w-full md:order-none md:ml-6 md:block md:w-auto md:flex-1 md:max-w-md ${activeView === 'dashboard' ? 'hidden' : ''}`}>
+        {activeView === 'dashboard' && (
+          <nav aria-label="Sections" className="ml-10 hidden items-center gap-7 text-sm text-ink2 xl:flex">
+            {[
+              ['Village', '#village'],
+              ['All India', '#map'],
+              ['Engine', '#engine'],
+              ['Ask', '#ask'],
+              ['Tools', '#tools'],
+            ].map(([l, h]) => (
+              <a key={h} href={h} className="relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-ink after:transition-all hover:text-ink hover:after:w-full">
+                {l}
+              </a>
+            ))}
+          </nav>
+        )}
+        <div className={`order-last w-full md:order-none md:ml-6 md:w-auto md:flex-1 md:max-w-md ${activeView === 'dashboard' ? 'hidden' : 'md:block'}`}>
           <RegionSearch regions={regions} onSelect={onSelectRegion} shortcut />
         </div>
 
@@ -138,7 +153,7 @@ export default function CommandBar({ currentScenario, onScenarioChange, activeVi
             ))}
           </nav>
           <ScenarioMenu value={currentScenario} onChange={onScenarioChange} dataSource={dataSource} />
-          <button onClick={onAbout} aria-label="About AeroAgro" className="grid h-10 w-10 place-items-center rounded-xl border border-line/10 bg-surface text-ink2 hover:text-ink">
+          <button onClick={onAbout} aria-label="About AeroAgro" className="grid h-10 w-10 place-items-center rounded-full border border-line/[0.14] bg-surface text-ink2 hover:text-ink">
             <Info className="h-4 w-4" />
           </button>
         </div>

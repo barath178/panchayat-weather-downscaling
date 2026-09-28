@@ -15,14 +15,17 @@ module.exports = {
         muted: 'rgb(var(--muted) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-ink': 'rgb(var(--accent-ink) / <alpha-value>)',
+        marker: 'rgb(var(--marker) / <alpha-value>)',
         sky: 'rgb(var(--sky) / <alpha-value>)',
         sun: 'rgb(var(--sun) / <alpha-value>)',
         alert: 'rgb(var(--alert) / <alpha-value>)',
         frost: 'rgb(var(--frost) / <alpha-value>)',
-        // Status (fixed; always paired with icon + label)
-        good: '#2FB344',
-        warn: '#F2B01E',
-        bad: '#E5484D',
+        // Status (always paired with icon + label); darker on paper for contrast
+        good: 'rgb(var(--good) / <alpha-value>)',
+        warn: 'rgb(var(--warn) / <alpha-value>)',
+        bad: 'rgb(var(--bad) / <alpha-value>)',
+        btn: 'rgb(var(--btn) / <alpha-value>)',
+        'btn-ink': 'rgb(var(--btn-ink) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
@@ -30,12 +33,12 @@ module.exports = {
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        // "Field instrument" language: tight, machined corners
-        card: '14px',
+        // "Monsoon Almanac": soft card stock, pill controls
+        card: '20px',
       },
       boxShadow: {
-        card: '0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.7)',
-        pop: '0 24px 60px -12px rgb(0 0 0 / 0.75)',
+        card: 'var(--shadow-card)',
+        pop: 'var(--shadow-pop)',
         glow: '0 0 0 1px rgb(var(--accent) / 0.35), 0 8px 30px -6px rgb(var(--accent) / 0.35)',
       },
       gridTemplateColumns: {
