@@ -1,0 +1,458 @@
+{
+ "chat": [
+  {
+   "q": "When should I spray this week?",
+   "a": "Best day this week: Tomorrow, 10:00–14:00 (4 h of calm, dry air). Today: 08:00–10:00. All safe windows: Today 08–10, Tomorrow 10–14, Wed 07–10, Sat 07–08, Sun 07–08.",
+   "sources": [
+    "Hourly spray model",
+    "ICAR drift limits",
+    "7-day outlook",
+    "Open-Meteo live"
+   ],
+   "action": "Open hourly chart"
+  },
+  {
+   "q": "Will it rain tomorrow?",
+   "a": "Tomorrow: light rain in Munnar Tea High-Range, about 3.6 mm. The district block forecast says 2.4 mm; your village gets more because of orographic lift.",
+   "sources": [
+    "7-day outlook",
+    "IMD rain classes",
+    "Orographic model",
+    "Open-Meteo live"
+   ],
+   "action": null
+  },
+  {
+   "q": "मेरे गाँव का मौसम ज़िले से अलग क्यों है?",
+   "a": "ज़िला मॉडल 18 किमी के पूरे ब्लॉक को एक औसत ऊँचाई (1538 मीटर) पर देखता है। Munnar Tea High-Range 1600 मीटर पर है, इसलिए ऊँचाई, ढलान, ठंडी हवा के जमाव और भू-भाग के असर से रात का तापमान 17.2 से 16.8°C और बारिश 5.2 मिमी से 7.7 मिमी हो जाती है।",
+   "sources": [
+    "Explainable downscaling",
+    "Terrain covariates",
+    "Open-Meteo live"
+   ],
+   "action": "हर कदम देखें"
+  }
+ ],
+ "snapshot": {
+  "at": "2026-09-28T03:47:48.251Z",
+  "source": "Open-Meteo forecast API (best match, elevation=nan) + Copernicus GLO-90 via Open-Meteo elevation API"
+ },
+ "region": {
+  "id": "kerala_idukki_227",
+  "name": "Munnar Tea High-Range",
+  "regional": "മൂന്നാർ മലനിരകൾ",
+  "district": "Idukki",
+  "state": "Kerala",
+  "lat": 10.08,
+  "lng": 77.065,
+  "elevationM": 1600,
+  "slopeDeg": 18.5,
+  "drainage": 0.92,
+  "terrain": "Misty Western Ghats Ridge",
+  "crops": [
+   "High-Altitude Orthodox Tea",
+   "Green Cardamom",
+   "Clove"
+  ]
+ },
+ "cellElevationM": 1538,
+ "coarse": {
+  "tempMax": 22,
+  "tempMin": 17.2,
+  "rainfallMm": 5.2,
+  "windSpeedKmh": 4.8,
+  "relativeHumidity": 91
+ },
+ "fine": {
+  "tempMax": 21.4,
+  "tempMin": 16.8,
+  "rainfallMm": 7.7,
+  "windSpeedKmh": 6,
+  "relativeHumidity": 94
+ },
+ "steps": {
+  "tmin": [
+   {
+    "label": "Height (lapse rate)",
+    "why": "62 m higher than the block average; nights cool 6.5 °C per km",
+    "value": -0.403,
+    "eq": "ΔT = −Γn·Δz = −6.5 K/km × 0.062 km"
+   }
+  ],
+  "tmax": [
+   {
+    "label": "Height (lapse rate)",
+    "why": "62 m higher than the block average; air cools 5 °C per km by day",
+    "value": -0.31,
+    "eq": "ΔT = −Γd·Δz = −5 K/km × 0.062 km"
+   },
+   {
+    "label": "Slope exposure",
+    "why": "18.5° slope mixes air and trims the afternoon peak",
+    "value": -0.27749999999999997,
+    "eq": "ΔT = −0.015·θ = −0.015 × 18.5°"
+   }
+  ],
+  "rain": [
+   {
+    "label": "Orographic lift",
+    "why": "Air forced up hills condenses into extra rain",
+    "value": 1.2275827938430552,
+    "eq": "f = 1 + 0.6·Δz⁺ + 0.6·sin θ = 1 + 0.6×0.062 + 0.6×0.317"
+   },
+   {
+    "label": "Windward slope",
+    "why": "Faces the moist monsoon flow",
+    "value": 1.1,
+    "eq": "f = ×1.10"
+   },
+   {
+    "label": "Ridge crest",
+    "why": "Crests catch the most cloud water",
+    "value": 1.1,
+    "eq": "f = ×1.10"
+   }
+  ],
+  "wind": [
+   {
+    "label": "Height exposure",
+    "why": "Hilltops sit in faster air",
+    "value": 1.25,
+    "eq": "f = ×1.25"
+   }
+  ],
+  "dz": 62
+ },
+ "hours": [
+  {
+   "t": "06:00",
+   "w": 2.6,
+   "c": 17.1,
+   "s": "safe"
+  },
+  {
+   "t": "07:00",
+   "w": 1.1,
+   "c": 18,
+   "s": "caution"
+  },
+  {
+   "t": "08:00",
+   "w": 3.4,
+   "c": 18.9,
+   "s": "safe"
+  },
+  {
+   "t": "09:00",
+   "w": 6.5,
+   "c": 19.7,
+   "s": "safe"
+  },
+  {
+   "t": "10:00",
+   "w": 7,
+   "c": 20.3,
+   "s": "danger"
+  },
+  {
+   "t": "11:00",
+   "w": 7.3,
+   "c": 21,
+   "s": "danger"
+  },
+  {
+   "t": "12:00",
+   "w": 6.4,
+   "c": 20.7,
+   "s": "danger"
+  },
+  {
+   "t": "13:00",
+   "w": 7.8,
+   "c": 21.4,
+   "s": "danger"
+  },
+  {
+   "t": "14:00",
+   "w": 8.6,
+   "c": 19.2,
+   "s": "danger"
+  },
+  {
+   "t": "15:00",
+   "w": 7.5,
+   "c": 19.8,
+   "s": "danger"
+  },
+  {
+   "t": "16:00",
+   "w": 7.8,
+   "c": 18.4,
+   "s": "danger"
+  },
+  {
+   "t": "17:00",
+   "w": 6.8,
+   "c": 17.9,
+   "s": "caution"
+  },
+  {
+   "t": "18:00",
+   "w": 6.4,
+   "c": 17.2,
+   "s": "caution"
+  },
+  {
+   "t": "19:00",
+   "w": 4.5,
+   "c": 16.9,
+   "s": "caution"
+  }
+ ],
+ "spray": {
+  "label": "08:00–10:00",
+  "start": "08:00",
+  "end": "10:00",
+  "hours": 2
+ },
+ "et0": 2.7,
+ "irrigation": {
+  "action": "Skip irrigation today",
+  "detail": "Effective rain (6.2 mm) covers ET₀ 2.7 mm.",
+  "deficit": -3.5
+ },
+ "pest": {
+  "level": "high",
+  "title": "Blister blight (Exobasidium vexans)",
+  "detail": "Persistent mist on the bushes. Copper fungicide at 7-day intervals on young flush."
+ },
+ "week": [
+  {
+   "label": "Today",
+   "date": "28 Sept",
+   "coarse": {
+    "tempMax": 22,
+    "tempMin": 17.2,
+    "rainfallMm": 5.2,
+    "windSpeedKmh": 4.8,
+    "relativeHumidity": 91
+   },
+   "fine": {
+    "tempMax": 21.4,
+    "tempMin": 16.8,
+    "rainfallMm": 7.7,
+    "windSpeedKmh": 6,
+    "relativeHumidity": 94
+   },
+   "spray": {
+    "label": "08:00–10:00",
+    "start": "08:00",
+    "end": "10:00",
+    "hours": 2
+   },
+   "blocker": "ok"
+  },
+  {
+   "label": "Tomorrow",
+   "date": "29 Sept",
+   "coarse": {
+    "tempMax": 22.3,
+    "tempMin": 15.8,
+    "rainfallMm": 2.4,
+    "windSpeedKmh": 6.1,
+    "relativeHumidity": 89
+   },
+   "fine": {
+    "tempMax": 21.7,
+    "tempMin": 13.5,
+    "rainfallMm": 3.6,
+    "windSpeedKmh": 7.6,
+    "relativeHumidity": 97
+   },
+   "spray": {
+    "label": "10:00–14:00",
+    "start": "10:00",
+    "end": "14:00",
+    "hours": 4
+   },
+   "blocker": "ok"
+  },
+  {
+   "label": "Wed",
+   "date": "30 Sept",
+   "coarse": {
+    "tempMax": 23,
+    "tempMin": 15.1,
+    "rainfallMm": 7.3,
+    "windSpeedKmh": 6,
+    "relativeHumidity": 88
+   },
+   "fine": {
+    "tempMax": 22.4,
+    "tempMin": 14.8,
+    "rainfallMm": 10.8,
+    "windSpeedKmh": 7.5,
+    "relativeHumidity": 90
+   },
+   "spray": {
+    "label": "07:00–10:00",
+    "start": "07:00",
+    "end": "10:00",
+    "hours": 3
+   },
+   "blocker": "ok"
+  },
+  {
+   "label": "Thu",
+   "date": "1 Oct",
+   "coarse": {
+    "tempMax": 23,
+    "tempMin": 15.5,
+    "rainfallMm": 13.1,
+    "windSpeedKmh": 4.8,
+    "relativeHumidity": 91
+   },
+   "fine": {
+    "tempMax": 22.4,
+    "tempMin": 15.2,
+    "rainfallMm": 19.5,
+    "windSpeedKmh": 6,
+    "relativeHumidity": 93
+   },
+   "spray": {
+    "label": "No safe window today",
+    "hours": 0
+   },
+   "blocker": "rain"
+  },
+  {
+   "label": "Fri",
+   "date": "2 Oct",
+   "coarse": {
+    "tempMax": 22.6,
+    "tempMin": 16.2,
+    "rainfallMm": 15.3,
+    "windSpeedKmh": 3.9,
+    "relativeHumidity": 90
+   },
+   "fine": {
+    "tempMax": 22,
+    "tempMin": 15.8,
+    "rainfallMm": 22.7,
+    "windSpeedKmh": 4.9,
+    "relativeHumidity": 93
+   },
+   "spray": {
+    "label": "No safe window today",
+    "hours": 0
+   },
+   "blocker": "rain"
+  },
+  {
+   "label": "Sat",
+   "date": "3 Oct",
+   "coarse": {
+    "tempMax": 22.2,
+    "tempMin": 16.3,
+    "rainfallMm": 13.2,
+    "windSpeedKmh": 4.3,
+    "relativeHumidity": 88
+   },
+   "fine": {
+    "tempMax": 21.6,
+    "tempMin": 15.9,
+    "rainfallMm": 19.6,
+    "windSpeedKmh": 5.4,
+    "relativeHumidity": 91
+   },
+   "spray": {
+    "label": "07:00–08:00",
+    "start": "07:00",
+    "end": "08:00",
+    "hours": 1
+   },
+   "blocker": "rain"
+  },
+  {
+   "label": "Sun",
+   "date": "4 Oct",
+   "coarse": {
+    "tempMax": 21.3,
+    "tempMin": 16,
+    "rainfallMm": 10.8,
+    "windSpeedKmh": 4.8,
+    "relativeHumidity": 88
+   },
+   "fine": {
+    "tempMax": 20.7,
+    "tempMin": 15.6,
+    "rainfallMm": 16,
+    "windSpeedKmh": 6,
+    "relativeHumidity": 91
+   },
+   "spray": {
+    "label": "07:00–08:00",
+    "start": "07:00",
+    "end": "08:00",
+    "hours": 1
+   },
+   "blocker": "rain"
+  }
+ ],
+ "bestSprayDay": 1,
+ "dry": null,
+ "weekRain": 99.9,
+ "weekRainBlock": 67.3,
+ "grid": {
+  "tempMin": {
+   "lo": 13.1,
+   "hi": 23.6,
+   "loElev": 2168,
+   "hiElev": 560,
+   "coarse": 17.2,
+   "village": 16.8,
+   "risk": 0,
+   "land": 225
+  },
+  "tempMax": {
+   "lo": 18.8,
+   "hi": 26.8,
+   "loElev": 2168,
+   "hiElev": 560,
+   "coarse": 22,
+   "village": 21.4,
+   "risk": 0,
+   "land": 225
+  },
+  "rainfall": {
+   "lo": 3.9,
+   "hi": 7.7,
+   "loElev": 906,
+   "hiElev": 1493,
+   "coarse": 5.2,
+   "village": 7.7,
+   "risk": 40,
+   "land": 225
+  },
+  "wind": {
+   "lo": 2.2,
+   "hi": 9.6,
+   "loElev": 1519,
+   "hiElev": 1992,
+   "coarse": 4.8,
+   "village": 6,
+   "risk": 0,
+   "land": 225
+  },
+  "elevation": {
+   "lo": 560,
+   "hi": 2168,
+   "loElev": 560,
+   "hiElev": 2168,
+   "coarse": 1538,
+   "village": 1493,
+   "risk": 71,
+   "land": 225
+  }
+ }
+}

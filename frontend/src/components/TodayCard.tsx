@@ -43,7 +43,7 @@ export default function TodayCard({ panchayat: p, coarse, fine, coarseElevationM
   ];
 
   return (
-    <article className="card overflow-hidden">
+    <article className="card hud overflow-hidden">
       <div className="relative p-5 sm:p-6" style={{ background: `linear-gradient(160deg, ${sky.from}, ${sky.to} 85%)` }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

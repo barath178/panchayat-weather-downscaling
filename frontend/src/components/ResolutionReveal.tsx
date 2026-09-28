@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MoveHorizontal, Snowflake } from 'lucide-react';
 import { buildRevealField, contourSegments, rasterize, NX, NY, BLOCK, RAMP_CSS, T_LO, T_HI } from '@/lib/revealField';
+import { NorthArrow, ScaleBar } from './Instrument';
 
 const RW = 640; // colour raster (the field is smooth, so it scales up cleanly)
 const RH = 480;
@@ -241,9 +242,10 @@ export default function ResolutionReveal() {
   const diff = hover ? hover.fine - hover.coarse : 0;
 
   return (
-    <figure className="card overflow-hidden p-0">
+    <figure className="card hud overflow-hidden p-0">
       <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
         <div>
+          <div className="eyebrow mb-1">Fig 0.1 · Resolution comparison</div>
           <figcaption className="font-display text-lg leading-tight text-ink">Same night. Two resolutions.</figcaption>
           <p className="text-xs text-muted">Night low across twelve 18 km blocks · drag to compare</p>
         </div>
@@ -298,6 +300,10 @@ export default function ResolutionReveal() {
             Frost hollow {deg(cold.t)}°C
           </span>
         </div>
+
+        {/* cartographic furniture */}
+        <ScaleBar km={18} widthPct={25} className="absolute left-2.5 top-2.5" />
+        <NorthArrow className="absolute right-2.5 top-2" />
 
         {/* labels */}
         <span className="absolute bottom-2 left-2 rounded-md bg-bg/75 px-2 py-0.5 text-[10px] font-semibold text-sun backdrop-blur sm:bottom-3 sm:left-3 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[11px]">

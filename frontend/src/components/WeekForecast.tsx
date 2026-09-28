@@ -35,11 +35,11 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
   ];
 
   return (
-    <section className="card overflow-hidden" aria-labelledby="week-title">
+    <section className="card hud overflow-hidden" aria-labelledby="week-title">
       <div className="flex flex-wrap items-end justify-between gap-3 p-5 pb-0 sm:p-6 sm:pb-0">
         <div>
           <div className="eyebrow flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-accent" /> 7-day village outlook {isLive ? '· live' : '· simulated'}
+            <CalendarDays className="h-3.5 w-3.5 text-accent" /> Fig 1.2 · 7-day village outlook {isLive ? '· live' : '· simulated'}
           </div>
           <h2 id="week-title" className="mt-1 font-display text-2xl text-ink">
             The week ahead in {p.name}

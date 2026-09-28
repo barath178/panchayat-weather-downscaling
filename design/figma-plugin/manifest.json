@@ -1,0 +1,9 @@
+{
+  "name": "AeroAgro · Field Instrument",
+  "id": "aeroagro-field-instrument",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}

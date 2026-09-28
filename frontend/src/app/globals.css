@@ -94,16 +94,48 @@ body {
     @apply rounded-card border border-line/[0.08] bg-surface shadow-card;
   }
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-line/10 bg-surface2 px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-line/20 hover:text-ink;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-line/10 bg-surface2 px-2.5 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-line/20 hover:text-ink;
+  }
+  /* Instrument readout label */
+  .mono-label {
+    @apply font-mono text-[10px] uppercase tracking-[0.14em] text-muted;
+  }
+  /* HUD corner ticks framing a panel */
+  .hud {
+    position: relative;
+  }
+  .hud::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    border-radius: inherit;
+    --t: rgb(var(--accent) / 0.55);
+    background:
+      linear-gradient(var(--t), var(--t)) top left / 12px 1.5px no-repeat,
+      linear-gradient(var(--t), var(--t)) top left / 1.5px 12px no-repeat,
+      linear-gradient(var(--t), var(--t)) top right / 12px 1.5px no-repeat,
+      linear-gradient(var(--t), var(--t)) top right / 1.5px 12px no-repeat,
+      linear-gradient(var(--t), var(--t)) bottom left / 12px 1.5px no-repeat,
+      linear-gradient(var(--t), var(--t)) bottom left / 1.5px 12px no-repeat,
+      linear-gradient(var(--t), var(--t)) bottom right / 12px 1.5px no-repeat,
+      linear-gradient(var(--t), var(--t)) bottom right / 1.5px 12px no-repeat;
+  }
+  /* Faint blueprint grid behind the dashboard */
+  .blueprint {
+    background-image:
+      linear-gradient(rgb(var(--line) / 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--line) / 0.028) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
   .chip-on {
     @apply border-accent bg-accent text-accent-ink hover:text-accent-ink;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98];
   }
   .btn-primary {
     @apply btn bg-accent text-accent-ink hover:brightness-110;
@@ -112,10 +144,10 @@ body {
     @apply btn border border-line/10 bg-surface2 text-ink hover:border-line/20 hover:bg-raised;
   }
   .seg {
-    @apply inline-flex items-center gap-0.5 rounded-xl border border-line/[0.08] bg-bg/60 p-1;
+    @apply inline-flex items-center gap-0.5 rounded-lg border border-line/[0.08] bg-bg/60 p-1;
   }
   .seg-btn {
-    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-ink;
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-ink;
   }
   .seg-on {
     @apply bg-raised text-ink shadow-sm;

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Grid3x3, Square, Loader2, MapPinned, Mountain, Thermometer, Sparkles } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import { BlockField, GRID_RISK, GRID_VARS, GridVar, fieldStats } from '@/lib/blockGrid';
+import { NorthArrow, ScaleBar } from './Instrument';
 
 interface Props {
   panchayat: PanchayatData;
@@ -185,12 +186,12 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
   const n = field?.grid.n ?? 15;
 
   return (
-    <section className="card relative overflow-hidden p-5 sm:p-6" aria-labelledby="grid-title">
+    <section className="card hud relative p-5 sm:p-6" aria-labelledby="grid-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="eyebrow flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5 text-accent" />
-            {field?.grid.source === 'synthetic' ? 'Offline terrain model' : 'Live Copernicus 90 m DEM'}
+            Fig 2.1 · {field?.grid.source === 'synthetic' ? 'Offline terrain model' : 'Live Copernicus GLO-90 DEM'}
           </div>
           <h2 id="grid-title" className="mt-1 font-display text-2xl text-ink">
             225 village cells inside one forecast block
@@ -219,9 +220,25 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_240px]">
-        <div ref={wrapRef} className="relative aspect-square w-full max-w-[560px]">
+        <div className="relative w-full max-w-[560px] self-start pl-5 pt-4">
+          {/* map-style grid references: columns A–O, rows 1–15 */}
+          <div className="absolute left-5 right-0 top-0 grid font-mono text-[9px] leading-4 text-muted" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
+            {Array.from({ length: n }, (_, i) => (
+              <span key={i} className={`text-center ${hover != null && hover % n === i ? 'text-accent' : ''}`}>
+                {String.fromCharCode(65 + i)}
+              </span>
+            ))}
+          </div>
+          <div className="absolute bottom-0 left-0 top-4 grid w-5 font-mono text-[9px] text-muted" style={{ gridTemplateRows: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
+            {Array.from({ length: n }, (_, i) => (
+              <span key={i} className={`flex items-center ${hover != null && Math.floor(hover / n) === i ? 'text-accent' : ''}`}>
+                {i + 1}
+              </span>
+            ))}
+          </div>
+        <div ref={wrapRef} className="relative aspect-square w-full">
           {!field ? (
-            <div className="grid h-full w-full place-items-center rounded-2xl bg-surface2">
+            <div className="grid h-full w-full place-items-center rounded-lg bg-surface2">
               <div className="flex flex-col items-center gap-3 text-sm text-muted">
                 <Loader2 className="h-6 w-6 animate-spin text-accent" />
                 Fetching 225 terrain heights…
@@ -232,16 +249,16 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
               <canvas
                 ref={canvasRef}
                 style={{ width: size, height: size }}
-                className="rounded-2xl"
+                className="relative rounded-md"
                 onMouseMove={onMove}
                 onMouseLeave={() => setHover(null)}
                 role="img"
                 aria-label={`${meta.label} across the 18 km block around ${p.name}, from ${fmt(stats!.lo)} to ${fmt(stats!.hi)} ${meta.unit}`}
               />
-              {/* axis labels */}
-              <span className="pointer-events-none absolute left-2 top-2 rounded-md bg-black/45 px-1.5 py-0.5 font-mono text-[10px] text-ink2 backdrop-blur">N ↑ · 18 km</span>
-              <span className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-black/45 px-1.5 py-0.5 font-mono text-[10px] text-ink2 backdrop-blur">
-                {n} × {n} cells · 1.2 km
+              <NorthArrow className="absolute right-2.5 top-2" />
+              <ScaleBar km={6} widthPct={100 / 3} className="absolute bottom-2.5 left-2.5" />
+              <span className="pointer-events-none absolute bottom-2 right-2 rounded bg-black/50 px-1.5 py-0.5 font-mono text-[9.5px] text-ink2 backdrop-blur">
+                {n}×{n} · Δx 1.2 km
               </span>
               {mode === 'block' && (
                 <div className="pointer-events-none absolute inset-x-6 top-1/2 -translate-y-1/2 text-center animate-fade-in">
@@ -280,12 +297,13 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
             </>
           )}
         </div>
+        </div>
 
         {/* Stats */}
         <div className="flex flex-col gap-3">
           {stats && field ? (
             <>
-              <div className="rounded-2xl bg-surface2 p-4">
+              <div className="rounded-lg bg-surface2 p-4">
                 <div className="text-xs text-muted">Hidden inside the block</div>
                 <div className="mt-1 font-display text-4xl text-accent tabular">
                   {fmt(stats.hi - stats.lo)}
@@ -305,13 +323,13 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
                   { k: v === 'elevation' ? 'Lowest cell' : 'Lowest', val: `${fmt(stats.lo)} ${meta.unit} · ${field.grid.elev[stats.loI]} m`, tone: 'text-ink' },
                   { k: v === 'elevation' ? 'Highest cell' : 'Highest', val: `${fmt(stats.hi)} ${meta.unit} · ${field.grid.elev[stats.hiI]} m`, tone: 'text-ink' },
                 ].map((s) => (
-                  <div key={s.k} className="rounded-xl border border-line/[0.07] px-3 py-2">
+                  <div key={s.k} className="rounded-lg border border-line/[0.07] px-3 py-2">
                     <dt className="text-[11px] text-muted">{s.k}</dt>
-                    <dd className={`font-semibold tabular ${s.tone}`}>{s.val}</dd>
+                    <dd className={`font-mono text-[13px] font-semibold tabular ${s.tone}`}>{s.val}</dd>
                   </div>
                 ))}
               </dl>
-              <div className="rounded-xl bg-accent/10 px-3 py-2.5 text-sm text-ink2">
+              <div className="rounded-lg bg-accent/10 px-3 py-2.5 text-sm text-ink2">
                 <strong className="text-ink tabular">
                   {stats.risk} of {stats.land}
                 </strong>{' '}

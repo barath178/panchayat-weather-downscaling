@@ -25,6 +25,7 @@ const VARS: { id: Var; label: string; unit: string; key: keyof WeatherMetrics; a
 interface Row {
   label: string;
   why: string;
+  eq?: string;
   from: number;
   to: number;
   kind: 'start' | 'step' | 'end';
@@ -32,17 +33,17 @@ interface Row {
 
 /** Turn the engine's recorded steps into waterfall rows (multiplicative steps become running deltas). */
 function buildRows(steps: Step[], start: number, end: number, additive: boolean): Row[] {
-  const rows: Row[] = [{ label: 'Block forecast · 18 km', why: 'What the district model says for the whole block', from: start, to: start, kind: 'start' }];
+  const rows: Row[] = [{ label: 'Block forecast · 18 km', why: 'What the district model says for the whole block', eq: 'NWP grid-cell mean (elevation = nan)', from: start, to: start, kind: 'start' }];
   let v = start;
   for (const s of steps) {
     const next = additive ? v + s.value : v * s.value;
-    rows.push({ label: s.label, why: s.why, from: v, to: next, kind: 'step' });
+    rows.push({ label: s.label, why: s.why, eq: s.eq, from: v, to: next, kind: 'step' });
     v = next;
   }
   if (Math.abs(end - v) > 0.15) {
-    rows.push({ label: 'Physical limit', why: 'Kept inside realistic bounds', from: v, to: end, kind: 'step' });
+    rows.push({ label: 'Physical limit', why: 'Kept inside realistic bounds', eq: 'clamp(f, 0.3, 2.0)', from: v, to: end, kind: 'step' });
   }
-  rows.push({ label: 'Your village · 1.2 km', why: 'Terrain-aware forecast', from: end, to: end, kind: 'end' });
+  rows.push({ label: 'Your village · 1.2 km', why: 'Terrain-aware forecast', eq: additive ? 'T = T₀ + ΣΔT' : 'X = X₀ · Πf', from: end, to: end, kind: 'end' });
   return rows;
 }
 
@@ -103,9 +104,9 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
   const confidence = !isLive ? 'Medium' : magnitude > 6 ? 'Medium' : 'High';
 
   return (
-    <section className="card flex h-full flex-col p-5 sm:p-6" aria-labelledby="explain-title">
+    <section className="card hud flex h-full flex-col p-5 sm:p-6" aria-labelledby="explain-title">
       <div className="eyebrow flex items-center gap-1.5">
-        <BrainCircuit className="h-3.5 w-3.5 text-accent" /> Explainable AI
+        <BrainCircuit className="h-3.5 w-3.5 text-accent" /> Fig 2.2 · Explainable AI
       </div>
       <h2 id="explain-title" className="mt-1 font-display text-2xl text-ink">
         Why your village differs
@@ -155,9 +156,11 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
           return (
             <li key={`${v}-${i}`} className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)_64px] items-center gap-3 sm:grid-cols-[minmax(0,190px)_minmax(0,1fr)_72px]">
               <div className="min-w-0">
-                <div className={`truncate text-sm ${isStep ? 'text-ink2' : 'font-semibold text-ink'}`}>{r.label}</div>
-                <div className="truncate text-[11px] text-muted" title={r.why}>
-                  {r.why}
+                <div className={`truncate text-sm ${isStep ? 'text-ink2' : 'font-semibold text-ink'}`} title={r.why}>
+                  {r.label}
+                </div>
+                <div className="truncate font-mono text-[10px] text-muted" title={r.eq ?? r.why}>
+                  {r.eq ?? r.why}
                 </div>
               </div>
               <div className="relative h-7 rounded-md bg-surface2">
@@ -208,6 +211,40 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
       </div>
 
       {/* Inputs */}
+      {/* The whole model for this variable, numbers substituted */}
+      <div className="mt-4 rounded-lg border border-line/[0.08] bg-bg/50 p-4 font-mono text-[12px] leading-6 text-ink2">
+        <div className="mono-label mb-1.5 flex items-center justify-between">
+          <span>Model · {meta.label}</span>
+          <span className="text-accent">Δx 18 → 1.2 km</span>
+        </div>
+        {meta.additive ? (
+          <>
+            <div>
+              T<sub>1.2</sub> = T<sub>18</sub> + Σ ΔT<sub>i</sub>
+            </div>
+            <div className="pl-6">
+              = {f1(start)} {deltas.length ? deltas.map((r) => ` ${r.d < 0 ? '−' : '+'} ${f1(Math.abs(r.d))}`).join('') : '+ 0.0'}
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              X<sub>1.2</sub> = X<sub>18</sub> · Π f<sub>i</sub>
+            </div>
+            <div className="pl-6">
+              = {f1(start)} × {(start > 0.05 ? end / start : detail[v].reduce((m, s) => m * s.value, 1)).toFixed(3)}
+            </div>
+          </>
+        )}
+        <div className="pl-6 text-ink">
+          = <strong className="text-accent">{f1(end)}</strong> {meta.unit}
+        </div>
+        <div className="mt-2 border-t border-line/[0.08] pt-2 text-[10.5px] text-muted">
+          Γd 5.0 K/km (day) · Γn 6.5 / 4.5 K/km (night, warm / cold season) · Δz {detail.dz >= 0 ? '+' : '−'}
+          {Math.abs(Math.round(detail.dz))} m
+        </div>
+      </div>
+
       <div className="min-h-5 flex-1" aria-hidden />
       <div className="border-t border-line/[0.07] pt-4">
         <div className="text-xs text-muted">Terrain inputs the model used</div>

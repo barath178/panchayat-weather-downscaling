@@ -179,7 +179,7 @@ export default function AskAeroAgro({ ctx, lang, onLangChange, onAction }: Props
   const busy = thinking != null || !!typing;
 
   return (
-    <section id="ask" className="card relative flex h-[640px] flex-col overflow-hidden scroll-mt-24" aria-labelledby="ask-title">
+    <section id="ask" className="card hud relative flex h-[640px] flex-col overflow-hidden scroll-mt-24" aria-labelledby="ask-title">
       {/* ambient glow */}
       <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/10 blur-3xl" aria-hidden />
 

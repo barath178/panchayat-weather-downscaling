@@ -142,7 +142,12 @@ export interface Step {
   why: string;
   /** additive change (°C) for temperature, multiplicative factor for rain & wind */
   value: number;
+  /** the equation with this village's numbers substituted */
+  eq?: string;
 }
+
+const f2 = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
+const f3 = (n: number) => (Math.round(n * 1000) / 1000).toFixed(3);
 
 export interface DownscaleDetail {
   metrics: WeatherMetrics;
@@ -171,47 +176,77 @@ export function downscaleDetailed(p: PanchayatData, coarse: WeatherMetrics, coar
   const hgt = `${Math.abs(Math.round(dz))} m ${dz >= 0 ? 'higher' : 'lower'} than the block average`;
 
   // Temperature: lapse rate + urban heat island + katabatic cold-air pooling on clear nights.
-  tmaxSteps.push({ label: 'Height (lapse rate)', why: `${hgt}; air cools ${TMAX_LAPSE_C_PER_KM} °C per km by day`, value: -(TMAX_LAPSE_C_PER_KM * dz) / 1000 });
-  if (p.slopeDeg > 2) tmaxSteps.push({ label: 'Slope exposure', why: `${p.slopeDeg}° slope mixes air and trims the afternoon peak`, value: -p.slopeDeg * 0.015 });
-  tminSteps.push({ label: 'Height (lapse rate)', why: `${hgt}; nights cool ${nightLapse} °C per km`, value: -(nightLapse * dz) / 1000 });
+  const dzKm = dz / 1000;
+  tmaxSteps.push({
+    label: 'Height (lapse rate)',
+    why: `${hgt}; air cools ${TMAX_LAPSE_C_PER_KM} °C per km by day`,
+    value: -TMAX_LAPSE_C_PER_KM * dzKm,
+    eq: `ΔT = −Γd·Δz = −${TMAX_LAPSE_C_PER_KM} K/km × ${f3(dzKm)} km`,
+  });
+  if (p.slopeDeg > 2)
+    tmaxSteps.push({ label: 'Slope exposure', why: `${p.slopeDeg}° slope mixes air and trims the afternoon peak`, value: -p.slopeDeg * 0.015, eq: `ΔT = −0.015·θ = −0.015 × ${p.slopeDeg}°` });
+  tminSteps.push({
+    label: 'Height (lapse rate)',
+    why: `${hgt}; nights cool ${nightLapse} °C per km`,
+    value: -nightLapse * dzKm,
+    eq: `ΔT = −Γn·Δz = −${nightLapse} K/km × ${f3(dzKm)} km`,
+  });
   if (t.urban) {
-    tmaxSteps.push({ label: 'Urban heat island', why: 'Concrete and asphalt store heat', value: 1.2 });
-    tminSteps.push({ label: 'Urban heat island', why: 'Buildings release stored heat all night', value: 2.2 });
+    tmaxSteps.push({ label: 'Urban heat island', why: 'Concrete and asphalt store heat', value: 1.2, eq: 'ΔT_UHI,day = +1.2 K' });
+    tminSteps.push({ label: 'Urban heat island', why: 'Buildings release stored heat all night', value: 2.2, eq: 'ΔT_UHI,night = +2.2 K' });
   }
   if (clearNight && !t.urban && (t.valley || t.himalayan)) {
-    const pooling = p.drainageAccumulation * (coldSeason ? 4.0 : 1.5) * (1 - p.slopeDeg / 40);
-    tminSteps.push({ label: 'Cold-air pooling', why: `Clear night: cold air drains downhill and settles here (drainage index ${p.drainageAccumulation})`, value: -pooling });
+    const k = coldSeason ? 4.0 : 1.5;
+    const pooling = p.drainageAccumulation * k * (1 - p.slopeDeg / 40);
+    tminSteps.push({
+      label: 'Cold-air pooling',
+      why: `Clear night: cold air drains downhill and settles here (drainage index ${p.drainageAccumulation})`,
+      value: -pooling,
+      eq: `ΔT = −k·D·(1 − θ/40) = −${k} × ${p.drainageAccumulation} × ${f2(1 - p.slopeDeg / 40)}`,
+    });
   }
   if (t.arid) {
-    tmaxSteps.push({ label: 'Dry sand heating', why: 'Bare desert soil heats fast by day', value: 1.5 });
-    tminSteps.push({ label: 'Desert radiative cooling', why: 'Dry air lets heat escape at night', value: -1.0 });
+    tmaxSteps.push({ label: 'Dry sand heating', why: 'Bare desert soil heats fast by day', value: 1.5, eq: 'ΔT = +1.5 K (low soil heat capacity)' });
+    tminSteps.push({ label: 'Desert radiative cooling', why: 'Dry air lets heat escape at night', value: -1.0, eq: 'ΔT = −1.0 K (low column water vapour)' });
   }
   const tMax = coarse.tempMax + tmaxSteps.reduce((s, x) => s + x.value, 0);
   let tMin = coarse.tempMin + tminSteps.reduce((s, x) => s + x.value, 0);
   if (tMin > tMax - 2) {
-    tminSteps.push({ label: 'Physical consistency', why: 'Night low kept at least 2 °C below the day high', value: tMax - 2 - tMin });
+    tminSteps.push({ label: 'Physical consistency', why: 'Night low kept at least 2 °C below the day high', value: tMax - 2 - tMin, eq: 'Tmin ≤ Tmax − 2 K' });
     tMin = tMax - 2;
   }
 
   // Rainfall: orographic amplification, rain-shadow damping, coastal convergence (multiplicative).
   const lift = 1 + (Math.max(0, dz) / 1000) * 0.6 + Math.sin(slopeRad) * 0.6;
-  if (Math.abs(lift - 1) > 0.005) rainSteps.push({ label: 'Orographic lift', why: 'Air forced up hills condenses into extra rain', value: lift });
-  if (t.windward) rainSteps.push({ label: 'Windward slope', why: 'Faces the moist monsoon flow', value: 1.1 });
-  if (t.ridge) rainSteps.push({ label: 'Ridge crest', why: 'Crests catch the most cloud water', value: 1.1 });
-  if (t.rainShadow) rainSteps.push({ label: 'Rain shadow', why: 'Hills upwind have already squeezed the rain out', value: 0.6 });
-  if (t.arid) rainSteps.push({ label: 'Arid evaporation', why: 'Dry air evaporates light rain before it lands', value: 0.55 });
-  if (t.coastal) rainSteps.push({ label: 'Coastal convergence', why: 'Sea breeze meets land air and lifts it', value: 1.08 });
-  if (t.urban) rainSteps.push({ label: 'Urban convection', why: 'City heat triggers extra showers', value: 1.06 });
+  if (Math.abs(lift - 1) > 0.005)
+    rainSteps.push({
+      label: 'Orographic lift',
+      why: 'Air forced up hills condenses into extra rain',
+      value: lift,
+      eq: `f = 1 + 0.6·Δz⁺ + 0.6·sin θ = 1 + 0.6×${f3(Math.max(0, dzKm))} + 0.6×${f3(Math.sin(slopeRad))}`,
+    });
+  if (t.windward) rainSteps.push({ label: 'Windward slope', why: 'Faces the moist monsoon flow', value: 1.1, eq: 'f = ×1.10' });
+  if (t.ridge) rainSteps.push({ label: 'Ridge crest', why: 'Crests catch the most cloud water', value: 1.1, eq: 'f = ×1.10' });
+  if (t.rainShadow) rainSteps.push({ label: 'Rain shadow', why: 'Hills upwind have already squeezed the rain out', value: 0.6, eq: 'f = ×0.60' });
+  if (t.arid) rainSteps.push({ label: 'Arid evaporation', why: 'Dry air evaporates light rain before it lands', value: 0.55, eq: 'f = ×0.55 (sub-cloud evaporation)' });
+  if (t.coastal) rainSteps.push({ label: 'Coastal convergence', why: 'Sea breeze meets land air and lifts it', value: 1.08, eq: 'f = ×1.08' });
+  if (t.urban) rainSteps.push({ label: 'Urban convection', why: 'City heat triggers extra showers', value: 1.06, eq: 'f = ×1.06' });
   const rainMult = clamp(rainSteps.reduce((m, x) => m * x.value, 1), 0.3, 2.0);
   const rain = coarse.rainfallMm * rainMult;
 
   // Wind: gap funnelling, ridge acceleration, valley sheltering, urban canopy friction.
-  if (t.windGap) windSteps.push({ label: 'Wind gap funnelling', why: 'A gap in the hills squeezes and speeds up the wind', value: 1.9 });
-  if (t.ridge || t.himalayan) windSteps.push({ label: 'Height exposure', why: 'Hilltops sit in faster air', value: 1.25 });
-  if (t.valley) windSteps.push({ label: 'Valley shelter', why: 'Surrounding slopes block the wind', value: 1 - p.drainageAccumulation * 0.35 });
-  if (t.urban) windSteps.push({ label: 'Building friction', why: 'Buildings slow the wind near the ground', value: 0.75 });
-  if (t.arid) windSteps.push({ label: 'Open desert', why: 'Nothing to slow the wind', value: 1.3 });
-  if (t.coastal) windSteps.push({ label: 'Sea breeze', why: 'Daily land–sea breeze adds wind', value: 1.12 });
+  if (t.windGap) windSteps.push({ label: 'Wind gap funnelling', why: 'A gap in the hills squeezes and speeds up the wind', value: 1.9, eq: 'f = ×1.90 (Venturi)' });
+  if (t.ridge || t.himalayan) windSteps.push({ label: 'Height exposure', why: 'Hilltops sit in faster air', value: 1.25, eq: 'f = ×1.25' });
+  if (t.valley)
+    windSteps.push({
+      label: 'Valley shelter',
+      why: 'Surrounding slopes block the wind',
+      value: 1 - p.drainageAccumulation * 0.35,
+      eq: `f = 1 − 0.35·D = 1 − 0.35 × ${p.drainageAccumulation}`,
+    });
+  if (t.urban) windSteps.push({ label: 'Building friction', why: 'Buildings slow the wind near the ground', value: 0.75, eq: 'f = ×0.75 (roughness z₀↑)' });
+  if (t.arid) windSteps.push({ label: 'Open desert', why: 'Nothing to slow the wind', value: 1.3, eq: 'f = ×1.30' });
+  if (t.coastal) windSteps.push({ label: 'Sea breeze', why: 'Daily land–sea breeze adds wind', value: 1.12, eq: 'f = ×1.12' });
   const wind = coarse.windSpeedKmh * windSteps.reduce((m, x) => m * x.value, 1);
 
   // Humidity: conserve vapour pressure, re-evaluate saturation at the local mean temperature.

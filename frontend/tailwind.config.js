@@ -30,7 +30,8 @@ module.exports = {
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        card: '22px',
+        // "Field instrument" language: tight, machined corners
+        card: '14px',
       },
       boxShadow: {
         card: '0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -24px rgb(0 0 0 / 0.7)',

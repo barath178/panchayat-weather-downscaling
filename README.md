@@ -113,6 +113,12 @@ Open [`index.html`](index.html) directly in a browser. No install needed.
 
 ## Design (Figma)
 
+### Figma plugin: native design system (recommended)
+
+[`design/figma-plugin`](design/figma-plugin) is a Figma plugin that builds the whole "Field Instrument" design as **native, editable layers**: 17 colour variables, 12 text styles, variant components (Button, Chip, Verdict tile), a HUD panel with constraint-pinned corner ticks, and full Desktop (1440) and Mobile (390) screens plus an architecture diagram, filled with a live engine snapshot for Munnar. In the Figma desktop app: **Plugins → Development → Import plugin from manifest…** → `design/figma-plugin/manifest.json`, then run it. See its [README](design/figma-plugin/README.md).
+
+### SVG artboard (legacy)
+
 [`design/aeroagro_figma_design.svg`](design/aeroagro_figma_design.svg) is a vector file you can import into Figma (**File → Import**, or drag onto the canvas). Every group becomes a named layer and all text stays editable. It contains:
 
 1. Design system: colour tokens, status colours, data ramps, type scale, components
