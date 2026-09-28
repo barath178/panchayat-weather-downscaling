@@ -124,19 +124,6 @@ body {
   transform: none;
 }
 
-/* Infinite ticker */
-@keyframes ticker {
-  to {
-    transform: translateX(-50%);
-  }
-}
-.ticker {
-  animation: ticker 60s linear infinite;
-}
-.ticker:hover {
-  animation-play-state: paused;
-}
-
 ::selection {
   background: rgb(var(--accent));
   color: rgb(var(--accent-ink));
@@ -180,7 +167,7 @@ body {
     @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted;
   }
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-line/[0.14] bg-transparent px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-line/30 hover:bg-surface hover:text-ink;
+    @apply inline-flex items-center gap-1.5 rounded-md border border-line/[0.14] bg-transparent px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-line/30 hover:bg-surface hover:text-ink;
   }
   /* Instrument readout label */
   .mono-label {
@@ -218,23 +205,44 @@ body {
     @apply border-btn bg-btn text-btn-ink hover:bg-btn hover:text-btn-ink;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors;
   }
   .btn-primary {
-    @apply btn bg-btn text-btn-ink hover:-translate-y-px hover:shadow-pop;
+    @apply btn bg-btn text-btn-ink hover:bg-btn/90;
   }
   .btn-ghost {
     @apply btn border border-line/[0.16] bg-transparent text-ink hover:border-line/30 hover:bg-surface;
   }
   .seg {
-    @apply inline-flex items-center gap-0.5 rounded-full border border-line/[0.12] bg-surface/70 p-1;
+    @apply inline-flex items-center gap-0.5 rounded-[10px] border border-line/[0.12] bg-surface/70 p-1;
   }
   .seg-btn {
-    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-ink;
+    @apply inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:text-ink;
   }
   .seg-on {
     @apply bg-btn text-btn-ink shadow-sm hover:text-btn-ink;
   }
+}
+
+/* Long-form text on the Privacy and Terms pages */
+.legal h2 {
+  @apply mt-12 font-display text-3xl leading-tight text-ink;
+}
+.legal p,
+.legal li {
+  @apply mt-4 text-[16px] leading-relaxed text-ink2;
+}
+.legal ul {
+  @apply mt-2 list-disc space-y-1 pl-5;
+}
+.legal li {
+  @apply mt-2;
+}
+.legal a {
+  @apply text-accent underline underline-offset-2;
+}
+.legal strong {
+  @apply font-semibold text-ink;
 }
 
 @layer utilities {

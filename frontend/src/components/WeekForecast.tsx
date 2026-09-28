@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { CalendarDays, Droplets, Wind, FileText, Snowflake, Flame, CloudRain, Wheat, SprayCan, Ban } from 'lucide-react';
@@ -29,9 +29,9 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
 
   const stats = [
     { icon: CloudRain, label: 'Week rain', value: `${fineRain} mm`, sub: `block ${blockRain} mm` },
-    { icon: Droplets, label: 'Rainy days', value: `${rainyDays} of 7`, sub: '≥ 2.5 mm (IMD)' },
+    { icon: Droplets, label: 'Rainy days', value: `${rainyDays} of 7`, sub: 'â‰¥ 2.5 mm (IMD)' },
     { icon: SprayCan, label: 'Best spray day', value: best >= 0 ? dayLabel(week[best], best, 'en', 'short') : 'None', sub: best >= 0 ? week[best].spray.label : 'no safe window' },
-    { icon: Wheat, label: 'Dry spell', value: dry ? `${dry[1] - dry[0] + 1} days` : 'None', sub: dry ? `${dayLabel(week[dry[0]], dry[0], 'en', 'short')} → ${dayLabel(week[dry[1]], dry[1], 'en', 'short')}` : 'harvest under cover' },
+    { icon: Wheat, label: 'Dry spell', value: dry ? `${dry[1] - dry[0] + 1} days` : 'None', sub: dry ? `${dayLabel(week[dry[0]], dry[0], 'en', 'short')} â†’ ${dayLabel(week[dry[1]], dry[1], 'en', 'short')}` : 'harvest under cover' },
   ];
 
   return (
@@ -39,7 +39,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
       <div className="flex flex-wrap items-end justify-between gap-3 p-5 pb-0 sm:p-6 sm:pb-0">
         <div>
           <div className="eyebrow flex items-center gap-1.5">
-            <CalendarDays className="h-3.5 w-3.5 text-accent" /> Fig 1.2 · 7-day village outlook {isLive ? '· live' : '· simulated'}
+            <CalendarDays className="h-3.5 w-3.5 text-accent" /> Fig 1.2 Â· 7-day village outlook {isLive ? 'Â· live' : 'Â· simulated'}
           </div>
           <h2 id="week-title" className="mt-1 font-display text-2xl text-ink">
             The week ahead in {p.name}
@@ -73,20 +73,20 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
             return (
               <li
                 key={i}
-                className={`relative flex animate-rise flex-col items-center rounded-2xl border px-2 pb-3 pt-4 text-center transition-colors ${
+                className={`relative flex flex-col items-center rounded-2xl border px-2 pb-3 pt-4 text-center transition-colors ${
                   isBest ? 'border-accent/70 bg-accent/[0.06] shadow-glow' : 'border-line/[0.07] bg-surface2/60 hover:border-line/15'
                 }`}
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 {isBest && (
-                  <span className="absolute -top-2.5 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">Best to spray</span>
+                  <span className="absolute -top-2.5 rounded-md bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">Best to spray</span>
                 )}
                 <div className={`text-sm font-semibold ${i === 0 ? 'text-accent' : 'text-ink'}`}>{dayLabel(d, i, 'en', 'short')}</div>
                 <div className="h-4 text-[11px] text-muted">{shortDate(d)}</div>
                 <Icon className="mt-2 h-7 w-7 text-ink/85" strokeWidth={1.5} aria-label={sky.label} />
 
                 {/* temperature range: village bar, block ghost */}
-                <div className="mt-2 text-sm font-semibold text-ink tabular">{Math.round(d.fine.tempMax)}°</div>
+                <div className="mt-2 text-sm font-semibold text-ink tabular">{Math.round(d.fine.tempMax)}Â°</div>
                 <div className="relative my-1 h-20 w-full" aria-hidden>
                   <span
                     className="absolute left-1/2 w-1.5 -translate-x-[9px] rounded-full border border-dashed border-sun/60"
@@ -98,7 +98,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
                     style={{ top: `${y(d.fine.tempMax)}%`, bottom: `${100 - y(d.fine.tempMin)}%`, background: 'linear-gradient(#F6B94C, #7DC4FF)' }}
                   />
                 </div>
-                <div className="text-sm text-ink2 tabular">{Math.round(d.fine.tempMin)}°</div>
+                <div className="text-sm text-ink2 tabular">{Math.round(d.fine.tempMin)}Â°</div>
 
                 {/* rain */}
                 <div className="mt-3 flex h-10 w-full items-end justify-center gap-1" aria-hidden>
@@ -120,7 +120,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
                 >
                   {d.spray.hours > 0 ? (
                     <span className="tabular">
-                      {d.spray.start?.slice(0, 2)}–{d.spray.end?.slice(0, 2)} h
+                      {d.spray.start?.slice(0, 2)}â€“{d.spray.end?.slice(0, 2)} h
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1">
@@ -148,7 +148,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm border border-dashed border-sun/70" /> District block 18 km
           </span>
-          <span>Spray chip: longest safe window (wind ≤ 15 km/h, no rain within 2 h)</span>
+          <span>Spray chip: longest safe window (wind â‰¤ 15 km/h, no rain within 2 h)</span>
         </div>
       </div>
     </section>

@@ -156,7 +156,8 @@ function tileLayer(type: MapType): L.Layer {
   const esri = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
   return L.layerGroup([
     L.tileLayer(`${esri}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { attribution: 'Tiles © Esri', maxNativeZoom: 16, ...common }),
-    L.tileLayer(`${esri}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: 16, ...common }),
+    // Place names ride above the data dots so a marker never sits on top of its own label
+    L.tileLayer(`${esri}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxNativeZoom: 16, pane: 'labels', ...common }),
   ]);
 }
 
@@ -241,6 +242,10 @@ export default function GoogleMapComponent({
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     // The 1.2 km block grid sits above the tiles but below markers and outlines
     map.createPane('blockGrid').style.zIndex = '350';
+    // Basemap labels sit above markers (400) but below tooltips (650), and never take clicks
+    const labels = map.createPane('labels');
+    labels.style.zIndex = '450';
+    labels.style.pointerEvents = 'none';
     polygonsRef.current = L.layerGroup().addTo(map);
     markersRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;

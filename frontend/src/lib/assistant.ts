@@ -337,8 +337,8 @@ export function answer(question: string, ctx: AssistantContext, uiLang: Lang): A
       let text = pick(
         lang,
         `${crop}: ${ctx.pest.title}, ${lvl[0]} risk. ${ctx.pest.detail}`,
-        `${crop}: ${ctx.pest.title} — जोखिम ${lvl[1]}। नमी ${ctx.fine.relativeHumidity}%, रात का तापमान ${ctx.fine.tempMin}°C। ${ctx.pest.level === 'low' ? 'साप्ताहिक निगरानी जारी रखें।' : 'अगले सूखे समय में सुरक्षात्मक छिड़काव करें और खेत की निगरानी करें।'}`,
-        `${crop}: ${ctx.pest.title} — ${lvl[2]} அபாயம். ஈரப்பதம் ${ctx.fine.relativeHumidity}%, இரவு வெப்பநிலை ${ctx.fine.tempMin}°C. ${ctx.pest.level === 'low' ? 'வாராந்திர கண்காணிப்பைத் தொடரவும்.' : 'அடுத்த வறண்ட நேரத்தில் பாதுகாப்பு தெளிப்பு செய்து வயலைக் கண்காணிக்கவும்.'}`
+        `${crop}: ${ctx.pest.title}: जोखिम ${lvl[1]}। नमी ${ctx.fine.relativeHumidity}%, रात का तापमान ${ctx.fine.tempMin}°C। ${ctx.pest.level === 'low' ? 'साप्ताहिक निगरानी जारी रखें।' : 'अगले सूखे समय में सुरक्षात्मक छिड़काव करें और खेत की निगरानी करें।'}`,
+        `${crop}: ${ctx.pest.title}: ${lvl[2]} அபாயம். ஈரப்பதம் ${ctx.fine.relativeHumidity}%, இரவு வெப்பநிலை ${ctx.fine.tempMin}°C. ${ctx.pest.level === 'low' ? 'வாராந்திர கண்காணிப்பைத் தொடரவும்.' : 'அடுத்த வறண்ட நேரத்தில் பாதுகாப்பு தெளிப்பு செய்து வயலைக் கண்காணிக்கவும்.'}`
       );
       if (humid >= 2)
         text += pick(

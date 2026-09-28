@@ -9,7 +9,7 @@ const sans = Inter_Tight({ subsets: ['latin'], variable: '--font-sans', display:
 const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'AeroAgro AI · Weather for your village, not your district',
+  title: 'AeroAgro AI · Village weather at 1.2 km',
   description:
     'Downscales 18 km block forecasts to 1.2 km Gram Panchayat microclimates using terrain physics, and turns them into spray windows, irrigation advice, pest alerts and PMFBY claim evidence for farmers.',
   openGraph: {
@@ -23,6 +23,7 @@ export const viewport: Viewport = {
   themeColor: '#F3EFE6',
   width: 'device-width',
   initialScale: 1,
+  viewportFit: 'cover', // lets the mobile tab bar pad for the home indicator
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Clock, Mountain, Radio, Satellite, ShieldCheck, Sparkles, CloudRain, Layers3, Cpu, FileText, ArrowRight, ArrowUpRight, Smartphone, Tv } from 'lucide-react';
+import { Clock, Mountain, Radio, Satellite, ShieldCheck, CloudRain, Layers3, Cpu, FileText, ArrowRight, ArrowUpRight, Smartphone, Tv } from 'lucide-react';
 
 import CommandBar, { Logo } from '@/components/CommandBar';
 import Hero from '@/components/Hero';
@@ -24,6 +24,7 @@ import ExplainPanel from '@/components/ExplainPanel';
 import AskAeroAgro from '@/components/AskAeroAgro';
 import AgrometBulletin from '@/components/AgrometBulletin';
 import { Reveal, SectionHead, Telemetry, TelemetryStrip } from '@/components/Instrument';
+import { MobileTabBar, useActiveSection } from '@/components/SectionNav';
 
 import { ALL_INDIA_PANCHAYATS } from '@/data/all_india_regions';
 import {
@@ -64,6 +65,7 @@ export type MapVariable = 'rainfall' | 'tempMin' | 'tempMax' | 'wind';
 type StudioTab = 'spray' | 'insurance' | 'imd' | 'profile' | 'acoustic';
 
 const DEFAULT_ID = 'tamilnadu_thanjavur_6'; // Thiruvaiyaru, Cauvery delta
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ''; // '/panchayat-weather-downscaling' on GitHub Pages
 
 /** Climatological season for today, used when live data is unavailable. */
 function seasonForToday(now: Date | null): Exclude<Scenario, 'live'> {
@@ -97,6 +99,7 @@ export default function AeroAgroDashboard() {
   // Wall-clock time is only read after mount so the static HTML and first client render match.
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => setNow(new Date()), []);
+  const activeSection = useActiveSection(activeView === 'dashboard');
 
   // Shareable links: ?v=<region id> opens that village
   useEffect(() => {
@@ -251,9 +254,16 @@ export default function AeroAgroDashboard() {
         onAbout={() => setShowAbout(true)}
         regions={ALL_INDIA_PANCHAYATS}
         onSelectRegion={selectRegion}
+        activeSection={activeSection}
       />
 
-      {activeView === 'dashboard' && <Hero regions={ALL_INDIA_PANCHAYATS} onSelect={setSelectedId} />}
+      {activeView === 'dashboard' && (
+        <Hero
+          regions={ALL_INDIA_PANCHAYATS}
+          onSelect={setSelectedId}
+          glance={{ panchayat: activePanchayat, fine, sprayWindow, irrigation, pest, crop: selectedCrop, source: dataSource.kind }}
+        />
+      )}
 
       {activeView === 'mobile' && (
         <div className="night topo-bg flex-1">
@@ -274,7 +284,7 @@ export default function AeroAgroDashboard() {
       {activeView === 'dashboard' && (
         <main id="dashboard" className="flex-1">
           {/* (01) Your village: paper */}
-          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-20 sm:px-8 lg:py-28">
+          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-14 sm:px-8 lg:py-20">
             <Reveal>
               <SectionHead
                 index="01"
@@ -311,17 +321,17 @@ export default function AeroAgroDashboard() {
 
           {/* (02) All India: night */}
           <section id="map" className="night scroll-mt-16">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+            <div className="mx-auto max-w-[1320px] px-5 py-14 sm:px-8 lg:py-20">
               <Reveal>
                 <SectionHead
                   index="02"
                   kicker="All India"
                   title={
                     <>
-                      303 regions, <em className="text-accent">one glance.</em>
+                      303 regions, <em className="text-accent">today&rsquo;s hazards.</em>
                     </>
                   }
-                  meta="Every dot is downscaled live. The AI scan flags hazards the district forecast misses. Tap a tile to jump to the worst-hit village."
+                  meta="Each dot shows today's 1.2 km value. The hazard scan counts regions past a rain, frost, heat, wind or humidity threshold, including those the 18 km forecast misses. Tap a tile to open the worst-hit region."
                 />
               </Reveal>
               <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
@@ -342,8 +352,8 @@ export default function AeroAgroDashboard() {
           </section>
 
           {/* (03) Engine: night */}
-          <section id="engine" className="night scroll-mt-16 border-t border-line/[0.08]" aria-labelledby="engine-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+          <section id="engine" className="night scroll-mt-16" aria-labelledby="engine-title">
+            <div className="mx-auto max-w-[1320px] px-5 py-14 sm:px-8 lg:py-20">
               <Reveal>
                 <SectionHead
                   index="03"
@@ -351,10 +361,10 @@ export default function AeroAgroDashboard() {
                   id="engine-title"
                   title={
                     <>
-                      From block to panchayat, <em className="text-accent">shown working.</em>
+                      How 18 km becomes <em className="text-accent">1.2 km.</em>
                     </>
                   }
-                  meta="Real terrain heights, transparent physics and an equation behind every number. Nothing here is a black box."
+                  meta="Elevation from the Copernicus DEM, each physics step in order, and the equation behind every number shown."
                 />
               </Reveal>
               <ol className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/[0.08] bg-line/[0.08] lg:grid-cols-4" aria-label="Pipeline">
@@ -389,14 +399,14 @@ export default function AeroAgroDashboard() {
           </section>
 
           {/* (04) Ask + reach: paper */}
-          <section className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+          <section id="reach" className="mx-auto max-w-[1320px] px-5 py-14 sm:px-8 lg:py-20">
             <Reveal>
               <SectionHead
                 index="04"
                 kicker="Ask & reach every farmer"
                 title={
                   <>
-                    Ask it like you&rsquo;d <em className="text-accent">ask a neighbour.</em>
+                    Ask about your field, <em className="text-accent">in your language.</em>
                   </>
                 }
                 meta="Type or speak in English, हिन्दी or தமிழ். Answers come from this village's forecast and are computed on the device."
@@ -412,8 +422,8 @@ export default function AeroAgroDashboard() {
                   { k: 'Phone', t: 'Farmer app view', d: 'The same advice on a simple phone screen, with voice in three languages.', icon: Smartphone, act: () => setActiveView('mobile') },
                   { k: 'Wall', t: 'Village kiosk', d: 'A large-type wallboard with a WhatsApp QR code for the panchayat office.', icon: Tv, act: () => setActiveView('kiosk') },
                 ].map(({ k, t, d, icon: I, act }) => (
-                  <button key={t} onClick={act} className="card group flex flex-1 items-start gap-5 p-6 text-left transition-transform hover:-translate-y-0.5">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-btn text-btn-ink">
+                  <button key={t} onClick={act} className="card group flex flex-1 items-start gap-5 p-6 text-left transition-colors hover:border-line/25">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-btn text-btn-ink">
                       <I className="h-5 w-5" />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -421,7 +431,7 @@ export default function AeroAgroDashboard() {
                       <span className="mt-1 block font-display text-3xl leading-none text-ink">{t}</span>
                       <span className="mt-2 block text-sm leading-relaxed text-ink2">{d}</span>
                     </span>
-                    <ArrowUpRight className="h-5 w-5 shrink-0 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink" />
+                    <ArrowUpRight className="h-5 w-5 shrink-0 text-muted transition-colors group-hover:text-ink" />
                   </button>
                 ))}
               </div>
@@ -433,7 +443,7 @@ export default function AeroAgroDashboard() {
 
           {/* (05) Field tools: night */}
           <section id="tools" className="night scroll-mt-16" aria-labelledby="tools-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+            <div className="mx-auto max-w-[1320px] px-5 py-14 sm:px-8 lg:py-20">
               <Reveal>
                 <SectionHead
                   index="05"
@@ -441,7 +451,7 @@ export default function AeroAgroDashboard() {
                   id="tools-title"
                   title={
                     <>
-                      Verify, <em className="text-accent">then act.</em>
+                      Hourly detail <em className="text-accent">and records.</em>
                     </>
                   }
                   meta="Hour-by-hour spray safety, crop-insurance evidence, live satellite, the Himalaya-to-delta transect and a tin-roof rain gauge."
@@ -481,13 +491,7 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          {/* Floating shortcut to the assistant */}
-          <a
-            href="#ask"
-            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-btn px-5 py-3 text-sm font-semibold text-btn-ink shadow-pop transition hover:-translate-y-0.5 lg:hidden"
-          >
-            <Sparkles className="h-4 w-4" /> Ask AI
-          </a>
+          <MobileTabBar active={activeSection} />
         </main>
       )}
 
@@ -503,19 +507,19 @@ export default function AeroAgroDashboard() {
         />
       )}
 
-      <footer className="night overflow-hidden border-t border-line/[0.1]">
+      <footer className={`night overflow-hidden border-t border-line/[0.1] ${activeView === 'dashboard' ? 'pb-20 lg:pb-0' : ''}`}>
         <div className="mx-auto grid max-w-[1320px] gap-12 px-5 pt-20 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Logo className="h-10 w-10" />
             <p className="mt-6 font-display text-4xl leading-[1.05] text-ink">
-              Weather for your village, <em className="text-accent">not your district.</em>
+              Village weather at 1.2&nbsp;km. <em className="text-accent">District forecasts stop at 18&nbsp;km.</em>
             </p>
             <p className="mt-5 max-w-md text-xs leading-relaxed text-muted">
               Data: Open-Meteo NWP · Copernicus GLO-90 DEM · IMD INSAT-3DR · ICAR agromet guidance. Downscaled values are decision-support estimates, not an official IMD
               forecast.
             </p>
           </div>
-          <nav className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3 lg:col-span-6 lg:col-start-7" aria-label="Footer">
+          <nav className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4 lg:col-span-7 lg:col-start-6" aria-label="Footer">
             {[
               ['Product', [['Your village', '#village'], ['All India', '#map'], ['Engine', '#engine'], ['Ask AeroAgro', '#ask'], ['Field tools', '#tools']]],
               [
@@ -526,6 +530,7 @@ export default function AeroAgroDashboard() {
                 ],
               ],
               ['Data', [['Open-Meteo', 'https://open-meteo.com'], ['Copernicus DEM', 'https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model'], ['IMD satellite', 'https://mausam.imd.gov.in']]],
+              ['Legal', [['Privacy policy', `${BASE}/privacy/`], ['Terms of use', `${BASE}/terms/`]]],
             ].map(([h, links]) => (
               <div key={h as string}>
                 <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">{h as string}</div>

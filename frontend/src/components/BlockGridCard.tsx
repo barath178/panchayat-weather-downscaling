@@ -198,7 +198,8 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
             225 village cells inside one forecast block
           </h2>
           <p className="mt-1 max-w-xl text-sm text-ink2">
-            The district model gives the whole 18 × 18 km square around {p.name} a single number. AeroAgro resolves it into 1.2 km cells from real terrain.
+            The district model gives the whole 18 × 18 km square around {p.name} a single number. AeroAgro resolves it into 1.2 km cells from{' '}
+            {field?.grid.source === 'synthetic' ? 'an estimated terrain model, because live elevation data could not be loaded.' : 'real elevation data.'}
           </p>
         </div>
         <div className="seg" role="group" aria-label="Resolution">

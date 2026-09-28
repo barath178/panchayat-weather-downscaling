@@ -80,16 +80,15 @@ export default function AlertScan({ regions, regionMetrics, selectedId, onSelect
     <section className="mb-6" aria-labelledby="scan-title">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/[0.1] bg-line/[0.1] sm:grid-cols-4 xl:grid-cols-8">
         <div className="col-span-2 flex items-center gap-3 bg-surface p-4 sm:col-span-4 xl:col-span-1 xl:flex-col xl:items-start xl:justify-between">
-          <span className="relative grid h-10 w-10 place-items-center rounded-full bg-accent/10">
-            <span className="absolute inset-0 animate-pulse-ring rounded-full bg-accent/25" />
-            <Radar className="relative h-5 w-5 text-accent" />
+          <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/10">
+            <Radar className="h-5 w-5 text-accent" />
           </span>
           <div>
             <h2 id="scan-title" className="text-sm font-semibold text-ink">
-              AI scan
+              Hazard scan
             </h2>
             <p className="text-xs leading-snug text-muted">
-              {regions.length} villages · {flagged} flagged · {source === 'live' ? 'live' : source === 'loading' ? 'updating…' : 'model'}
+              {regions.length} regions · {flagged} flagged · {source === 'live' ? 'live' : source === 'loading' ? 'updating…' : 'model'}
             </p>
           </div>
         </div>

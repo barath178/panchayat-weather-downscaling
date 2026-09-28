@@ -105,8 +105,8 @@ export function buildRevealField(): RevealField {
   return { elev, fine, coarse, shade, min, max };
 }
 
-// Night thermal ramp: warm valleys glow amber, cooling air turns violet and blue,
-// frost pockets burn ice-white.
+// Night thermal ramp: warm valleys glow amber, cooling air turns teal then blue,
+// frost pockets burn ice-white. No violet band, so it reads as temperature, not decoration.
 export const T_LO = -3;
 export const T_HI = 17;
 const STOPS: [number, [number, number, number]][] = [
@@ -114,11 +114,11 @@ const STOPS: [number, [number, number, number]][] = [
   [0, [200, 242, 255]],
   [2, [118, 214, 255]],
   [4, [64, 164, 245]],
-  [6, [66, 108, 222]],
-  [8, [96, 74, 196]],
-  [10, [138, 64, 168]],
-  [12, [184, 70, 128]],
-  [14, [224, 100, 90]],
+  [6, [38, 112, 200]],
+  [8, [28, 96, 128]],
+  [10, [40, 120, 104]],
+  [12, [150, 150, 70]],
+  [14, [214, 132, 58]],
   [17, [246, 185, 76]],
 ];
 

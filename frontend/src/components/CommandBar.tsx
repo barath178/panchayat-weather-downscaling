@@ -5,6 +5,7 @@ import { LayoutDashboard, Smartphone, Tv, Info, ChevronDown, Check, Radio, Cloud
 import type { Scenario } from '@/lib/microclimate';
 import type { PanchayatData } from '@/data/all_india_regions';
 import RegionSearch from './RegionSearch';
+import { SECTIONS } from './SectionNav';
 
 type View = 'dashboard' | 'mobile' | 'kiosk';
 
@@ -17,6 +18,7 @@ interface CommandBarProps {
   onAbout: () => void;
   regions: PanchayatData[];
   onSelectRegion: (id: string) => void;
+  activeSection?: string | null;
 }
 
 const VIEWS: { id: View; label: string; icon: React.ElementType }[] = [
@@ -72,7 +74,7 @@ function ScenarioMenu({ value, onChange, dataSource }: { value: Scenario; onChan
         aria-haspopup="menu"
         aria-expanded={open}
         title={dataSource.label}
-        className="flex h-10 items-center gap-2 rounded-full border border-line/[0.14] bg-surface px-4 text-sm font-medium text-ink hover:border-line/30"
+        className="flex h-10 items-center gap-2 rounded-md border border-line/[0.14] bg-surface px-4 text-sm font-medium text-ink hover:border-line/30"
       >
         <span className={`h-2 w-2 rounded-full ${DOT[dataSource.kind]}`} />
         <span className="whitespace-nowrap">{current.label}</span>
@@ -108,7 +110,7 @@ function ScenarioMenu({ value, onChange, dataSource }: { value: Scenario; onChan
   );
 }
 
-export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion }: CommandBarProps) {
+export default function CommandBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion, activeSection }: CommandBarProps) {
   return (
     <header className="z-[1100] border-b border-line/[0.1] bg-bg/85 backdrop-blur-xl md:sticky md:top-0">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 sm:px-8">
@@ -121,15 +123,16 @@ export default function CommandBar({ currentScenario, onScenarioChange, activeVi
 
         {activeView === 'dashboard' && (
           <nav aria-label="Sections" className="ml-10 hidden items-center gap-7 text-sm text-ink2 xl:flex">
-            {[
-              ['Village', '#village'],
-              ['All India', '#map'],
-              ['Engine', '#engine'],
-              ['Ask', '#ask'],
-              ['Tools', '#tools'],
-            ].map(([l, h]) => (
-              <a key={h} href={h} className="relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-ink after:transition-all hover:text-ink hover:after:w-full">
-                {l}
+            {SECTIONS.map(({ id, label }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                aria-current={activeSection === id ? 'location' : undefined}
+                className={`relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:bg-ink after:transition-all hover:text-ink hover:after:w-full ${
+                  activeSection === id ? 'text-ink after:w-full' : 'after:w-0'
+                }`}
+              >
+                {label}
               </a>
             ))}
           </nav>
@@ -153,7 +156,7 @@ export default function CommandBar({ currentScenario, onScenarioChange, activeVi
             ))}
           </nav>
           <ScenarioMenu value={currentScenario} onChange={onScenarioChange} dataSource={dataSource} />
-          <button onClick={onAbout} aria-label="About AeroAgro" className="grid h-10 w-10 place-items-center rounded-full border border-line/[0.14] bg-surface text-ink2 hover:text-ink">
+          <button onClick={onAbout} aria-label="About AeroAgro" className="grid h-10 w-10 place-items-center rounded-lg border border-line/[0.14] bg-surface text-ink2 hover:text-ink">
             <Info className="h-4 w-4" />
           </button>
         </div>

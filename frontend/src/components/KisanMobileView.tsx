@@ -141,7 +141,7 @@ export default function KisanMobileView({ panchayat, fine, hourly, sprayWindow, 
         {[
           ['Built for sunlight', 'High-contrast colours and large type that stay readable outdoors.'],
           ['Speaks the farmer’s language', 'English, हिन्दी and தமிழ், read aloud with the phone’s own voice.'],
-          ['Works over WhatsApp', 'No new app to install — advisories travel through village groups.'],
+          ['Works over WhatsApp', 'No new app to install. Advisories travel through village groups.'],
         ].map(([t, d]) => (
           <li key={t} className="flex gap-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-accent" />

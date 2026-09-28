@@ -23,7 +23,7 @@ export function SectionHead({
     <div className="mb-10 grid grid-cols-1 gap-6 border-t border-line/[0.16] pt-6 lg:grid-cols-12 lg:items-end">
       <div className="lg:col-span-8">
         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-          ({index}) <span className="mx-1.5 text-line/40">—</span> {kicker}
+          {index} <span className="mx-1.5 text-line/40">/</span> {kicker}
         </div>
         <h2 id={id} className="mt-4 font-display text-[44px] leading-[0.95] tracking-[-0.015em] text-ink sm:text-6xl lg:text-7xl">
           {title}
@@ -34,34 +34,9 @@ export function SectionHead({
   );
 }
 
-/** Fades content up once it scrolls into view. */
-export function Reveal({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [shown, setShown] = React.useState(false);
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
-      setShown(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setShown(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: '0px 0px -8% 0px' }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div ref={ref} className={`reveal ${shown ? 'in' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
-      {children}
-    </div>
-  );
+/** Section wrapper. Content is static on purpose: no scroll-triggered motion. */
+export function Reveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>;
 }
 
 /** Alternating black/white scale bar, e.g. 0 ── 6 km */
@@ -112,13 +87,13 @@ const STATUS: Record<Telemetry['status'], [string, string]> = {
   scenario: ['SIM', 'bg-sky'],
 };
 
-/** Thin live ticker above the navigation: data source, run time, position and grid, scrolling. */
+/** Thin status strip above the navigation: data source, run time, position and grid. Static; swipe to see more on small screens. */
 export function TelemetryStrip({ t }: { t: Telemetry }) {
   const [label, dot] = STATUS[t.status];
   const dz = t.elevationM - t.cellElevationM;
   const items: [string, string][] = [
     ['NWP', t.source],
-    ['Updated', t.updated ?? '—'],
+    ['Updated', t.updated ?? 'n/a'],
     ['Position', `${t.lat.toFixed(3)}°N ${t.lng.toFixed(3)}°E`],
     ['Elevation', `${t.elevationM.toLocaleString('en-IN')} m a.s.l.`],
     ['NWP cell', `${Math.round(t.cellElevationM).toLocaleString('en-IN')} m`],
@@ -127,24 +102,17 @@ export function TelemetryStrip({ t }: { t: Telemetry }) {
     ['Grid', '18 km → 1.2 km'],
     ['Coverage', `${t.regions} regions`],
   ];
-  const run = (k: string) => (
-    <div className="flex shrink-0 items-center gap-8 pr-8" aria-hidden={k === 'b'}>
-      {items.map(([name, v]) => (
-        <span key={name + k} className="text-white/45">
-          {name} <span className="text-white/80">{v}</span>
-        </span>
-      ))}
-      <span className="text-[#D4F25A]">✦</span>
-    </div>
-  );
   return (
     <div className="night relative flex items-center overflow-hidden bg-[#0B110E] font-mono text-[10.5px] uppercase tracking-[0.12em]">
       <span className="relative z-10 flex shrink-0 items-center gap-1.5 bg-[#0B110E] py-2 pl-4 pr-4 font-semibold text-white sm:pl-8">
         <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
       </span>
-      <div className="ticker flex w-max py-2">
-        {run('a')}
-        {run('b')}
+      <div className="scrollbar-none flex min-w-0 items-center gap-8 overflow-x-auto whitespace-nowrap py-2 pr-8">
+        {items.map(([name, v]) => (
+          <span key={name} className="text-white/45">
+            {name} <span className="text-white/80">{v}</span>
+          </span>
+        ))}
       </div>
     </div>
   );

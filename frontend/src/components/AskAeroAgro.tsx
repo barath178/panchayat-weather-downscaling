@@ -249,18 +249,18 @@ export default function AskAeroAgro({ ctx, lang, onLangChange, onAction }: Props
                 {!isTyping && a && m.id !== 0 && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5 animate-fade-in">
                     {a.sources.map((s) => (
-                      <span key={s} className="rounded-full border border-line/10 px-2 py-0.5 text-[10px] text-muted">
+                      <span key={s} className="rounded-md border border-line/10 px-2 py-0.5 text-[10px] text-muted">
                         {s}
                       </span>
                     ))}
                     {canSpeak && (
-                      <button onClick={() => speak(m.id, a)} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] text-ink2 hover:bg-raised hover:text-ink">
+                      <button onClick={() => speak(m.id, a)} className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] text-ink2 hover:bg-raised hover:text-ink">
                         {speakingId === m.id ? <Square className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
                         {speakingId === m.id ? 'Stop' : 'Listen'}
                       </button>
                     )}
                     {a.action && (
-                      <button onClick={() => onAction(a.action!.id)} className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent/25">
+                      <button onClick={() => onAction(a.action!.id)} className="inline-flex items-center gap-1 rounded-md bg-accent/15 px-2.5 py-0.5 text-[11px] font-semibold text-accent hover:bg-accent/25">
                         {a.action.label} <ArrowUpRight className="h-3 w-3" />
                       </button>
                     )}

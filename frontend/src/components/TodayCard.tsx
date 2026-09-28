@@ -55,7 +55,7 @@ export default function TodayCard({ panchayat: p, coarse, fine, coarseElevationM
             </p>
           </div>
           <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+            className={`shrink-0 rounded-md px-2.5 py-1 text-[11px] font-semibold ${
               source.kind === 'live' ? 'bg-good/15 text-good' : source.kind === 'loading' ? 'bg-warn/15 text-warn' : 'bg-line/10 text-ink2'
             }`}
           >

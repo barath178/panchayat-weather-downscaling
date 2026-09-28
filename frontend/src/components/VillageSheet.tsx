@@ -42,7 +42,7 @@ export default function VillageSheet({ panchayat: p, coarse, fine, coarseElevati
     <article className="flex h-full flex-col" aria-labelledby="village-name">
       <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
         <span>{now ? now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Today'}</span>
-        <span className="inline-flex items-center gap-2 rounded-full border border-line/[0.14] px-3 py-1 text-ink2">
+        <span className="inline-flex items-center gap-2 rounded-md border border-line/[0.14] px-3 py-1 text-ink2">
           <span className={`h-1.5 w-1.5 rounded-full ${srcDot}`} /> {srcLabel}
         </span>
       </div>

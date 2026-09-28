@@ -5,11 +5,13 @@ import { LocateFixed, Loader2, ArrowDownRight } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import RegionSearch from './RegionSearch';
 import ResolutionReveal from './ResolutionReveal';
+import TodayGlance, { GlanceData } from './TodayGlance';
 import { getPosition, nearestRegion } from '@/lib/geo';
 
 interface HeroProps {
   regions: PanchayatData[];
   onSelect: (id: string) => void;
+  glance: GlanceData;
 }
 
 const EXAMPLES: [string, string][] = [
@@ -20,21 +22,27 @@ const EXAMPLES: [string, string][] = [
   ['Cauvery delta', 'tamilnadu_thanjavur_6'],
 ];
 
+// Every figure here is a property of the software, not a usage claim: count them in the code.
 const STATS: [string, string, string][] = [
-  ['303', 'regions', 'districts, metros and hill panchayats across India'],
-  ['15×', 'sharper', '18 km forecast blocks resolved into 1.2 km cells'],
-  ['3', 'languages', 'English, हिन्दी and தமிழ், read aloud for every farmer'],
-  ['₹0', 'running cost', 'free, keyless open data; runs in any browser'],
+  ['303', 'regions', 'districts, metros and hill panchayats in the dataset'],
+  ['15×', 'finer grid', '18 km forecast blocks split into 1.2 km cells'],
+  ['3', 'languages', 'English, हिन्दी and தமிழ், with read-aloud'],
+  ['0', 'API keys', 'uses open data from Open-Meteo and Copernicus'],
 ];
 
-export default function Hero({ regions, onSelect }: HeroProps) {
+const SOURCE_LINE: Record<GlanceData['source'], [string, string]> = {
+  live: ['Live Open-Meteo forecast', 'bg-good'],
+  loading: ['Fetching forecast', 'bg-warn'],
+  offline: ['Offline: seasonal averages', 'bg-alert'],
+  scenario: ['Simulated scenario', 'bg-sky'],
+};
+
+export default function Hero({ regions, onSelect, glance }: HeroProps) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
-  const goTo = (id: string) => {
-    onSelect(id);
-    requestAnimationFrame(() => document.getElementById('village')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-  };
+  // Picking a place answers in the glance card right here; "Full forecast" takes the reader down.
+  const goTo = (id: string) => onSelect(id);
 
   const locate = async () => {
     setLocating(true);
@@ -54,28 +62,25 @@ export default function Hero({ regions, onSelect }: HeroProps) {
       {/* Poster */}
       <section className="grain topo-bg overflow-hidden">
         <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-12 sm:px-8 lg:pb-24 lg:pt-20">
-          <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted animate-rise">
+          <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
             <span>MoES · Block → Panchayat downscaling</span>
             <span className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-good animate-pulse-ring" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-good" />
-              </span>
-              Live for 303 regions
+              <span className={`inline-flex h-2 w-2 rounded-full ${SOURCE_LINE[glance.source][1]}`} />
+              {SOURCE_LINE[glance.source][0]}
             </span>
           </div>
 
-          <h1 className="mt-10 font-display text-[clamp(52px,9vw,128px)] leading-[0.9] tracking-[-0.025em] text-ink animate-rise [animation-delay:80ms]">
-            Weather for your village,<br className="hidden md:block" /> <em className="marker">not your district.</em>
+          <h1 className="mt-10 font-display text-[clamp(48px,8vw,112px)] leading-[0.92] tracking-[-0.025em] text-ink">
+            Village weather at 1.2&nbsp;km.<br className="hidden md:block" /> <em className="marker">District forecasts stop at 18&nbsp;km.</em>
           </h1>
 
-          <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-end">
-            <p className="max-w-xl text-lg leading-relaxed text-ink2 animate-rise [animation-delay:160ms] lg:col-span-5 sm:text-xl">
-              AeroAgro takes the 18 km forecast every district receives and re-draws it at <span className="text-ink">1.2 km</span> from real terrain, then tells each
-              farmer exactly when to spray, water and protect their crop.
+          <div className="mt-10 grid grid-cols-1 gap-8 lg:mt-12 lg:grid-cols-12 lg:items-end lg:gap-10">
+            <p className="order-3 max-w-xl text-lg leading-relaxed text-ink2 lg:order-none lg:col-span-5 sm:text-xl">
+              AeroAgro recalculates the district forecast for <span className="text-ink">1.2 km</span> cells using elevation data. For today it gives each village a spray
+              window, an irrigation call and a crop-disease check.
             </p>
 
-            <div className="animate-rise [animation-delay:240ms] lg:col-span-6 lg:col-start-7">
+            <div className="order-1 lg:order-none lg:col-span-6 lg:col-start-7">
               <div className="flex flex-col gap-3 sm:flex-row">
                 <div className="flex-1">
                   <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
@@ -89,11 +94,15 @@ export default function Hero({ regions, onSelect }: HeroProps) {
               <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
                 <span className="mr-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Try</span>
                 {EXAMPLES.map(([label, id]) => (
-                  <button key={id} onClick={() => goTo(id)} className="chip">
+                  <button key={id} onClick={() => goTo(id)} aria-pressed={glance.panchayat.id === id} className={`chip ${glance.panchayat.id === id ? 'chip-on' : ''}`}>
                     {label}
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="order-2 lg:order-none lg:col-span-12">
+              <TodayGlance {...glance} />
             </div>
           </div>
         </div>
