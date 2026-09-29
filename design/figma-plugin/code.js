@@ -1201,6 +1201,104 @@ async function footer(w) {
   });
 }
 
+
+/** First screen, mirrors Hero.tsx: dark console band, controls + Today card + spec on the left, live map on the right. */
+async function consoleHero(w) {
+  return night(async () => {
+    const r = DATA.region, fi = DATA.fine, co = DATA.coarse;
+    const H = 820, L = 360, G = 20, P = 24;
+    const band = frame('Console · map first', { dir: 'row', gap: G, pad: P, w, h: H, fill: paint('bg') });
+    setNightMode(band);
+
+    // ---- left column
+    const left = frame('Controls', { dir: 'col', gap: 16, w: L });
+    const k = frame('Kicker', { dir: 'row', align: 'CENTER', w: L });
+    add(k, await text('MOES · BLOCK → PANCHAYAT', 'mono/label', 'muted'), { grow: true });
+    add(k, await text('● 303 REGIONS', 'mono/label', 'good'));
+    add(left, k);
+    add(left, await title('Weather for your village, ', 'not your district.', 'display/m', { w: L }));
+    add(left, await text('18 km forecasts re-computed on a 1.2 km terrain grid, turned into spray, irrigation and crop-risk advice for each village.', 'body/s', 'ink2', { w: L }));
+
+    const field = frame('Search field', { dir: 'row', gap: 10, pad: [16, 18], radius: 999, fill: paint('surface'), stroke: ['line', 0.14], align: 'CENTER', w: L });
+    add(field, icon('search', 'muted', 18));
+    add(field, await text('Find your village, district or crop', 'body/m', 'muted'));
+    add(left, field);
+    const loc = inst(COMP.button, 'Kind=Primary');
+    add(left, loc, { fill: true });
+    const chips = frame('Examples', { dir: 'row', gap: 6 });
+    chips.layoutWrap = 'WRAP';
+    chips.counterAxisSpacing = 6;
+    chips.primaryAxisSizingMode = 'FIXED';
+    chips.resize(L, 10);
+    for (const c of ['Ooty', 'Munnar', 'Kotgarh apples', 'Jaisalmer', 'Cauvery delta']) {
+      const i = inst(COMP.chip, c === 'Munnar' ? 'State=On' : 'State=Off');
+      await setLabel(i, 'Label', c);
+      add(chips, i);
+    }
+    add(left, chips);
+
+    // Today card
+    const today = frame('Today card', { dir: 'col', gap: 0, radius: 20, fill: paint('surface', 0.8), stroke: ['line', 0.1], w: L, clip: true });
+    const th = frame('Head', { dir: 'row', pad: [10, 16], w: L, align: 'CENTER' });
+    add(th, await text('TODAY · 1.2 KM CELL', 'mono/label', 'muted'), { grow: true });
+    add(th, await text('● LIVE', 'mono/label', 'good'));
+    add(today, th);
+    const tb = frame('Body', { dir: 'col', gap: 6, pad: [8, 16, 12, 16], w: L });
+    add(tb, await text(r.name, 'body/m-strong', 'ink'));
+    add(tb, await text(`${r.district}, ${r.state} · ${r.elevationM.toLocaleString('en-IN')} m`, 'body/s', 'muted'));
+    const tr = frame('Temps', { dir: 'row', gap: 10, align: 'MAX' });
+    add(tr, await text(`${Math.round(fi.tempMax)}°`, 'display/l', 'ink'));
+    add(tr, await text(`night ${Math.round(fi.tempMin)}°`, 'body/s', 'muted'));
+    add(tb, tr);
+    const dT = Math.round((fi.tempMin - co.tempMin) * 10) / 10;
+    add(tb, await text(`District said ${co.tempMin}° at night, village ${fi.tempMin}° (${dT > 0 ? '+' : ''}${dT}°)`, 'mono/data', 'muted', { w: L - 32 }));
+    add(today, tb);
+    const tg = frame('Readouts', { dir: 'row', gap: 1, fill: paint('line', 0.08), w: L });
+    const cell = async (k1, v1, color) => {
+      const c = frame(k1, { dir: 'col', gap: 2, pad: [10, 12], fill: paint('surface'), w: (L - 2) / 3 });
+      add(c, await text(k1, 'body/s', 'muted'));
+      add(c, await text(v1, 'body/m-strong', color));
+      return c;
+    };
+    const sp = DATA.spray;
+    add(tg, await cell('Rain', `${fi.rainfallMm} mm`, 'ink'));
+    add(tg, await cell('Spray', sp.hours ? `${sp.start}–${sp.end}` : 'Hold off', sp.hours >= 3 ? 'good' : sp.hours ? 'warn' : 'bad'));
+    add(tg, await cell('Crop risk', DATA.pest.level, DATA.pest.level === 'high' ? 'bad' : DATA.pest.level === 'moderate' ? 'warn' : 'good'));
+    add(today, tg);
+    const tl = frame('Link', { dir: 'row', pad: [10, 16], w: L });
+    add(tl, await text('Full forecast, 7 days and bulletin →', 'body/s', 'accent'));
+    add(today, tl);
+    add(left, today);
+
+    // Pipeline spec
+    const spec = frame('Pipeline spec', { dir: 'col', gap: 0, radius: 20, fill: paint('surface', 0.8), stroke: ['line', 0.1], w: L, clip: true });
+    const sh = frame('Head', { dir: 'row', pad: [10, 16], w: L });
+    add(sh, await text('PIPELINE SPEC', 'mono/label', 'muted'), { grow: true });
+    add(sh, await text('V1.0', 'mono/label', 'accent'));
+    add(spec, sh);
+    for (const [k2, v2] of [
+      ['INPUT', 'NWP forecast · 11–25 km grid'],
+      ['OUTPUT', '1.2 km cells · 15 × 15 per block'],
+      ['TERRAIN', 'Copernicus GLO-90 DEM'],
+      ['PHYSICS', 'Lapse · cold-air pool · orographic'],
+      ['BLEND', 'Elevation-aware OI (gridpp)'],
+      ['REFRESH', 'Live · cached 30 min'],
+    ]) {
+      const row = frame(k2, { dir: 'row', gap: 12, pad: [7, 16], w: L });
+      const kt = await text(k2, 'mono/label', 'muted', { w: 64 });
+      add(row, kt);
+      add(row, await text(v2, 'mono/data', 'ink2'));
+      add(spec, row);
+    }
+    add(left, spec);
+    add(band, left);
+
+    // ---- right: live map
+    add(band, image('map', w - 2 * P - L - G, H - 2 * P, 'Live map · 303 regions', 20));
+    return band;
+  });
+}
+
 // ---------------------------------------------------------------- screens
 async function buildDesktop(page) {
   const W = 1440, C = W - 128;
@@ -1208,7 +1306,7 @@ async function buildDesktop(page) {
   page.appendChild(s);
   add(s, await ticker(W), { fill: true });
   add(s, await nav(W), { fill: true });
-  add(s, await heroPoster(W), { fill: true });
+  add(s, await consoleHero(W), { fill: true });
   add(s, await figureBand(W), { fill: true });
   add(s, await statsRow(W), { fill: true });
 
