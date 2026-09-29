@@ -64,6 +64,7 @@ export type MapVariable = 'rainfall' | 'tempMin' | 'tempMax' | 'wind';
 type StudioTab = 'spray' | 'insurance' | 'imd' | 'profile' | 'acoustic';
 
 const DEFAULT_ID = 'tamilnadu_thanjavur_6'; // Thiruvaiyaru, Cauvery delta
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ''; // '/panchayat-weather-downscaling' on GitHub Pages
 
 /** Climatological season for today, used when live data is unavailable. */
 function seasonForToday(now: Date | null): Exclude<Scenario, 'live'> {
@@ -272,6 +273,7 @@ export default function AeroAgroDashboard() {
               focusBlock={focusBlock}
             />
           }
+          today={{ panchayat: activePanchayat, fine, coarse, sprayWindow, pest, crop: selectedCrop, source: dataSource.kind }}
           below={
             <section id="map" className="night scroll-mt-16">
               <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
@@ -508,7 +510,7 @@ export default function AeroAgroDashboard() {
               forecast.
             </p>
           </div>
-          <nav className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3 lg:col-span-6 lg:col-start-7" aria-label="Footer">
+          <nav className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4 lg:col-span-7 lg:col-start-6" aria-label="Footer">
             {[
               ['Product', [['Your village', '#village'], ['All India', '#map'], ['Engine', '#engine'], ['Ask AeroAgro', '#ask'], ['Field tools', '#tools']]],
               [
@@ -519,6 +521,7 @@ export default function AeroAgroDashboard() {
                 ],
               ],
               ['Data', [['Open-Meteo', 'https://open-meteo.com'], ['Copernicus DEM', 'https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model'], ['IMD satellite', 'https://mausam.imd.gov.in']]],
+              ['Legal', [['Privacy policy', `${BASE}/privacy/`], ['Terms of use', `${BASE}/terms/`]]],
             ].map(([h, links]) => (
               <div key={h as string}>
                 <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">{h as string}</div>

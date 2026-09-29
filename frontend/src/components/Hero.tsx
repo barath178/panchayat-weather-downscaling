@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { LocateFixed, Loader2, ArrowDownRight } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import RegionSearch from './RegionSearch';
+import TodayMini, { TodayMiniProps } from './TodayMini';
 import ResolutionReveal from './ResolutionReveal';
 import { getPosition, nearestRegion } from '@/lib/geo';
 
@@ -14,6 +15,8 @@ interface HeroProps {
   map?: React.ReactNode;
   /** full-width strip under the console, e.g. the hazard scan */
   below?: React.ReactNode;
+  /** the selected village, answered next to the map */
+  today?: TodayMiniProps;
 }
 
 const EXAMPLES: [string, string][] = [
@@ -41,13 +44,12 @@ const SPEC: [string, string][] = [
   ['Refresh', 'Live · cached 30 min'],
 ];
 
-export default function Hero({ regions, onSelect, map, below }: HeroProps) {
+export default function Hero({ regions, onSelect, map, below, today }: HeroProps) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
   const goTo = (id: string) => {
     onSelect(id);
-    requestAnimationFrame(() => document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   const locate = async () => {
@@ -70,7 +72,7 @@ export default function Hero({ regions, onSelect, map, below }: HeroProps) {
         <div className="pointer-events-none absolute inset-0 blueprint" aria-hidden />
         <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:py-6">
           {/* Controls */}
-          <div className="flex min-w-0 flex-col gap-5">
+          <div className="flex min-w-0 flex-col gap-4 scrollbar-none lg:max-h-[calc(100vh-170px)] lg:min-h-[640px] lg:overflow-y-auto">
             <div>
               <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
                 <span>MoES · Block → Panchayat</span>
@@ -101,6 +103,8 @@ export default function Hero({ regions, onSelect, map, below }: HeroProps) {
                 ))}
               </div>
             </div>
+
+            {today && <TodayMini {...today} />}
 
             {/* Pipeline spec */}
             <div className="rounded-card border border-line/[0.1] bg-surface/80">
