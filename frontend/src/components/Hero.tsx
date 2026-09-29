@@ -10,6 +10,10 @@ import { getPosition, nearestRegion } from '@/lib/geo';
 interface HeroProps {
   regions: PanchayatData[];
   onSelect: (id: string) => void;
+  /** the live map, shown directly under the header */
+  map?: React.ReactNode;
+  /** full-width strip under the console, e.g. the hazard scan */
+  below?: React.ReactNode;
 }
 
 const EXAMPLES: [string, string][] = [
@@ -27,13 +31,23 @@ const STATS: [string, string, string][] = [
   ['₹0', 'running cost', 'free, keyless open data; runs in any browser'],
 ];
 
-export default function Hero({ regions, onSelect }: HeroProps) {
+// The pipeline in numbers: what goes in, what comes out, and the physics in between.
+const SPEC: [string, string][] = [
+  ['Input', 'NWP forecast · 11–25 km grid'],
+  ['Output', '1.2 km cells · 15 × 15 per block'],
+  ['Terrain', 'Copernicus GLO-90 DEM'],
+  ['Physics', 'Lapse · cold-air pool · orographic'],
+  ['Blend', 'Elevation-aware OI (gridpp)'],
+  ['Refresh', 'Live · cached 30 min'],
+];
+
+export default function Hero({ regions, onSelect, map, below }: HeroProps) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
   const goTo = (id: string) => {
     onSelect(id);
-    requestAnimationFrame(() => document.getElementById('village')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    requestAnimationFrame(() => document.getElementById('map')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   const locate = async () => {
@@ -51,43 +65,35 @@ export default function Hero({ regions, onSelect }: HeroProps) {
 
   return (
     <>
-      {/* Poster */}
-      <section className="grain topo-bg overflow-hidden">
-        <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-12 sm:px-8 lg:pb-24 lg:pt-20">
-          <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted animate-rise">
-            <span>MoES · Block → Panchayat downscaling</span>
-            <span className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-good animate-pulse-ring" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-good" />
-              </span>
-              Live for 303 regions
-            </span>
-          </div>
-
-          <h1 className="mt-10 font-display text-[clamp(52px,9vw,128px)] leading-[0.9] tracking-[-0.025em] text-ink animate-rise [animation-delay:80ms]">
-            Weather for your village,<br className="hidden md:block" /> <em className="marker">not your district.</em>
-          </h1>
-
-          <div className="mt-12 grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-end">
-            <p className="max-w-xl text-lg leading-relaxed text-ink2 animate-rise [animation-delay:160ms] lg:col-span-5 sm:text-xl">
-              AeroAgro takes the 18 km forecast every district receives and re-draws it at <span className="text-ink">1.2 km</span> from real terrain, then tells each
-              farmer exactly when to spray, water and protect their crop.
-            </p>
-
-            <div className="animate-rise [animation-delay:240ms] lg:col-span-6 lg:col-start-7">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex-1">
-                  <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
-                </div>
-                <button onClick={locate} disabled={locating} className="btn-primary h-14 px-6">
-                  {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
-                  Use my location
-                </button>
+      {/* Console: search and spec on the left, the live map on the right, both on the first screen */}
+      <section className="night relative border-b border-line/[0.08]" aria-label="Live map and search">
+        <div className="pointer-events-none absolute inset-0 blueprint" aria-hidden />
+        <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:py-6">
+          {/* Controls */}
+          <div className="flex min-w-0 flex-col gap-5">
+            <div>
+              <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+                <span>MoES · Block → Panchayat</span>
+                <span className="flex items-center gap-1.5 text-good">
+                  <span className="h-1.5 w-1.5 rounded-full bg-good" /> 303 regions
+                </span>
               </div>
-              {locError && <p className="mt-2 text-sm text-alert">{locError}</p>}
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                <span className="mr-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Try</span>
+              <h1 className="mt-3 font-display text-[40px] leading-[0.95] tracking-[-0.02em] text-ink">
+                Weather for your village, <em className="text-accent">not your district.</em>
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-ink2">
+                18 km forecasts re-computed on a <span className="text-ink">1.2 km</span> terrain grid, turned into spray, irrigation and crop-risk advice for each village.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
+              <button onClick={locate} disabled={locating} className="btn-primary h-12">
+                {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+                Use my location
+              </button>
+              {locError && <p className="text-sm text-alert">{locError}</p>}
+              <div className="flex flex-wrap gap-1.5">
                 {EXAMPLES.map(([label, id]) => (
                   <button key={id} onClick={() => goTo(id)} className="chip">
                     {label}
@@ -95,9 +101,33 @@ export default function Hero({ regions, onSelect }: HeroProps) {
                 ))}
               </div>
             </div>
+
+            {/* Pipeline spec */}
+            <div className="rounded-card border border-line/[0.1] bg-surface/80">
+              <div className="flex items-center justify-between border-b border-line/[0.08] px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+                <span>Pipeline spec</span>
+                <span className="text-accent">v1.0</span>
+              </div>
+              <dl className="divide-y divide-line/[0.06] font-mono text-[11.5px]">
+                {SPEC.map(([k, v]) => (
+                  <div key={k} className="grid grid-cols-[76px_1fr] gap-3 px-4 py-2">
+                    <dt className="uppercase tracking-[0.1em] text-muted">{k}</dt>
+                    <dd className="text-ink2">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="border-t border-line/[0.08] px-4 py-2.5 font-mono text-[11.5px] text-ink2">
+                T<sub>1.2</sub> = T<sub>18</sub> − Γ·Δz + ΔT<sub>pool</sub> + ΔT<sub>slope</sub>
+              </div>
+            </div>
           </div>
+
+          {/* Live map */}
+          <div className="min-w-0">{map}</div>
         </div>
       </section>
+
+      {below}
 
       {/* Figure band */}
       <section className="night relative overflow-hidden" aria-label="Resolution comparison">

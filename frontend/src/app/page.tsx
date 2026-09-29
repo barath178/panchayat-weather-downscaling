@@ -253,7 +253,32 @@ export default function AeroAgroDashboard() {
         onSelectRegion={selectRegion}
       />
 
-      {activeView === 'dashboard' && <Hero regions={ALL_INDIA_PANCHAYATS} onSelect={setSelectedId} />}
+      {activeView === 'dashboard' && (
+        <Hero
+          regions={ALL_INDIA_PANCHAYATS}
+          onSelect={setSelectedId}
+          map={
+            <GoogleMapComponent
+              panchayats={ALL_INDIA_PANCHAYATS}
+              selectedId={selectedId}
+              onSelectPanchayat={setSelectedId}
+              activeVariable={activeVar}
+              onVariableChange={setActiveVar}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              regionMetrics={regionMetrics}
+              liveLoading={isLive && nationalStatus === 'loading'}
+              blockField={blockField}
+              focusBlock={focusBlock}
+            />
+          }
+          below={
+            <section id="map" className="night scroll-mt-16">
+              <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
+            </section>
+          }
+        />
+      )}
 
       {activeView === 'mobile' && (
         <div className="night topo-bg flex-1">
@@ -306,38 +331,6 @@ export default function AeroAgroDashboard() {
             </div>
             <div className="mt-6">
               <WeekForecast panchayat={activePanchayat} week={week} isLive={liveOk} onOpenBulletin={() => setShowBulletin(true)} />
-            </div>
-          </section>
-
-          {/* (02) All India: night */}
-          <section id="map" className="night scroll-mt-16">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
-              <Reveal>
-                <SectionHead
-                  index="02"
-                  kicker="All India"
-                  title={
-                    <>
-                      303 regions, <em className="text-accent">one glance.</em>
-                    </>
-                  }
-                  meta="Every dot is downscaled live. The AI scan flags hazards the district forecast misses. Tap a tile to jump to the worst-hit village."
-                />
-              </Reveal>
-              <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
-              <GoogleMapComponent
-                panchayats={ALL_INDIA_PANCHAYATS}
-                selectedId={selectedId}
-                onSelectPanchayat={setSelectedId}
-                activeVariable={activeVar}
-                onVariableChange={setActiveVar}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                regionMetrics={regionMetrics}
-                liveLoading={isLive && nationalStatus === 'loading'}
-                blockField={blockField}
-                focusBlock={focusBlock}
-              />
             </div>
           </section>
 
