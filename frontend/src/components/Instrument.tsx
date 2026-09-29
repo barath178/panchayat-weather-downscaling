@@ -20,16 +20,16 @@ export function SectionHead({
   id?: string;
 }) {
   return (
-    <div className="mb-10 grid grid-cols-1 gap-6 border-t border-line/[0.16] pt-6 lg:grid-cols-12 lg:items-end">
-      <div className="lg:col-span-8">
-        <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-          {index} <span className="mx-1.5 text-line/40">/</span> {kicker}
+    <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+      <div>
+        <div className="flex items-center gap-2 text-xs font-medium text-accent">
+          <span className="rounded bg-accent/10 px-1.5 py-0.5 font-mono">{index}</span> {kicker}
         </div>
-        <h2 id={id} className="mt-4 font-display text-[44px] leading-[0.95] tracking-[-0.015em] text-ink sm:text-6xl lg:text-7xl">
+        <h2 id={id} className="mt-2.5 text-[28px] font-semibold leading-tight tracking-[-0.025em] text-ink sm:text-[32px]">
           {title}
         </h2>
       </div>
-      {meta && <p className="max-w-sm text-[15px] leading-relaxed text-ink2 lg:col-span-4 lg:justify-self-end">{meta}</p>}
+      {meta && <p className="max-w-md text-sm leading-relaxed text-muted lg:text-right">{meta}</p>}
     </div>
   );
 }

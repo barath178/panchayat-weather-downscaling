@@ -8,11 +8,11 @@ import { Home, Map, Cpu, Sparkles, Wrench } from 'lucide-react';
 
 // `spy` is the element watched for the active state when the link target (`id`) is smaller than its section.
 export const SECTIONS: { id: string; spy?: string; label: string; short: string; icon: React.ElementType }[] = [
-  { id: 'village', label: 'Village', short: 'Today', icon: Home },
-  { id: 'map', label: 'All India', short: 'Map', icon: Map },
-  { id: 'engine', label: 'Engine', short: 'Engine', icon: Cpu },
-  { id: 'ask', spy: 'reach', label: 'Ask', short: 'Ask', icon: Sparkles },
-  { id: 'tools', label: 'Tools', short: 'Tools', icon: Wrench },
+  { id: 'village', label: 'Village forecast', short: 'Today', icon: Home },
+  { id: 'map', label: 'All-India map', short: 'Map', icon: Map },
+  { id: 'engine', label: 'Downscaling engine', short: 'Engine', icon: Cpu },
+  { id: 'ask', spy: 'reach', label: 'Ask and share', short: 'Ask', icon: Sparkles },
+  { id: 'tools', label: 'Field tools', short: 'Tools', icon: Wrench },
 ];
 
 /** Id of the section that currently spans the upper third of the viewport, or null above the first one. */
@@ -53,9 +53,9 @@ export function MobileTabBar({ active }: { active: string | null }) {
               <a
                 href={`#${id}`}
                 aria-current={on ? 'location' : undefined}
-                className={`flex flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] font-medium transition-colors ${on ? 'text-ink' : 'text-muted'}`}
+                className={`flex flex-col items-center gap-1 pb-2 pt-2.5 text-[11px] font-medium transition-colors ${on ? 'text-accent' : 'text-muted'}`}
               >
-                <span className={`grid h-7 w-12 place-items-center rounded-md transition-colors ${on ? 'bg-btn text-btn-ink' : ''}`}>
+                <span className={`grid h-7 w-12 place-items-center rounded-md transition-colors ${on ? 'bg-accent/15' : ''}`}>
                   <Icon className="h-[18px] w-[18px]" />
                 </span>
                 {short}

@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { Instrument_Serif, Inter_Tight, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { CSP_META } from '@/lib/security';
 
-// "Monsoon Almanac" type system: poster serif for the story, tight grotesk for reading, mono for measured numbers.
-const display = Instrument_Serif({ subsets: ['latin'], weight: '400', style: ['normal', 'italic'], variable: '--font-display', display: 'swap' });
-const sans = Inter_Tight({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
-const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
+// "Field Console" type system: one grotesk for UI and headlines (headlines set heavier and tighter),
+// a matching mono for measured numbers. Hindi and Tamil fall back to the system's Noto fonts.
+const sans = Geist({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const mono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'AeroAgro AI · Village weather at 1.2 km',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F3EFE6',
+  themeColor: '#070B0E',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover', // lets the mobile tab bar pad for the home indicator
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <head>
         {/* Same policy as the vercel.json header, for hosts that cannot send headers (GitHub Pages). Dev needs eval for HMR. */}
         {process.env.NODE_ENV === 'production' && <meta httpEquiv="Content-Security-Policy" content={CSP_META} />}

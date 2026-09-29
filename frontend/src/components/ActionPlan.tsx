@@ -60,7 +60,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
   return (
     <section className="card h-full p-6 sm:p-7" aria-labelledby="plan-title">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="plan-title" className="font-display text-4xl leading-none text-ink">
+        <h2 id="plan-title" className="text-xl font-semibold tracking-tight text-ink">
           What to do today
         </h2>
         <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">ICAR agromet rules</span>
@@ -76,7 +76,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
 
       <div className="mt-4 space-y-3">
         <Tile icon={SprayCan} title="Spraying" verdict={v.spray.verdict} tone={v.spray.tone}>
-          <p className="font-display text-3xl leading-tight text-ink">{sprayWindow.hours ? sprayWindow.label : 'No safe window'}</p>
+          <p className="text-2xl font-semibold tracking-tight text-ink tabular">{sprayWindow.hours ? sprayWindow.label : 'No safe window'}</p>
           <div className="mt-2.5 flex gap-[3px]" aria-hidden>
             {hourly.map((h) => (
               <span key={h.time} className={`h-2 flex-1 rounded-full ${HOUR_COLOR[h.status]}`} title={`${h.time} · ${h.reason}`} />
@@ -96,7 +96,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
         </Tile>
 
         <Tile icon={ShieldCheck} title={`Crop health · ${crop}`} verdict={v.crop.verdict} tone={v.crop.tone}>
-          <p className="font-display text-2xl leading-tight text-ink">{pest.title}</p>
+          <p className="text-base font-semibold text-ink">{pest.title}</p>
           <p className="mt-1 text-sm leading-relaxed text-ink2">{pest.detail}</p>
         </Tile>
       </div>

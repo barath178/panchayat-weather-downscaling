@@ -1,55 +1,46 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LocateFixed, Loader2, ArrowDownRight } from 'lucide-react';
+import { LocateFixed, Loader2, Mountain, Grid3x3, CalendarDays, Languages } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import RegionSearch from './RegionSearch';
 import ResolutionReveal from './ResolutionReveal';
-import TodayGlance, { GlanceData } from './TodayGlance';
+import VillageConsole, { ConsoleData } from './VillageConsole';
 import { getPosition, nearestRegion } from '@/lib/geo';
 
 interface HeroProps {
   regions: PanchayatData[];
   onSelect: (id: string) => void;
-  glance: GlanceData;
+  console: ConsoleData;
 }
 
 const EXAMPLES: [string, string][] = [
+  ['Munnar tea', 'kerala_idukki_227'],
   ['Ooty', 'tamilnadu_thenilgiris_7'],
-  ['Munnar', 'kerala_idukki_227'],
   ['Kotgarh apples', 'himachalpradeshjkuttarakhand_shimla_260'],
   ['Jaisalmer', 'rajasthan_jaisalmer_203'],
   ['Cauvery delta', 'tamilnadu_thanjavur_6'],
 ];
 
-// Every figure here is a property of the software, not a usage claim: count them in the code.
-const STATS: [string, string, string][] = [
-  ['303', 'regions', 'districts, metros and hill panchayats in the dataset'],
-  ['15×', 'finer grid', '18 km forecast blocks split into 1.2 km cells'],
-  ['3', 'languages', 'English, हिन्दी and தமிழ், with read-aloud'],
-  ['0', 'API keys', 'uses open data from Open-Meteo and Copernicus'],
+// Every figure is a property of the software you can count in the code, not a usage claim.
+const FACTS: [React.ElementType, string, string][] = [
+  [Mountain, '303', 'regions across India'],
+  [Grid3x3, '225', '1.2 km cells per 18 km block'],
+  [CalendarDays, '7-day', 'village outlook'],
+  [Languages, '3', 'languages, read aloud'],
 ];
 
-const SOURCE_LINE: Record<GlanceData['source'], [string, string]> = {
-  live: ['Live Open-Meteo forecast', 'bg-good'],
-  loading: ['Fetching forecast', 'bg-warn'],
-  offline: ['Offline: seasonal averages', 'bg-alert'],
-  scenario: ['Simulated scenario', 'bg-sky'],
-};
-
-export default function Hero({ regions, onSelect, glance }: HeroProps) {
+/** Overview: the pitch and the live product side by side, then the worked example. */
+export default function Hero({ regions, onSelect, console: data }: HeroProps) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
-
-  // Picking a place answers in the glance card right here; "Full forecast" takes the reader down.
-  const goTo = (id: string) => onSelect(id);
 
   const locate = async () => {
     setLocating(true);
     setLocError(null);
     try {
       const pos = await getPosition();
-      goTo(nearestRegion(regions, pos.coords.latitude, pos.coords.longitude).region.id);
+      onSelect(nearestRegion(regions, pos.coords.latitude, pos.coords.longitude).region.id);
     } catch (e: any) {
       setLocError(e?.code === 1 ? 'Location permission was denied.' : 'Could not get your location.');
     } finally {
@@ -58,82 +49,64 @@ export default function Hero({ regions, onSelect, glance }: HeroProps) {
   };
 
   return (
-    <>
-      {/* Poster */}
-      <section className="grain topo-bg overflow-hidden">
-        <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-12 sm:px-8 lg:pb-24 lg:pt-20">
-          <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
-            <span>MoES · Block → Panchayat downscaling</span>
-            <span className="flex items-center gap-2">
-              <span className={`inline-flex h-2 w-2 rounded-full ${SOURCE_LINE[glance.source][1]}`} />
-              {SOURCE_LINE[glance.source][0]}
-            </span>
+    <section id="overview" aria-labelledby="overview-title" className="mx-auto max-w-[1400px] px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+        {/* Pitch */}
+        <div className="topo-bg card relative flex flex-col overflow-hidden p-6 sm:p-8 xl:col-span-7 xl:p-10">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 font-medium text-accent">MoES problem statement</span>
+            <span className="rounded-md border border-line/[0.12] px-2.5 py-1 text-ink2">Block → Gram Panchayat downscaling</span>
           </div>
 
-          <h1 className="mt-10 font-display text-[clamp(48px,8vw,112px)] leading-[0.92] tracking-[-0.025em] text-ink">
-            Village weather at 1.2&nbsp;km.<br className="hidden md:block" /> <em className="marker">District forecasts stop at 18&nbsp;km.</em>
+          <h1 id="overview-title" className="mt-6 max-w-[16ch] text-[40px] font-semibold leading-[1.02] tracking-[-0.035em] text-ink sm:text-5xl xl:text-[58px]">
+            Weather advice for every Gram Panchayat, <span className="text-accent">at 1.2&nbsp;km.</span>
           </h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-ink2 sm:text-lg">
+            District forecasts give one number for an 18&nbsp;km square. AeroAgro recalculates it for 1.2&nbsp;km cells from elevation data, then tells each village when to
+            spray, whether to irrigate and which crop disease to watch.
+          </p>
 
-          <div className="mt-10 grid grid-cols-1 gap-8 lg:mt-12 lg:grid-cols-12 lg:items-end lg:gap-10">
-            <p className="order-3 max-w-xl text-lg leading-relaxed text-ink2 lg:order-none lg:col-span-5 sm:text-xl">
-              AeroAgro recalculates the district forecast for <span className="text-ink">1.2 km</span> cells using elevation data. For today it gives each village a spray
-              window, an irrigation call and a crop-disease check.
-            </p>
-
-            <div className="order-1 lg:order-none lg:col-span-6 lg:col-start-7">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="flex-1">
-                  <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
-                </div>
-                <button onClick={locate} disabled={locating} className="btn-primary h-14 px-6">
-                  {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
-                  Use my location
-                </button>
-              </div>
-              {locError && <p className="mt-2 text-sm text-alert">{locError}</p>}
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-                <span className="mr-1 font-mono text-[11px] uppercase tracking-[0.16em] text-muted">Try</span>
-                {EXAMPLES.map(([label, id]) => (
-                  <button key={id} onClick={() => goTo(id)} aria-pressed={glance.panchayat.id === id} className={`chip ${glance.panchayat.id === id ? 'chip-on' : ''}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <RegionSearch regions={regions} onSelect={onSelect} size="lg" placeholder="Search a village, district or crop" />
             </div>
-
-            <div className="order-2 lg:order-none lg:col-span-12">
-              <TodayGlance {...glance} />
-            </div>
+            <button onClick={locate} disabled={locating} className="btn-primary h-14 px-6">
+              {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+              Use my location
+            </button>
           </div>
-        </div>
-      </section>
+          {locError && <p className="mt-2 text-sm text-alert">{locError}</p>}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs text-muted">Try</span>
+            {EXAMPLES.map(([label, id]) => (
+              <button key={id} onClick={() => onSelect(id)} aria-pressed={data.panchayat.id === id} className={`chip ${data.panchayat.id === id ? 'chip-on' : ''}`}>
+                {label}
+              </button>
+            ))}
+          </div>
 
-      {/* Figure band */}
-      <section className="night relative overflow-hidden" aria-label="Resolution comparison">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_80%_0%,rgb(212_242_90/0.08),transparent_70%)]" aria-hidden />
-        <div className="relative mx-auto max-w-[1320px] px-5 py-16 sm:px-8 lg:py-24">
-          <ResolutionReveal />
+          <div className="min-h-10 flex-1" aria-hidden />
+          <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line/[0.08] bg-line/[0.08] sm:grid-cols-4" aria-label="Key facts">
+            {FACTS.map(([Icon, v, k]) => (
+              <li key={k} className="bg-surface/90 p-4">
+                <Icon className="h-4 w-4 text-accent" aria-hidden />
+                <div className="mt-3 text-2xl font-semibold tracking-tight text-ink tabular">{v}</div>
+                <div className="mt-0.5 text-xs leading-snug text-muted">{k}</div>
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
 
-      {/* Numbers */}
-      <section className="border-b border-line/[0.14]">
-        <dl className="mx-auto grid max-w-[1320px] grid-cols-2 px-5 sm:px-8 lg:grid-cols-4">
-          {STATS.map(([v, k, d], i) => (
-            <div key={k} className={`py-10 pr-6 ${i ? 'lg:border-l lg:border-line/[0.14] lg:pl-8' : ''} ${i % 2 ? 'border-l border-line/[0.14] pl-6 lg:pl-8' : ''}`}>
-              <dt className="sr-only">{k}</dt>
-              <dd className="font-display text-6xl leading-none text-ink sm:text-7xl">{v}</dd>
-              <dd className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink">{k}</dd>
-              <dd className="mt-1 max-w-[26ch] text-sm leading-relaxed text-muted">{d}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="flex justify-center pb-8">
-          <a href="#village" className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted transition-colors hover:text-ink">
-            Open your village <ArrowDownRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" />
-          </a>
+        {/* Live product */}
+        <div className="xl:col-span-5">
+          <VillageConsole {...data} />
         </div>
-      </section>
-    </>
+      </div>
+
+      {/* Worked example */}
+      <div className="card mt-5 p-5 sm:p-8">
+        <ResolutionReveal />
+      </div>
+    </section>
   );
 }
