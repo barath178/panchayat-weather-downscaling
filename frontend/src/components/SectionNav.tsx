@@ -8,8 +8,8 @@ import { Home, Map, Cpu, Sparkles, Wrench } from 'lucide-react';
 
 // `spy` is the element watched for the active state when the link target (`id`) is smaller than its section.
 export const SECTIONS: { id: string; spy?: string; label: string; short: string; icon: React.ElementType }[] = [
-  { id: 'village', label: 'Village forecast', short: 'Today', icon: Home },
   { id: 'map', label: 'All-India map', short: 'Map', icon: Map },
+  { id: 'village', label: 'Village forecast', short: 'Today', icon: Home },
   { id: 'engine', label: 'Downscaling engine', short: 'Engine', icon: Cpu },
   { id: 'ask', spy: 'reach', label: 'Ask and share', short: 'Ask', icon: Sparkles },
   { id: 'tools', label: 'Field tools', short: 'Tools', icon: Wrench },

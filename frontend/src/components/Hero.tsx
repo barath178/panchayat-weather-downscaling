@@ -49,7 +49,7 @@ export default function Hero({ regions, onSelect, console: data }: HeroProps) {
   };
 
   return (
-    <section id="overview" aria-labelledby="overview-title" className="mx-auto max-w-[1400px] px-4 pb-12 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+    <section id="overview" aria-labelledby="overview-title" className="mx-auto max-w-[1400px] px-4 py-10 sm:px-6 lg:px-8 border-t border-line/[0.06]">
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         {/* Pitch */}
         <div className="topo-bg card relative flex flex-col overflow-hidden p-6 sm:p-8 xl:col-span-7 xl:p-10">
@@ -58,10 +58,10 @@ export default function Hero({ regions, onSelect, console: data }: HeroProps) {
             <span className="rounded-md border border-line/[0.12] px-2.5 py-1 text-ink2">Block → Gram Panchayat downscaling</span>
           </div>
 
-          <h1 id="overview-title" className="mt-6 max-w-[16ch] text-[40px] font-semibold leading-[1.02] tracking-[-0.035em] text-ink sm:text-5xl xl:text-[58px]">
+          <h1 id="overview-title" className="mt-6 max-w-[22ch] text-3xl font-semibold leading-[1.1] tracking-[-0.03em] text-ink sm:text-4xl">
             Weather advice for every Gram Panchayat, <span className="text-accent">at 1.2&nbsp;km.</span>
           </h1>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-ink2 sm:text-lg">
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-ink2">
             District forecasts give one number for an 18&nbsp;km square. AeroAgro recalculates it for 1.2&nbsp;km cells from elevation data, then tells each village when to
             spray, whether to irrigate and which crop disease to watch.
           </p>

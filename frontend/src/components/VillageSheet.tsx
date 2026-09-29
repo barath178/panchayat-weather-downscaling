@@ -47,7 +47,7 @@ export default function VillageSheet({ panchayat: p, coarse, fine, coarseElevati
         </span>
       </div>
 
-      <h3 id="village-name" className="mt-4 text-3xl font-semibold leading-tight tracking-[-0.025em] text-ink sm:text-4xl">
+      <h3 id="village-name" className="mt-4 text-2xl font-semibold leading-tight tracking-[-0.02em] text-ink">
         {p.name}
       </h3>
       <p className="mt-3 text-[15px] text-ink2">
@@ -60,7 +60,7 @@ export default function VillageSheet({ panchayat: p, coarse, fine, coarseElevati
 
       {/* the numbers */}
       <div className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4">
-        <div className="text-[clamp(72px,8vw,112px)] font-semibold leading-[0.85] tracking-[-0.05em] tabular text-ink">{Math.round(fine.tempMax)}°</div>
+        <div className="text-[clamp(56px,6vw,80px)] font-semibold leading-[0.85] tracking-[-0.05em] tabular text-ink">{Math.round(fine.tempMax)}°</div>
         <div className="pb-2">
           <div className="text-4xl font-medium leading-none tracking-tight text-muted tabular">{Math.round(fine.tempMin)}°</div>
           <div className="mt-2 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">night low</div>

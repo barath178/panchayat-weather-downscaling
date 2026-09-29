@@ -77,7 +77,7 @@ export default function AlertScan({ regions, regionMetrics, selectedId, onSelect
   };
 
   return (
-    <section className="mb-6" aria-labelledby="scan-title">
+    <section aria-labelledby="scan-title">
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/[0.1] bg-line/[0.1] sm:grid-cols-4 xl:grid-cols-8">
         <div className="col-span-2 flex items-center gap-3 bg-surface p-4 sm:col-span-4 xl:col-span-1 xl:flex-col xl:items-start xl:justify-between">
           <span className="grid h-10 w-10 place-items-center rounded-lg bg-accent/10">
@@ -109,7 +109,7 @@ export default function AlertScan({ regions, regionMetrics, selectedId, onSelect
                 <I className={`h-3.5 w-3.5 shrink-0 ${count ? rule.tone : ''}`} />
                 <span className="truncate">{rule.label}</span>
               </span>
-              <span className={`font-display text-5xl leading-none tabular ${count ? 'text-ink' : 'text-muted/50'}`}>{count}</span>
+              <span className={`text-3xl font-semibold tracking-tight tabular leading-none tabular ${count ? 'text-ink' : 'text-muted/50'}`}>{count}</span>
               <span className="block min-w-0 truncate text-[11px] text-muted group-hover:text-ink2">{worst && m ? `${worst.name} · ${rule.fmt(m)}` : 'none today'}</span>
             </button>
           );
@@ -124,7 +124,7 @@ export default function AlertScan({ regions, regionMetrics, selectedId, onSelect
           <span className="flex items-center gap-1.5 text-xs text-sun">
             <EyeOff className="h-3.5 w-3.5" /> Missed
           </span>
-          <span className="font-display text-5xl leading-none text-ink tabular">{scan.missed}</span>
+          <span className="text-3xl font-semibold tracking-tight tabular leading-none text-ink tabular">{scan.missed}</span>
           <span className="text-[11px] leading-snug text-ink2">alerts the district forecast misses</span>
         </button>
       </div>

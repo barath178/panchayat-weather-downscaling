@@ -166,9 +166,7 @@ export function Sidebar({
 
       <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3">
         <div className="kicker px-3 pb-2 pt-3">Dashboard</div>
-        <button onClick={() => go('top')} className={item(activeView === 'dashboard' && !activeSection)}>
-          <LayoutDashboard className="h-4 w-4" /> Overview
-        </button>
+
         {SECTIONS.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => go(id)} aria-current={activeView === 'dashboard' && activeSection === id ? 'location' : undefined} className={item(activeView === 'dashboard' && activeSection === id)}>
             <Icon className="h-4 w-4" /> {label}

@@ -279,6 +279,31 @@ export default function AeroAgroDashboard() {
 
         {activeView === 'dashboard' && (
           <main id="dashboard" className="flex-1">
+            <Section id="map" first>
+              <SectionHead
+                index="01"
+                kicker="All-India map"
+                title="Hazards across 303 regions"
+                meta="Each dot shows today's 1.2 km value. The hazard scan counts regions past a rain, frost, heat, wind or humidity threshold, including those the 18 km forecast misses."
+              />
+              <GoogleMapComponent
+                panchayats={ALL_INDIA_PANCHAYATS}
+                selectedId={selectedId}
+                onSelectPanchayat={setSelectedId}
+                activeVariable={activeVar}
+                onVariableChange={setActiveVar}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                regionMetrics={regionMetrics}
+                liveLoading={isLive && nationalStatus === 'loading'}
+                blockField={blockField}
+                focusBlock={focusBlock}
+              />
+              <div className="mt-5">
+              <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
+              </div>
+            </Section>
+
             <Hero
               regions={ALL_INDIA_PANCHAYATS}
               onSelect={setSelectedId}
@@ -287,7 +312,7 @@ export default function AeroAgroDashboard() {
 
             <Section id="village">
               <SectionHead
-                index="01"
+                index="02"
                 kicker="Village forecast"
                 title={`Today and the week ahead in ${activePanchayat.name}`}
                 meta="Every number here is recomputed for this exact place, then turned into spray, irrigation and crop-protection advice."
@@ -312,29 +337,6 @@ export default function AeroAgroDashboard() {
               <div className="mt-5">
                 <WeekForecast panchayat={activePanchayat} week={week} isLive={liveOk} onOpenBulletin={() => setShowBulletin(true)} />
               </div>
-            </Section>
-
-            <Section id="map">
-              <SectionHead
-                index="02"
-                kicker="All-India map"
-                title="Hazards across 303 regions"
-                meta="Each dot shows today's 1.2 km value. The hazard scan counts regions past a rain, frost, heat, wind or humidity threshold, including those the 18 km forecast misses."
-              />
-              <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
-              <GoogleMapComponent
-                panchayats={ALL_INDIA_PANCHAYATS}
-                selectedId={selectedId}
-                onSelectPanchayat={setSelectedId}
-                activeVariable={activeVar}
-                onVariableChange={setActiveVar}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                regionMetrics={regionMetrics}
-                liveLoading={isLive && nationalStatus === 'loading'}
-                blockField={blockField}
-                focusBlock={focusBlock}
-              />
             </Section>
 
             <Section id="engine" labelledBy="engine-title">
@@ -500,10 +502,10 @@ export default function AeroAgroDashboard() {
 }
 
 /** Dashboard band: hairline on top, shared width and rhythm. */
-function Section({ id, labelledBy, children }: { id: string; labelledBy?: string; children: React.ReactNode }) {
+function Section({ id, labelledBy, first, children }: { id: string; labelledBy?: string; first?: boolean; children: React.ReactNode }) {
   return (
-    <section id={id} aria-labelledby={labelledBy} className="scroll-mt-20 border-t border-line/[0.06]">
-      <div className="mx-auto max-w-[1400px] px-4 py-12 sm:px-6 lg:px-8">{children}</div>
+    <section id={id} aria-labelledby={labelledBy} className={`scroll-mt-20 ${first ? '' : 'border-t border-line/[0.06]'}`}>
+      <div className={`mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 ${first ? 'pb-10 pt-6' : 'py-10'}`}>{children}</div>
     </section>
   );
 }

@@ -63,7 +63,7 @@ export default function VillageConsole({ panchayat: p, fine, coarse, hourly, spr
         {/* Temperature */}
         <div className="flex items-end justify-between gap-4 px-5 pt-5">
           <div className="flex items-end gap-3">
-            <span className="text-6xl font-semibold leading-[0.85] tracking-[-0.04em] text-ink tabular">{Math.round(fine.tempMax)}°</span>
+            <span className="text-5xl font-semibold leading-[0.85] tracking-[-0.04em] text-ink tabular">{Math.round(fine.tempMax)}°</span>
             <span className="pb-1 text-2xl font-medium tracking-tight text-muted tabular">/ {Math.round(fine.tempMin)}°</span>
           </div>
           <div className="pb-1 text-right text-xs text-muted">

@@ -249,7 +249,7 @@ export default function ResolutionReveal() {
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Fig. 1 · Worked example: night minimum, six district blocks</div>
-          <figcaption className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
+          <figcaption className="mt-2 text-xl font-semibold leading-tight tracking-tight text-ink sm:text-2xl">
             The same night, <em className="text-accent">at two resolutions.</em>
           </figcaption>
         </div>
@@ -359,7 +359,7 @@ export default function ResolutionReveal() {
           [`${deg(cold.t)} °C`, 'What the farmer needed to know', `${stats.frost} cells fall to frost range in hollows the district number averages away.`],
         ].map(([big, k, v], i) => (
           <div key={k}>
-            <div className={`font-display text-4xl ${i === 2 ? 'text-frost' : i === 1 ? 'text-accent' : 'text-sun'}`}>{big}</div>
+            <div className={`text-2xl font-semibold tracking-tight ${i === 2 ? 'text-frost' : i === 1 ? 'text-accent' : 'text-sun'}`}>{big}</div>
             <div className="mt-1 text-sm font-semibold text-ink">{k}</div>
             <p className="mt-1 text-sm leading-relaxed text-ink2">{v}</p>
           </div>
