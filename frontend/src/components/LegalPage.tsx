@@ -24,7 +24,7 @@ export default function LegalPage({ title, intro, children }: { title: string; i
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-5 py-14 sm:px-8 lg:py-20">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Last updated {LEGAL_UPDATED}</p>
+        <p className="text-xs font-medium text-muted">Last updated {LEGAL_UPDATED}</p>
         <h1 className="mt-4 font-display text-6xl leading-none text-ink">{title}</h1>
         <p className="mt-6 text-lg leading-relaxed text-ink2">{intro}</p>
         <div className="legal mt-12">{children}</div>

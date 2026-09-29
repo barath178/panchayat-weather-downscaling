@@ -163,10 +163,8 @@ export function Sidebar({
 
   return (
     <aside className="fixed inset-y-0 left-0 z-[1100] hidden w-16 flex-col items-center border-r border-line/[0.08] bg-surface/70 py-4 backdrop-blur-xl lg:flex">
-      <a href="#top" aria-label="AeroAgro home">
-        <Logo className="h-9 w-9" />
-      </a>
-      <nav aria-label="Sections" className="mt-6 flex flex-1 flex-col items-center gap-1.5">
+
+      <nav aria-label="Sections" className="mt-14 flex flex-1 flex-col items-center gap-1.5">
         {SECTIONS.map(({ id, label, icon: Icon }) => {
           const on = activeView === 'dashboard' && activeSection === id;
           return (

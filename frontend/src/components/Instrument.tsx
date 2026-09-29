@@ -103,7 +103,7 @@ export function TelemetryStrip({ t }: { t: Telemetry }) {
     ['Coverage', `${t.regions} regions`],
   ];
   return (
-    <div className="night relative flex items-center overflow-hidden bg-[#0B110E] font-mono text-[10.5px] uppercase tracking-[0.12em]">
+    <div className="night relative flex items-center overflow-hidden bg-[#0B110E] text-xs font-medium">
       <span className="relative z-10 flex shrink-0 items-center gap-1.5 bg-[#0B110E] py-2 pl-4 pr-4 font-semibold text-white sm:pl-8">
         <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
       </span>

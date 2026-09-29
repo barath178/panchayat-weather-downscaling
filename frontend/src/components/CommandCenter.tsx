@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Bug, Droplets, SprayCan, Send, Copy, Check, MapPin } from 'lucide-react';
+import { Bug, Droplets, SprayCan, Send, Copy, Check, ArrowRight } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import type { DownscaleDetail, PestRisk, SprayWindow, WeatherMetrics } from '@/lib/microclimate';
 import { haversineKm } from '@/lib/geo';
@@ -28,180 +28,165 @@ interface Props {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const sgn = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(r1(n))}`;
 
-function Panel({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+/** One quiet surface. Structure comes from spacing and type, not from nested borders. */
+function Card({ title, aside, children, className = '' }: { title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-xl border border-line/[0.08] bg-surface p-4 ${className}`}>
-      <h3 className="kicker mb-3">{title}</h3>
+    <section className={`card p-5 ${className}`}>
+      <div className="mb-4 flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        {aside && <span className="text-xs text-muted">{aside}</span>}
+      </div>
       {children}
     </section>
   );
 }
 
-/** Block value next to panchayat value, the panchayat side highlighted. */
-function Pair({ label, block, village }: { label: string; block: string; village: string }) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="rounded-lg border border-line/[0.08] bg-surface2/60 px-3 py-2">
-        <div className="text-[10.5px] text-muted">Block {label}</div>
-        <div className="mt-0.5 text-sm font-semibold text-ink2 tabular">{block}</div>
-      </div>
-      <div className="rounded-lg border border-accent/30 bg-accent/[0.07] px-3 py-2">
-        <div className="text-[10.5px] text-accent/80">Panchayat {label}</div>
-        <div className="mt-0.5 text-sm font-semibold text-accent tabular">{village}</div>
-      </div>
-    </div>
-  );
-}
-
 /**
- * First-screen command centre: block-vs-panchayat numbers and the equation on the left,
- * the live map in the middle, risks and the WhatsApp dispatcher on the right.
+ * First-screen command centre: what changed and why on the left, the map in the middle,
+ * what to do and how to tell the village on the right.
  */
 export default function CommandCenter(props: Props) {
   const { regions, panchayat: p, coarse, fine, detail, coarseElevationM, sprayWindow, irrigation, pest, et0, crop, advisoryText, onSelect, map } = props;
   const [copied, setCopied] = useState(false);
   const v = verdicts(sprayWindow, irrigation, pest);
 
-  // Nearby panchayats in the same state, nearest first
   const nearby = useMemo(
     () =>
       regions
-        .filter((r) => r.state === p.state)
+        .filter((r) => r.state === p.state && r.id !== p.id)
         .map((r) => ({ r, km: haversineKm(p.lat, p.lng, r.lat, r.lng) }))
         .sort((a, b) => a.km - b.km)
-        .slice(0, 8),
+        .slice(0, 6),
     [regions, p]
   );
 
-  const tSum = detail.tmin.reduce((s, x) => s + x.value, 0);
+  const rows = [
+    { k: 'Night low', c: coarse.tempMin, f: fine.tempMin, u: '°C' },
+    { k: 'Day high', c: coarse.tempMax, f: fine.tempMax, u: '°C' },
+    { k: 'Rain', c: coarse.rainfallMm, f: fine.rainfallMm, u: 'mm' },
+    { k: 'Wind', c: coarse.windSpeedKmh, f: fine.windSpeedKmh, u: 'km/h' },
+  ];
+
+  const actions = [
+    { icon: SprayCan, title: 'Spray', ...v.spray, body: sprayWindow.hours ? `${sprayWindow.label}, wind under 15 km/h` : 'No safe hour today' },
+    { icon: Droplets, title: 'Irrigation', ...v.water, body: `${irrigation.deficit > 0 ? `${irrigation.deficit} mm short` : 'Rain covers demand'} · ET₀ ${et0} mm` },
+    { icon: Bug, title: crop, ...v.crop, body: pest.title.replace(/\s*\(.*\)$/, '') },
+  ];
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(advisoryText);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard blocked: nothing to do */
+      /* clipboard blocked */
     }
   };
 
-  const risks = [
-    { icon: Bug, title: pest.title.replace(/\s*\(.*\)$/, ''), tag: v.crop.verdict, tone: v.crop.tone, body: pest.detail },
-    { icon: Droplets, title: 'Irrigation', tag: v.water.verdict, tone: v.water.tone, body: `${irrigation.detail} Crop water demand (ET₀): ${et0} mm/day.` },
-    {
-      icon: SprayCan,
-      title: 'Spray window',
-      tag: v.spray.verdict,
-      tone: v.spray.tone,
-      body: sprayWindow.hours ? `Safe to spray ${sprayWindow.label} (${sprayWindow.hours} h): wind below 15 km/h and no rain within 2 h.` : 'No safe hour today. Hold all sprays.',
-    },
-  ];
-
   return (
-    <div className="grid grid-cols-1 gap-4 xl:h-[calc(100vh-7rem)] xl:min-h-[640px] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
-      {/* Left: the numbers */}
-      <div className="flex min-h-0 flex-col gap-4 xl:overflow-y-auto xl:pr-1">
-        <Panel title="Block 18 km vs panchayat 1.2 km">
-          <div className="space-y-2">
-            <Pair label="rain" block={`${r1(coarse.rainfallMm)} mm`} village={`${r1(fine.rainfallMm)} mm`} />
-            <Pair label="temp" block={`${r1(coarse.tempMin)}–${r1(coarse.tempMax)} °C`} village={`${r1(fine.tempMin)}–${r1(fine.tempMax)} °C`} />
-            <Pair label="wind / RH" block={`${r1(coarse.windSpeedKmh)} km/h · ${coarse.relativeHumidity}%`} village={`${r1(fine.windSpeedKmh)} km/h · ${fine.relativeHumidity}%`} />
-          </div>
-        </Panel>
-
-        <Panel title="Downscaling equation · night low">
-          <div className="rounded-lg border border-line/[0.08] bg-bg/60 p-3 font-mono text-[11.5px] leading-relaxed text-ink2">
-            <div>
-              T<sub>1.2</sub> = T<sub>18</sub> + Σ ΔT<sub>i</sub>
-            </div>
-            <div>
-              = {r1(coarse.tempMin)} {detail.tmin.map((s) => sgn(s.value)).join(' ')}
-            </div>
-            <div className="font-semibold text-accent">
-              = {r1(coarse.tempMin + tSum)} °C
-            </div>
-          </div>
-          <ul className="mt-3 space-y-1.5 text-xs">
-            {detail.tmin.map((s) => (
-              <li key={s.label} className="flex justify-between gap-3">
-                <span className="text-ink2">{s.label}</span>
-                <span className={`font-mono ${s.value < 0 ? 'text-frost' : s.value > 0 ? 'text-sun' : 'text-muted'}`}>{sgn(s.value)} °C</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 flex flex-wrap gap-1.5 text-[10.5px]">
-            <span className="rounded-md bg-surface2 px-2 py-1 text-ink2">Δz {sgn(p.elevationM - coarseElevationM)} m</span>
-            <span className="rounded-md bg-surface2 px-2 py-1 text-ink2">Slope {p.slopeDeg}°</span>
-            <span className="rounded-md bg-surface2 px-2 py-1 text-ink2">DEM Copernicus GLO-90</span>
-          </div>
-        </Panel>
-
-        <Panel title={`Panchayats near ${p.district} (${nearby.length})`} className="xl:flex-1">
-          <ul className="space-y-1.5">
-            {nearby.map(({ r, km }) => {
-              const on = r.id === p.id;
+    <div className="grid grid-cols-1 gap-5 xl:h-[calc(100vh-7.5rem)] xl:min-h-[660px] xl:grid-cols-[300px_minmax(0,1fr)_320px]">
+      {/* Left: what the 1.2 km grid changed, and why */}
+      <div className="flex min-h-0 flex-col gap-5 xl:overflow-y-auto scrollbar-none">
+        <Card title="District vs village" aside="18 km → 1.2 km">
+          <ul className="space-y-3.5">
+            {rows.map(({ k, c, f, u }) => {
+              const d = r1(f - c);
               return (
-                <li key={r.id}>
-                  <button
-                    onClick={() => onSelect(r.id)}
-                    aria-pressed={on}
-                    className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                      on ? 'border-accent/40 bg-accent/[0.08]' : 'border-line/[0.08] hover:bg-surface2'
-                    }`}
-                  >
-                    <span className="min-w-0">
-                      <span className={`block truncate text-[13px] font-medium ${on ? 'text-accent' : 'text-ink'}`}>{r.name}</span>
-                      <span className="block truncate text-[11px] text-muted">
-                        {r.elevationM.toLocaleString('en-IN')} m · {r.terrainType}
-                      </span>
+                <li key={k} className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-ink2">{k}</span>
+                  <span className="flex items-baseline gap-2 tabular">
+                    <span className="text-xs text-muted line-through decoration-muted/40">{r1(c)}</span>
+                    <span className="text-base font-semibold text-ink">
+                      {r1(f)}
+                      <span className="ml-0.5 text-xs font-normal text-muted">{u}</span>
                     </span>
-                    <span className="shrink-0 font-mono text-[10.5px] text-muted">{on ? <MapPin className="h-3.5 w-3.5 text-accent" /> : `${Math.round(km)} km`}</span>
-                  </button>
+                    <span className={`w-10 text-right text-xs font-medium ${d === 0 ? 'text-muted' : 'text-accent'}`}>{d === 0 ? '0' : sgn(d)}</span>
+                  </span>
                 </li>
               );
             })}
           </ul>
-        </Panel>
+        </Card>
+
+        <Card title={fine.tempMin <= coarse.tempMin ? 'Why the night is colder here' : 'Why the night is warmer here'}>
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between">
+              <span className="text-muted">District forecast</span>
+              <span className="font-medium text-ink2 tabular">{r1(coarse.tempMin)} °C</span>
+            </li>
+            {detail.tmin.map((s) => (
+              <li key={s.label} className="flex justify-between">
+                <span className="text-muted">{s.label}</span>
+                <span className="font-medium text-ink2 tabular">{sgn(s.value)} °C</span>
+              </li>
+            ))}
+            <li className="flex justify-between border-t border-line/[0.06] pt-2">
+              <span className="font-medium text-ink">Village</span>
+              <span className="font-semibold text-accent tabular">{r1(fine.tempMin)} °C</span>
+            </li>
+          </ul>
+          <p className="mt-3 text-xs text-muted">
+            {sgn(p.elevationM - coarseElevationM)} m above the forecast cell · slope {p.slopeDeg}°
+          </p>
+        </Card>
+
+        <Card title="Nearby" aside={p.district} className="xl:flex-1">
+          <ul className="-mx-2">
+            {nearby.map(({ r, km }) => (
+              <li key={r.id}>
+                <button onClick={() => onSelect(r.id)} className="group flex w-full items-center justify-between gap-3 rounded-lg px-2 py-2 text-left hover:bg-surface2">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm text-ink">{r.name}</span>
+                    <span className="block text-xs text-muted">{r.elevationM.toLocaleString('en-IN')} m</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1 text-xs text-muted">
+                    {Math.round(km)} km <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
 
-      {/* Centre: the map */}
+      {/* Centre */}
       <div className="min-h-0">{map}</div>
 
-      {/* Right: decisions and delivery */}
-      <div className="flex min-h-0 flex-col gap-4 xl:overflow-y-auto xl:pl-1">
-        {risks.map(({ icon: I, title, tag, tone, body }) => {
-          const t = TONE[tone];
-          return (
-            <section key={title} className="rounded-xl border border-line/[0.08] bg-surface p-4">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <I className="h-4 w-4 text-muted" /> {title}
-                </h3>
-                <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold ${t.bg} ${t.text}`}>{tag}</span>
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-ink2">{body}</p>
-            </section>
-          );
-        })}
+      {/* Right: what to do, and telling the village */}
+      <div className="flex min-h-0 flex-col gap-5 xl:overflow-y-auto scrollbar-none">
+        <Card title="Today's actions" aside={p.name}>
+          <ul className="space-y-4">
+            {actions.map(({ icon: I, title, tone, verdict, body }) => (
+              <li key={title} className="flex gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-surface2 text-ink2">
+                  <I className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-ink">{title}</span>
+                    <span className={`shrink-0 text-xs font-semibold ${TONE[tone].text}`}>{verdict}</span>
+                  </span>
+                  <span className="block truncate text-xs text-muted">{body}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
 
-        <section className="flex flex-col rounded-xl border border-good/25 bg-good/[0.05] p-4 xl:flex-1">
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Send className="h-4 w-4 text-good" /> Village WhatsApp dispatcher
-          </h3>
-          <p className="mt-1 text-[11px] text-muted">
-            {crop} · {p.name}
-          </p>
-          <pre className="mt-3 max-h-64 flex-1 overflow-y-auto whitespace-pre-wrap rounded-lg border border-line/[0.08] bg-bg/70 p-3 font-sans text-[11.5px] leading-relaxed text-ink2">
-            {advisoryText}
-          </pre>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button onClick={copy} className="btn-ghost h-9 px-3 text-xs">
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? 'Copied' : 'Copy'}
+        <Card title="Send to the village" aside="WhatsApp" className="flex flex-col xl:flex-1">
+          <div className="relative flex-1 overflow-hidden rounded-xl bg-bg/70 p-4">
+            <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-ink2">{advisoryText.replace(/[*_]/g, '')}</pre>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-bg/90 to-transparent" aria-hidden />
+          </div>
+          <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
+            <button onClick={copy} aria-label="Copy advisory" className="btn-ghost h-10 w-10 px-0">
+              {copied ? <Check className="h-4 w-4 text-accent" /> : <Copy className="h-4 w-4" />}
             </button>
-            <a href={`https://wa.me/?text=${encodeURIComponent(advisoryText)}`} target="_blank" rel="noopener noreferrer" className="btn-primary h-9 px-3 text-xs">
-              <Send className="h-4 w-4" /> Send to village
+            <a href={`https://wa.me/?text=${encodeURIComponent(advisoryText)}`} target="_blank" rel="noopener noreferrer" className="btn-primary h-10">
+              <Send className="h-4 w-4" /> Send advisory
             </a>
           </div>
-        </section>
+        </Card>
       </div>
     </div>
   );

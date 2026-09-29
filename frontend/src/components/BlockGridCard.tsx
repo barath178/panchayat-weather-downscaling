@@ -341,7 +341,7 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
                 <MapPinned className="h-4 w-4" /> Show grid on the map
               </button>
               <div className="flex items-center gap-1.5">
-                <span className="mr-1 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+                <span className="mr-1 flex items-center gap-1 text-xs font-medium text-muted">
                   <Download className="h-3 w-3" /> Data
                 </span>
                 {[

@@ -117,21 +117,21 @@ h2 em {
 @layer components {
   /* Base card used across the app */
   .card {
-    @apply rounded-card border border-line/[0.08] bg-surface shadow-card;
+    @apply rounded-card bg-surface ring-1 ring-line/[0.05];
   }
   /* Legacy alias so older panels pick up the new look */
   .orchids-glass {
-    @apply rounded-card border border-line/[0.08] bg-surface shadow-card;
+    @apply rounded-card bg-surface ring-1 ring-line/[0.05];
   }
   .eyebrow {
-    @apply font-mono text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted;
+    @apply text-xs font-medium text-muted;
   }
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-md border border-line/[0.14] bg-transparent px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-line/30 hover:bg-surface hover:text-ink;
   }
   /* Instrument readout label */
   .mono-label {
-    @apply font-mono text-[10px] uppercase tracking-[0.14em] text-muted;
+    @apply text-xs text-muted;
   }
   /* HUD corner ticks framing a panel */
   .hud {
@@ -168,7 +168,7 @@ h2 em {
   }
   /* Small uppercase label over a value, e.g. RAIN / 12 mm */
   .kicker {
-    @apply text-[11px] font-medium uppercase tracking-[0.08em] text-muted;
+    @apply text-[13px] font-medium text-ink2;
   }
 }
 

@@ -63,7 +63,7 @@ export default function ActionPlan({ crop, crops, onCropChange, hourly, sprayWin
         <h2 id="plan-title" className="text-xl font-semibold tracking-tight text-ink">
           What to do today
         </h2>
-        <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">ICAR agromet rules</span>
+        <span className="text-xs font-medium text-muted">ICAR agromet rules</span>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Crop">

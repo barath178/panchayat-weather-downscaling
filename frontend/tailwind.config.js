@@ -34,7 +34,7 @@ module.exports = {
       },
       borderRadius: {
         // "Field Console": crisp panels, rectangular controls
-        card: '14px',
+        card: '18px',
       },
       boxShadow: {
         card: 'var(--shadow-card)',

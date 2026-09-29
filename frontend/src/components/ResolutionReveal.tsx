@@ -248,7 +248,7 @@ export default function ResolutionReveal() {
       {/* caption row */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Fig. 1 · Worked example: night minimum, six district blocks</div>
+          <div className="text-xs font-medium text-muted">Fig. 1 · Worked example: night minimum, six district blocks</div>
           <figcaption className="mt-2 text-xl font-semibold leading-tight tracking-tight text-ink sm:text-2xl">
             The same night, <em className="text-accent">at two resolutions.</em>
           </figcaption>
