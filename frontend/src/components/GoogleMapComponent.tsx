@@ -189,6 +189,7 @@ export default function GoogleMapComponent({
   const [filterType, setFilterType] = useState<'all' | 'urban' | 'rural'>('all');
   const [hovered, setHovered] = useState<PanchayatData | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
+  const [gestureHint, setGestureHint] = useState<string | null>(null);
 
   const [showImdOverlay, setShowImdOverlay] = useState(false);
   const [imdChannel, setImdChannel] = useState('ir1');
@@ -236,7 +237,11 @@ export default function GoogleMapComponent({
       renderer: L.canvas({ padding: 0.5, tolerance: 8 }),
       zoomSnap: 0.25,
       zoomDelta: 0.5,
-      wheelPxPerZoomLevel: 120,
+      // Page scroll must never be hijacked: wheel zooms only with Ctrl/Cmd (or a trackpad pinch), and on
+      // touch screens one finger scrolls the page while two fingers pan and pinch the map.
+      scrollWheelZoom: false,
+      dragging: !L.Browser.mobile,
+      touchZoom: true,
     });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     // The 1.2 km block grid sits above the tiles but below markers and outlines
@@ -246,7 +251,29 @@ export default function GoogleMapComponent({
     mapRef.current = map;
     const ro = new ResizeObserver(() => map.invalidateSize());
     ro.observe(el);
+
+    let hintTimer: ReturnType<typeof setTimeout>;
+    const showHint = (msg: string) => {
+      setGestureHint(msg);
+      clearTimeout(hintTimer);
+      hintTimer = setTimeout(() => setGestureHint(null), 1400);
+    };
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault(); // also catches trackpad pinch, which browsers report as ctrl+wheel
+        const step = Math.max(-1, Math.min(1, -e.deltaY / (e.ctrlKey && !e.deltaMode ? 60 : 120)));
+        map.setZoomAround(map.mouseEventToContainerPoint(e), map.getZoom() + step, { animate: false });
+      } else showHint('Use Ctrl + scroll to zoom the map');
+    };
+    const onTouch = (e: TouchEvent) => {
+      if (e.touches.length === 1 && L.Browser.mobile) showHint('Use two fingers to move the map');
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('touchstart', onTouch, { passive: true });
     return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('touchstart', onTouch);
+      clearTimeout(hintTimer);
       ro.disconnect();
       map.remove();
       mapRef.current = null;
@@ -429,6 +456,14 @@ export default function GoogleMapComponent({
   return (
     <div className="card relative h-[520px] overflow-hidden p-0 sm:h-[600px] xl:h-full">
       <div ref={mapContainerRef} className="z-0 h-full w-full" aria-label="Map of monitored regions" />
+
+      {/* Shown briefly when someone scrolls or swipes over the map without the zoom gesture */}
+      <div
+        aria-live="polite"
+        className={`pointer-events-none absolute inset-0 z-[1100] grid place-items-center bg-black/45 transition-opacity duration-200 ease-out ${gestureHint ? 'opacity-100' : 'opacity-0'}`}
+      >
+        <span className="rounded-lg bg-surface/95 px-4 py-2 text-sm font-medium text-ink shadow-pop">{gestureHint}</span>
+      </div>
 
       {/* Top-left: variable + resolution */}
       <div className="pointer-events-none absolute left-3 right-[108px] top-3 z-[1000]">
