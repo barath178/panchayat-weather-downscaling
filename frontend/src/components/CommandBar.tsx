@@ -152,73 +152,61 @@ export function Sidebar({
     if (activeView !== 'dashboard') onViewChange('dashboard');
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
+  // Icon rail: labels live in tooltips and for screen readers, so the map gets the width
   const item = (on: boolean) =>
-    `flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-      on ? 'bg-raised font-medium text-ink ring-1 ring-line/[0.08]' : 'text-ink2 hover:bg-surface2 hover:text-ink'
-    }`;
-  const dz = Math.round(status.elevationM - status.cellElevationM);
+    `group relative grid h-10 w-10 place-items-center rounded-lg transition-colors ${on ? 'bg-accent/15 text-accent' : 'text-muted hover:bg-surface2 hover:text-ink'}`;
+  const tip = (label: string) => (
+    <span className="pointer-events-none absolute left-full top-1/2 z-10 ml-3 -translate-y-1/2 whitespace-nowrap rounded-md border border-line/10 bg-surface px-2 py-1 text-xs text-ink opacity-0 shadow-pop transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+      {label}
+    </span>
+  );
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-[1100] hidden w-64 flex-col border-r border-line/[0.08] bg-surface/60 backdrop-blur-xl lg:flex">
-      <div className="px-5 pb-4 pt-5">
-        <Wordmark />
-      </div>
-
-      <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3">
-        <div className="kicker px-3 pb-2 pt-3">Dashboard</div>
-
-        {SECTIONS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => go(id)} aria-current={activeView === 'dashboard' && activeSection === id ? 'location' : undefined} className={item(activeView === 'dashboard' && activeSection === id)}>
-            <Icon className="h-4 w-4" /> {label}
-          </button>
-        ))}
-        <div className="kicker px-3 pb-2 pt-6">Delivery views</div>
+    <aside className="fixed inset-y-0 left-0 z-[1100] hidden w-16 flex-col items-center border-r border-line/[0.08] bg-surface/70 py-4 backdrop-blur-xl lg:flex">
+      <a href="#top" aria-label="AeroAgro home">
+        <Logo className="h-9 w-9" />
+      </a>
+      <nav aria-label="Sections" className="mt-6 flex flex-1 flex-col items-center gap-1.5">
+        {SECTIONS.map(({ id, label, icon: Icon }) => {
+          const on = activeView === 'dashboard' && activeSection === id;
+          return (
+            <button key={id} onClick={() => go(id)} aria-label={label} aria-current={on ? 'location' : undefined} className={item(on)}>
+              <Icon className="h-[18px] w-[18px]" />
+              {tip(label)}
+            </button>
+          );
+        })}
+        <span className="my-2 h-px w-6 bg-line/10" aria-hidden />
         {VIEWS.slice(1).map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => onViewChange(id)} aria-current={activeView === id ? 'page' : undefined} className={item(activeView === id)}>
-            <Icon className="h-4 w-4" /> {label}
+          <button key={id} onClick={() => onViewChange(id)} aria-label={label} aria-current={activeView === id ? 'page' : undefined} className={item(activeView === id)}>
+            <Icon className="h-[18px] w-[18px]" />
+            {tip(label)}
           </button>
         ))}
       </nav>
-
-      {/* Data status: what the numbers on screen are built from */}
-      <div className="m-3 rounded-xl border border-line/[0.08] bg-bg/60 p-4 text-xs">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 font-semibold text-ink">
-            <span className={`h-2 w-2 rounded-full ${SOURCE_DOT[status.kind]}`} /> {STATUS_WORD[status.kind]}
-          </span>
-          {status.updated && <span className="font-mono text-muted">{status.updated}</span>}
-        </div>
-        <p className="mt-1.5 leading-snug text-muted">{status.label}</p>
-        <dl className="mt-3 space-y-1.5 font-mono text-[11px]">
-          {[
-            ['Place', status.place],
-            ['Position', `${status.lat.toFixed(2)}°N ${status.lng.toFixed(2)}°E`],
-            ['Height', `${status.elevationM.toLocaleString('en-IN')} m (${dz >= 0 ? '+' : '−'}${Math.abs(dz)} m vs cell)`],
-            ['Terrain', status.dem === 'dem' ? 'Copernicus DEM' : status.dem === 'loading' ? 'loading…' : 'estimated'],
-            ['Grid', '18 km → 1.2 km'],
-          ].map(([k, v]) => (
-            <div key={k} className="flex justify-between gap-3">
-              <dt className="text-muted">{k}</dt>
-              <dd className="truncate text-right text-ink2">{v}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-      <div className="flex items-center gap-4 border-t border-line/[0.06] px-6 py-3 text-xs text-muted">
-        <a href={`${BASE}/privacy/`} className="hover:text-ink">
-          Privacy
-        </a>
-        <a href={`${BASE}/terms/`} className="hover:text-ink">
-          Terms
-        </a>
-        <a href={REPO} target="_blank" rel="noopener noreferrer" className="ml-auto hover:text-ink">
-          Source code
-        </a>
-      </div>
+      <span className={`h-2.5 w-2.5 rounded-full ${SOURCE_DOT[status.kind]}`} title={`${STATUS_WORD[status.kind]} · ${status.label}`} />
     </aside>
   );
 }
 
+/** "Live · Munnar · 18 km → 1.2 km" chip; full provenance in the tooltip. */
+export function StatusChip({ status }: { status: DataStatus }) {
+  const dz = Math.round(status.elevationM - status.cellElevationM);
+  const detail = [
+    status.label,
+    `${status.lat.toFixed(2)}°N ${status.lng.toFixed(2)}°E · ${status.elevationM} m (${dz >= 0 ? '+' : '−'}${Math.abs(dz)} m vs forecast cell)`,
+    `Terrain: ${status.dem === 'dem' ? 'Copernicus GLO-90 DEM' : status.dem === 'loading' ? 'loading' : 'estimated'}`,
+    status.updated ? `Updated ${status.updated}` : '',
+  ].filter(Boolean).join('\n');
+  return (
+    <div title={detail} className="hidden min-w-0 items-center gap-2 rounded-lg border border-accent/25 bg-accent/[0.07] px-3 py-1.5 text-xs xl:flex">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${SOURCE_DOT[status.kind]}`} />
+      <span className="font-semibold text-ink">{STATUS_WORD[status.kind]}</span>
+      <span className="truncate text-ink2">{status.place}</span>
+      <span className="shrink-0 font-mono text-accent">18 km → 1.2 km</span>
+    </div>
+  );
+}
 // ---------------------------------------------------------------- top bar
 
 interface TopBarProps {
@@ -232,13 +220,14 @@ interface TopBarProps {
   onSelectRegion: (id: string) => void;
   lang: Lang;
   onLangChange: (l: Lang) => void;
+  status: DataStatus;
 }
 
-export default function TopBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion, lang, onLangChange }: TopBarProps) {
+export default function TopBar({ currentScenario, onScenarioChange, activeView, onViewChange, dataSource, onAbout, regions, onSelectRegion, lang, onLangChange, status }: TopBarProps) {
   return (
     <header className="relative z-[1050] lg:sticky lg:top-0 border-b border-line/[0.08] bg-bg/80 backdrop-blur-xl">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
-        <div className="lg:hidden">
+        <div className="shrink-0">
           <Wordmark sub={false} />
         </div>
 
@@ -246,6 +235,7 @@ export default function TopBar({ currentScenario, onScenarioChange, activeView, 
           <RegionSearch regions={regions} onSelect={onSelectRegion} shortcut />
         </div>
 
+        <StatusChip status={status} />
         <div className="ml-auto flex items-center gap-2">
           <div className="seg hidden md:inline-flex" role="radiogroup" aria-label="Advisory language">
             {LANGS.map(({ id, label, name }) => (

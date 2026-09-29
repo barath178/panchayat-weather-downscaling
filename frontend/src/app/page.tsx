@@ -6,6 +6,7 @@ import { Clock, Mountain, Radio, Satellite, ShieldCheck, CloudRain, Layers3, Cpu
 
 import TopBar, { DataStatus, Logo, Sidebar } from '@/components/CommandBar';
 import Hero from '@/components/Hero';
+import CommandCenter from '@/components/CommandCenter';
 import VillageSheet from '@/components/VillageSheet';
 import ActionPlan from '@/components/ActionPlan';
 import WhatsAppDrawer from '@/components/WhatsAppDrawer';
@@ -247,7 +248,7 @@ export default function AeroAgroDashboard() {
     <div id="top" className="min-h-screen">
       <Sidebar activeView={activeView} onViewChange={setActiveView} activeSection={activeSection} status={status} />
 
-      <div className="flex min-h-screen flex-col lg:pl-64">
+      <div className="flex min-h-screen flex-col lg:pl-16">
         <TopBar
           currentScenario={scenario}
           onScenarioChange={setScenario}
@@ -259,6 +260,7 @@ export default function AeroAgroDashboard() {
           onSelectRegion={selectRegion}
           lang={lang}
           onLangChange={setLang}
+          status={status}
         />
 
         {activeView === 'mobile' && (
@@ -280,26 +282,38 @@ export default function AeroAgroDashboard() {
         {activeView === 'dashboard' && (
           <main id="dashboard" className="flex-1">
             <Section id="map" first>
-              <SectionHead
-                index="01"
-                kicker="All-India map"
-                title="Hazards across 303 regions"
-                meta="Each dot shows today's 1.2 km value. The hazard scan counts regions past a rain, frost, heat, wind or humidity threshold, including those the 18 km forecast misses."
+              <CommandCenter
+                regions={ALL_INDIA_PANCHAYATS}
+                panchayat={activePanchayat}
+                coarse={coarse}
+                fine={fine}
+                detail={detail}
+                coarseElevationM={coarseElev}
+                sprayWindow={sprayWindow}
+                irrigation={irrigation}
+                pest={pest}
+                et0={et0}
+                crop={selectedCrop}
+                advisoryText={advisoryText}
+                onSelect={setSelectedId}
+                map={
+                  <GoogleMapComponent
+                    panchayats={ALL_INDIA_PANCHAYATS}
+                    selectedId={selectedId}
+                    onSelectPanchayat={setSelectedId}
+                    activeVariable={activeVar}
+                    onVariableChange={setActiveVar}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    regionMetrics={regionMetrics}
+                    liveLoading={isLive && nationalStatus === 'loading'}
+                    blockField={blockField}
+                    focusBlock={focusBlock}
+                    heightClass="h-[480px] sm:h-[560px] xl:h-full"
+                  />
+                }
               />
-              <GoogleMapComponent
-                panchayats={ALL_INDIA_PANCHAYATS}
-                selectedId={selectedId}
-                onSelectPanchayat={setSelectedId}
-                activeVariable={activeVar}
-                onVariableChange={setActiveVar}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                regionMetrics={regionMetrics}
-                liveLoading={isLive && nationalStatus === 'loading'}
-                blockField={blockField}
-                focusBlock={focusBlock}
-              />
-              <div className="mt-5">
+              <div className="mt-4">
               <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
               </div>
             </Section>
