@@ -36,34 +36,34 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
 
   return (
     <section className="card hud overflow-hidden" aria-labelledby="week-title">
-      <div className="flex flex-wrap items-end justify-between gap-3 p-5 pb-0 sm:p-6 sm:pb-0">
+      <div className="flex flex-wrap items-end justify-between gap-2 p-3 pb-0 sm:p-4 sm:pb-0">
         <div>
           <div className="eyebrow flex items-center gap-1.5">
             <CalendarDays className="h-3.5 w-3.5 text-accent" /> Fig 1.2 · 7-day village outlook {isLive ? '· live' : '· simulated'}
           </div>
-          <h2 id="week-title" className="mt-1 font-display text-2xl text-ink">
+          <h2 id="week-title" className="mt-0.5 font-display text-lg text-ink">
             The week ahead in {p.name}
           </h2>
         </div>
-        <button onClick={onOpenBulletin} className="btn-primary">
+        <button onClick={onOpenBulletin} className="btn-primary !px-3 !py-1.5 text-xs">
           <FileText className="h-4 w-4" /> Agromet bulletin
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 px-5 pt-4 sm:grid-cols-4 sm:px-6">
+      <div className="grid grid-cols-2 gap-1.5 px-3 pt-3 sm:grid-cols-4 sm:px-4">
         {stats.map(({ icon: I, label, value, sub }) => (
-          <div key={label} className="rounded-2xl bg-surface2 px-3.5 py-3">
+          <div key={label} className="rounded-xl bg-surface2 px-3 py-2">
             <div className="flex items-center gap-1.5 text-[11px] text-muted">
               <I className="h-3.5 w-3.5" /> {label}
             </div>
-            <div className="mt-0.5 truncate text-base font-semibold text-ink tabular">{value}</div>
+            <div className="truncate text-sm font-semibold text-ink tabular">{value}</div>
             <div className="truncate text-[11px] text-muted">{sub}</div>
           </div>
         ))}
       </div>
 
-      <div className="overflow-x-auto px-5 pb-5 pt-4 scrollbar-none sm:px-6 sm:pb-6">
-        <ol className="grid min-w-[720px] grid-cols-7 gap-2">
+      <div className="overflow-x-auto px-3 pb-3 pt-3 scrollbar-none sm:px-4 sm:pb-4">
+        <ol className="grid min-w-[600px] grid-cols-7 gap-1.5">
           {week.map((d, i) => {
             const sky = describeSky(d.fine);
             const Icon = sky.icon;
@@ -73,7 +73,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
             return (
               <li
                 key={i}
-                className={`relative flex animate-rise flex-col items-center rounded-2xl border px-2 pb-3 pt-4 text-center transition-colors ${
+                className={`relative flex animate-rise flex-col items-center rounded-xl border px-1.5 pb-2 pt-3 text-center transition-colors ${
                   isBest ? 'border-accent/70 bg-accent/[0.06] shadow-glow' : 'border-line/[0.07] bg-surface2/60 hover:border-line/15'
                 }`}
                 style={{ animationDelay: `${i * 60}ms` }}
@@ -81,13 +81,13 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
                 {isBest && (
                   <span className="absolute -top-2.5 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">Best to spray</span>
                 )}
-                <div className={`text-sm font-semibold ${i === 0 ? 'text-accent' : 'text-ink'}`}>{dayLabel(d, i, 'en', 'short')}</div>
-                <div className="h-4 text-[11px] text-muted">{shortDate(d)}</div>
-                <Icon className="mt-2 h-7 w-7 text-ink/85" strokeWidth={1.5} aria-label={sky.label} />
+                <div className={`text-xs font-semibold ${i === 0 ? 'text-accent' : 'text-ink'}`}>{dayLabel(d, i, 'en', 'short')}</div>
+                <div className="h-3.5 text-[10px] text-muted">{shortDate(d)}</div>
+                <Icon className="mt-1 h-5 w-5 text-ink/85" strokeWidth={1.5} aria-label={sky.label} />
 
                 {/* temperature range: village bar, block ghost */}
-                <div className="mt-2 text-sm font-semibold text-ink tabular">{Math.round(d.fine.tempMax)}°</div>
-                <div className="relative my-1 h-20 w-full" aria-hidden>
+                <div className="mt-1 text-xs font-semibold text-ink tabular">{Math.round(d.fine.tempMax)}°</div>
+                <div className="relative my-0.5 h-10 w-full" aria-hidden>
                   <span
                     className="absolute left-1/2 w-1.5 -translate-x-[9px] rounded-full border border-dashed border-sun/60"
                     style={{ top: `${y(d.coarse.tempMax)}%`, bottom: `${100 - y(d.coarse.tempMin)}%` }}
@@ -98,10 +98,10 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
                     style={{ top: `${y(d.fine.tempMax)}%`, bottom: `${100 - y(d.fine.tempMin)}%`, background: 'linear-gradient(#F6B94C, #7DC4FF)' }}
                   />
                 </div>
-                <div className="text-sm text-ink2 tabular">{Math.round(d.fine.tempMin)}°</div>
+                <div className="text-xs text-ink2 tabular">{Math.round(d.fine.tempMin)}°</div>
 
                 {/* rain */}
-                <div className="mt-3 flex h-10 w-full items-end justify-center gap-1" aria-hidden>
+                <div className="mt-1.5 flex h-5 w-full items-end justify-center gap-1" aria-hidden>
                   <span className="w-2.5 rounded-t-sm border border-b-0 border-dashed border-sun/50" style={{ height: `${Math.max(2, (d.coarse.rainfallMm / maxRain) * 100)}%` }} />
                   <span className="w-2.5 rounded-t-sm bg-sky" style={{ height: `${Math.max(2, (d.fine.rainfallMm / maxRain) * 100)}%` }} />
                 </div>
@@ -114,7 +114,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
 
                 {/* spray verdict */}
                 <div
-                  className={`mt-2.5 w-full rounded-lg px-1 py-1 text-[10.5px] font-semibold ${
+                  className={`mt-1.5 w-full rounded-md px-1 py-0.5 text-[10px] font-semibold ${
                     d.spray.hours >= 3 ? 'bg-good/15 text-good' : d.spray.hours > 0 ? 'bg-warn/15 text-warn' : 'bg-bad/15 text-bad'
                   }`}
                 >
@@ -141,7 +141,7 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
             );
           })}
         </ol>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: 'linear-gradient(#F6B94C, #7DC4FF)' }} /> Village 1.2 km
           </span>

@@ -271,7 +271,7 @@ export default function AeroAgroDashboard() {
 
       {activeView === 'dashboard' && (
         <div className="blueprint flex-1 border-t border-line/[0.07]">
-        <main id="dashboard" className="mx-auto w-full max-w-[1400px] scroll-mt-20 px-4 pb-16 pt-10 sm:px-8">
+        <main id="dashboard" className="mx-auto w-full max-w-[1400px] scroll-mt-20 px-4 pb-8 pt-5 sm:px-8">
           <SectionHead
             index="01"
             kicker="Live dashboard"
@@ -287,7 +287,7 @@ export default function AeroAgroDashboard() {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
             <div className="flex min-w-0 flex-col gap-6">
-              <div id="map" className="scroll-mt-24">
+              <div id="map" className="scroll-mt-24 xl:min-h-[520px] xl:flex-1">
                 <GoogleMapComponent
                   panchayats={ALL_INDIA_PANCHAYATS}
                   selectedId={selectedId}
@@ -321,7 +321,7 @@ export default function AeroAgroDashboard() {
           </div>
 
           {/* ---- The downscaling engine ---- */}
-          <section id="engine" className="mt-16 scroll-mt-24" aria-labelledby="engine-title">
+          <section id="engine" className="mt-8 scroll-mt-24" aria-labelledby="engine-title">
             <SectionHead
               index="02"
               kicker="Downscaling engine"
@@ -364,7 +364,7 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          <div className="mt-16">
+          <div className="mt-8">
             <SectionHead
               index="03"
               kicker="Field tools & assistant"
@@ -444,7 +444,7 @@ export default function AeroAgroDashboard() {
       )}
 
       <footer className="border-t border-line/[0.07]">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-4 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-4 py-5 sm:px-8 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <Logo className="h-8 w-8" />
             <div>
