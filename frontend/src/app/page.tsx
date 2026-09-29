@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { Clock, Mountain, Radio, Satellite, ShieldCheck, Sparkles, CloudRain, Layers3, Cpu, FileText, ArrowRight, ArrowUpRight, Smartphone, Tv } from 'lucide-react';
 
 import CommandBar, { Logo } from '@/components/CommandBar';
-import Hero from '@/components/Hero';
+import TabBar, { Tab } from '@/components/TabBar';
 import VillageSheet from '@/components/VillageSheet';
 import ActionPlan from '@/components/ActionPlan';
 import WhatsAppDrawer from '@/components/WhatsAppDrawer';
@@ -92,6 +92,7 @@ export default function AeroAgroDashboard() {
   const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('spray');
   const [activeView, setActiveView] = useState<'dashboard' | 'mobile' | 'kiosk'>('dashboard');
   const [showAbout, setShowAbout] = useState(false);
+  const [tab, setTab] = useState<Tab>('map');
   const [showBulletin, setShowBulletin] = useState(false);
   const [focusBlock, setFocusBlock] = useState(0);
   // Wall-clock time is only read after mount so the static HTML and first client render match.
@@ -220,23 +221,23 @@ export default function AeroAgroDashboard() {
 
   const selectRegion = (id: string) => {
     setSelectedId(id);
-    if (activeView === 'dashboard') scrollTo('dashboard');
+    setActiveView('dashboard');
+    setTab('map');
   };
 
   const onAssistantAction = (a: AssistantAction) => {
     if (a === 'bulletin') setShowBulletin(true);
     else if (a === 'spray' || a === 'insurance') {
       setActiveStudioTab(a);
-      scrollTo('tools');
-    } else if (a === 'explain') scrollTo('explain');
-    else scrollTo('engine');
+      setTab('tools');
+    } else setTab('engine');
   };
 
   const showGridOnMap = (v: GridVar) => {
     setActiveVar(v === 'elevation' ? 'tempMin' : v);
     setViewMode('fine');
     setFocusBlock((n) => n + 1);
-    scrollTo('map');
+    setTab('map');
   };
 
   return (
@@ -253,7 +254,7 @@ export default function AeroAgroDashboard() {
         onSelectRegion={selectRegion}
       />
 
-      {activeView === 'dashboard' && <Hero regions={ALL_INDIA_PANCHAYATS} onSelect={setSelectedId} />}
+      {activeView === 'dashboard' && <TabBar tab={tab} onChange={setTab} />}
 
       {activeView === 'mobile' && (
         <div className="night topo-bg flex-1">
@@ -273,8 +274,8 @@ export default function AeroAgroDashboard() {
 
       {activeView === 'dashboard' && (
         <main id="dashboard" className="flex-1">
-          {/* (01) Your village: paper */}
-          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-20 sm:px-8 lg:py-28">
+          {tab === 'village' && (<>
+          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-6 sm:px-8 lg:py-8">
             <Reveal>
               <SectionHead
                 index="01"
@@ -309,22 +310,12 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          {/* (02) All India: night */}
+          </>)}
+          {tab === 'map' && (<>
           <section id="map" className="night scroll-mt-16">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
-              <Reveal>
-                <SectionHead
-                  index="02"
-                  kicker="All India"
-                  title={
-                    <>
-                      303 regions, <em className="text-accent">one glance.</em>
-                    </>
-                  }
-                  meta="Every dot is downscaled live. The AI scan flags hazards the district forecast misses. Tap a tile to jump to the worst-hit village."
-                />
-              </Reveal>
-              <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
+            <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-8 lg:py-8">
+              
+              
               <GoogleMapComponent
                 panchayats={ALL_INDIA_PANCHAYATS}
                 selectedId={selectedId}
@@ -337,13 +328,16 @@ export default function AeroAgroDashboard() {
                 liveLoading={isLive && nationalStatus === 'loading'}
                 blockField={blockField}
                 focusBlock={focusBlock}
+                heightClass="h-[calc(100vh-190px)] min-h-[480px]"
               />
+              <div className="mt-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
             </div>
           </section>
 
-          {/* (03) Engine: night */}
+          </>)}
+          {tab === 'engine' && (<>
           <section id="engine" className="night scroll-mt-16 border-t border-line/[0.08]" aria-labelledby="engine-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+            <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-8 lg:py-8">
               <Reveal>
                 <SectionHead
                   index="03"
@@ -388,8 +382,9 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          {/* (04) Ask + reach: paper */}
-          <section className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+          </>)}
+          {tab === 'ask' && (<>
+          <section className="mx-auto max-w-[1320px] px-5 py-6 sm:px-8 lg:py-8">
             <Reveal>
               <SectionHead
                 index="04"
@@ -431,9 +426,10 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          {/* (05) Field tools: night */}
+          </>)}
+          {tab === 'tools' && (<>
           <section id="tools" className="night scroll-mt-16" aria-labelledby="tools-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
+            <div className="mx-auto max-w-[1320px] px-5 py-6 sm:px-8 lg:py-8">
               <Reveal>
                 <SectionHead
                   index="05"
@@ -481,13 +477,8 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          {/* Floating shortcut to the assistant */}
-          <a
-            href="#ask"
-            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-btn px-5 py-3 text-sm font-semibold text-btn-ink shadow-pop transition hover:-translate-y-0.5 lg:hidden"
-          >
-            <Sparkles className="h-4 w-4" /> Ask AI
-          </a>
+          </>)}
+          
         </main>
       )}
 

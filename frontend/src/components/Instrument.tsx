@@ -20,12 +20,12 @@ export function SectionHead({
   id?: string;
 }) {
   return (
-    <div className="mb-10 grid grid-cols-1 gap-6 border-t border-line/[0.16] pt-6 lg:grid-cols-12 lg:items-end">
+    <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
       <div className="lg:col-span-8">
         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">
           ({index}) <span className="mx-1.5 text-line/40">—</span> {kicker}
         </div>
-        <h2 id={id} className="mt-4 font-display text-[44px] leading-[0.95] tracking-[-0.015em] text-ink sm:text-6xl lg:text-7xl">
+        <h2 id={id} className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
           {title}
         </h2>
       </div>
