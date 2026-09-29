@@ -6,8 +6,6 @@ import { Clock, Mountain, Radio, Satellite, ShieldCheck, Sparkles, CloudRain, La
 
 import CommandBar, { Logo } from '@/components/CommandBar';
 import Hero from '@/components/Hero';
-import Workspace, { Tab } from '@/components/Workspace';
-import ResolutionReveal from '@/components/ResolutionReveal';
 import VillageSheet from '@/components/VillageSheet';
 import ActionPlan from '@/components/ActionPlan';
 import WhatsAppDrawer from '@/components/WhatsAppDrawer';
@@ -95,7 +93,6 @@ export default function AeroAgroDashboard() {
   const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('spray');
   const [activeView, setActiveView] = useState<'dashboard' | 'mobile' | 'kiosk'>('dashboard');
   const [showAbout, setShowAbout] = useState(false);
-  const [tab, setTab] = useState<Tab>('map');
   const [showBulletin, setShowBulletin] = useState(false);
   const [focusBlock, setFocusBlock] = useState(0);
   // Wall-clock time is only read after mount so the static HTML and first client render match.
@@ -224,23 +221,23 @@ export default function AeroAgroDashboard() {
 
   const selectRegion = (id: string) => {
     setSelectedId(id);
-    setActiveView('dashboard');
-    setTab('map');
+    if (activeView === 'dashboard') scrollTo('dashboard');
   };
 
   const onAssistantAction = (a: AssistantAction) => {
     if (a === 'bulletin') setShowBulletin(true);
     else if (a === 'spray' || a === 'insurance') {
       setActiveStudioTab(a);
-      setTab('tools');
-    } else setTab('engine');
+      scrollTo('tools');
+    } else if (a === 'explain') scrollTo('explain');
+    else scrollTo('engine');
   };
 
   const showGridOnMap = (v: GridVar) => {
     setActiveVar(v === 'elevation' ? 'tempMin' : v);
     setViewMode('fine');
     setFocusBlock((n) => n + 1);
-    setTab('map');
+    scrollTo('map');
   };
 
   return (
@@ -262,30 +259,49 @@ export default function AeroAgroDashboard() {
           regions={ALL_INDIA_PANCHAYATS}
           onSelect={setSelectedId}
           map={
-            <Workspace
-              tab={tab}
-              onTab={setTab}
-              map={
-                <GoogleMapComponent
-                  panchayats={ALL_INDIA_PANCHAYATS}
-                  selectedId={selectedId}
-                  onSelectPanchayat={setSelectedId}
-                  activeVariable={activeVar}
-                  onVariableChange={setActiveVar}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  regionMetrics={regionMetrics}
-                  liveLoading={isLive && nationalStatus === 'loading'}
-                  blockField={blockField}
-                  focusBlock={focusBlock}
-                />
-                  }
-            >
-              {tab === 'hazards' && (
-                <div className="night p-4 sm:p-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
-              )}
-          {tab === 'village' && (<>
-          <section id="village" className="night mx-auto max-w-[1320px] scroll-mt-16 px-5 py-4 sm:px-6 lg:py-5">
+            <GoogleMapComponent
+              panchayats={ALL_INDIA_PANCHAYATS}
+              selectedId={selectedId}
+              onSelectPanchayat={setSelectedId}
+              activeVariable={activeVar}
+              onVariableChange={setActiveVar}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              regionMetrics={regionMetrics}
+              liveLoading={isLive && nationalStatus === 'loading'}
+              blockField={blockField}
+              focusBlock={focusBlock}
+            />
+          }
+          today={{ panchayat: activePanchayat, fine, coarse, sprayWindow, pest, crop: selectedCrop, source: dataSource.kind }}
+          below={
+            <section id="map" className="night scroll-mt-16">
+              <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
+            </section>
+          }
+        />
+      )}
+
+      {activeView === 'mobile' && (
+        <div className="night topo-bg flex-1">
+          <main className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-8">
+            <KisanMobileView {...shared} />
+          </main>
+        </div>
+      )}
+
+      {activeView === 'kiosk' && (
+        <div className="night flex-1">
+          <main className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-8">
+            <PanchayatKioskView {...shared} />
+          </main>
+        </div>
+      )}
+
+      {activeView === 'dashboard' && (
+        <main id="dashboard" className="flex-1">
+          {/* (01) Your village: paper */}
+          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-20 sm:px-8 lg:py-28">
             <Reveal>
               <SectionHead
                 index="01"
@@ -320,11 +336,9 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          </>)}
-          {tab === 'engine' && (<>
-          <div className="px-4 pb-2 pt-4 sm:px-6"><ResolutionReveal /></div>
-          <section id="engine" className="night scroll-mt-16" aria-labelledby="engine-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-4 sm:px-6 lg:py-5">
+          {/* (03) Engine: night */}
+          <section id="engine" className="night scroll-mt-16 border-t border-line/[0.08]" aria-labelledby="engine-title">
+            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
               <Reveal>
                 <SectionHead
                   index="03"
@@ -369,9 +383,8 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          </>)}
-          {tab === 'ask' && (<>
-          <section id="ask-section" className="night mx-auto max-w-[1320px] px-5 py-4 sm:px-6 lg:py-5">
+          {/* (04) Ask + reach: paper */}
+          <section className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
             <Reveal>
               <SectionHead
                 index="04"
@@ -413,10 +426,9 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          </>)}
-          {tab === 'tools' && (<>
+          {/* (05) Field tools: night */}
           <section id="tools" className="night scroll-mt-16" aria-labelledby="tools-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-4 sm:px-6 lg:py-5">
+            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
               <Reveal>
                 <SectionHead
                   index="05"
@@ -464,29 +476,15 @@ export default function AeroAgroDashboard() {
             </div>
           </section>
 
-          </>)}
-            </Workspace>
-          }
-          today={{ panchayat: activePanchayat, fine, coarse, sprayWindow, pest, crop: selectedCrop, source: dataSource.kind, onOpen: () => setTab('village') }}
-        />
+          {/* Floating shortcut to the assistant */}
+          <a
+            href="#ask"
+            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-btn px-5 py-3 text-sm font-semibold text-btn-ink shadow-pop transition hover:-translate-y-0.5 lg:hidden"
+          >
+            <Sparkles className="h-4 w-4" /> Ask AI
+          </a>
+        </main>
       )}
-
-      {activeView === 'mobile' && (
-        <div className="night topo-bg flex-1">
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-8">
-            <KisanMobileView {...shared} />
-          </main>
-        </div>
-      )}
-
-      {activeView === 'kiosk' && (
-        <div className="night flex-1">
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-8">
-            <PanchayatKioskView {...shared} />
-          </main>
-        </div>
-      )}
-
 
       {showBulletin && (
         <AgrometBulletin
@@ -500,7 +498,6 @@ export default function AeroAgroDashboard() {
         />
       )}
 
-      {activeView !== 'dashboard' && (
       <footer className="night overflow-hidden border-t border-line/[0.1]">
         <div className="mx-auto grid max-w-[1320px] gap-12 px-5 pt-20 sm:px-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
@@ -558,7 +555,6 @@ export default function AeroAgroDashboard() {
           </div>
         </div>
       </footer>
-      )}
 
       {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
     </div>

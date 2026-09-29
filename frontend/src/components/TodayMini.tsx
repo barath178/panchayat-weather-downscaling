@@ -14,8 +14,6 @@ export interface TodayMiniProps {
   pest: PestRisk;
   crop: string;
   source: 'live' | 'loading' | 'offline' | 'scenario';
-  /** opens the full village forecast (a tab on the one-screen dashboard) */
-  onOpen?: () => void;
 }
 
 const SOURCE: Record<TodayMiniProps['source'], [string, string]> = {
@@ -27,7 +25,7 @@ const SOURCE: Record<TodayMiniProps['source'], [string, string]> = {
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
 /** The answer for the selected village, on the first screen next to the map. */
-export default function TodayMini({ panchayat: p, fine, coarse, sprayWindow, pest, crop, source, onOpen }: TodayMiniProps) {
+export default function TodayMini({ panchayat: p, fine, coarse, sprayWindow, pest, crop, source }: TodayMiniProps) {
   const sky = describeSky(fine);
   const Icon = sky.icon;
   const [label, dot] = SOURCE[source];
@@ -77,9 +75,9 @@ export default function TodayMini({ panchayat: p, fine, coarse, sprayWindow, pes
             <dd className={`mt-0.5 font-semibold capitalize ${risk}`}>{pest.level} risk</dd>
           </div>
         </dl>
-        <button onClick={onOpen} className="group flex w-full items-center justify-between border-t border-line/[0.08] px-4 py-2.5 text-xs font-semibold text-accent">
+        <a href="#village" className="group flex items-center justify-between border-t border-line/[0.08] px-4 py-2.5 text-xs font-semibold text-accent">
           Full forecast, 7 days and bulletin <ArrowDownRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" />
-        </button>
+        </a>
       </div>
     </section>
   );

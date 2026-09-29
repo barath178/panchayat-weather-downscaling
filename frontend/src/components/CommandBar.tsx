@@ -119,6 +119,21 @@ export default function CommandBar({ currentScenario, onScenarioChange, activeVi
           </span>
         </a>
 
+        {activeView === 'dashboard' && (
+          <nav aria-label="Sections" className="ml-10 hidden items-center gap-7 text-sm text-ink2 xl:flex">
+            {[
+              ['Village', '#village'],
+              ['All India', '#map'],
+              ['Engine', '#engine'],
+              ['Ask', '#ask'],
+              ['Tools', '#tools'],
+            ].map(([l, h]) => (
+              <a key={h} href={h} className="relative transition-colors after:absolute after:-bottom-1 after:left-0 after:h-px after:w-0 after:bg-ink after:transition-all hover:text-ink hover:after:w-full">
+                {l}
+              </a>
+            ))}
+          </nav>
+        )}
         <div className={`order-last w-full md:order-none md:ml-6 md:w-auto md:flex-1 md:max-w-md ${activeView === 'dashboard' ? 'hidden' : 'md:block'}`}>
           <RegionSearch regions={regions} onSelect={onSelectRegion} shortcut />
         </div>

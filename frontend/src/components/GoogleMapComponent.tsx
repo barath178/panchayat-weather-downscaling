@@ -427,7 +427,7 @@ export default function GoogleMapComponent({
   const panel = 'rounded-2xl border border-line/10 bg-surface/90 shadow-pop backdrop-blur-xl';
 
   return (
-    <div className="card relative h-[520px] overflow-hidden p-0 sm:h-[600px] lg:h-full lg:min-h-0">
+    <div className="card relative h-[520px] overflow-hidden p-0 sm:h-[600px] lg:h-[calc(100vh-170px)] lg:min-h-[640px]">
       <div ref={mapContainerRef} className="z-0 h-full w-full" aria-label="Map of monitored regions" />
 
       {/* Top-left: variable + resolution */}
