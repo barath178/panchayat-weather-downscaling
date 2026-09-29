@@ -52,7 +52,7 @@ export default function TodayMini({ panchayat: p, fine, coarse, sprayWindow, pes
           <Icon className="h-7 w-7 shrink-0 text-ink2" strokeWidth={1.4} aria-hidden />
         </div>
         <div className="flex items-end gap-3 px-4 pt-2">
-          <span className="font-display text-5xl leading-none text-ink">{Math.round(fine.tempMax)}°</span>
+          <span className="font-display text-4xl leading-none text-ink">{Math.round(fine.tempMax)}°</span>
           <span className="pb-1 text-sm text-muted">
             night {Math.round(fine.tempMin)}° · {sky.label.toLowerCase()}
           </span>

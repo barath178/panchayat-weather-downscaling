@@ -70,44 +70,46 @@ export default function Hero({ regions, onSelect, map, below, today }: HeroProps
       {/* Console: search and spec on the left, the live map on the right, both on the first screen */}
       <section className="night relative border-b border-line/[0.08]" aria-label="Live map and search">
         <div className="pointer-events-none absolute inset-0 blueprint" aria-hidden />
-        <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:py-6">
+        <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:py-4">
           {/* Controls */}
-          <div className="flex min-w-0 flex-col gap-4 scrollbar-none lg:max-h-[calc(100vh-170px)] lg:min-h-[640px] lg:overflow-y-auto">
+          <div className="flex min-w-0 flex-col gap-3 scrollbar-none lg:max-h-[calc(100vh-170px)] lg:min-h-[640px] lg:overflow-y-auto">
             <div>
-              <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
+              <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
                 <span>MoES · Block → Panchayat</span>
                 <span className="flex items-center gap-1.5 text-good">
                   <span className="h-1.5 w-1.5 rounded-full bg-good" /> 303 regions
                 </span>
               </div>
-              <h1 className="mt-3 font-display text-[40px] leading-[0.95] tracking-[-0.02em] text-ink">
+              <h1 className="mt-2 font-display text-[26px] leading-[1.05] tracking-[-0.01em] text-ink">
                 Weather for your village, <em className="text-accent">not your district.</em>
               </h1>
-              <p className="mt-3 text-sm leading-relaxed text-ink2">
-                18 km forecasts re-computed on a <span className="text-ink">1.2 km</span> terrain grid, turned into spray, irrigation and crop-risk advice for each village.
+              <p className="mt-1.5 text-[13px] leading-snug text-ink2">
+                18 km forecasts re-computed at <span className="text-ink">1.2 km</span> from terrain, as spray, irrigation and crop-risk advice.
               </p>
             </div>
 
-            <div className="flex flex-col gap-2.5">
-              <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
-              <button onClick={locate} disabled={locating} className="btn-primary h-12">
-                {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
-                Use my location
-              </button>
-              {locError && <p className="text-sm text-alert">{locError}</p>}
-              <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <RegionSearch regions={regions} onSelect={goTo} placeholder="Search village, district or crop" />
+                </div>
+                <button onClick={locate} disabled={locating} aria-label="Use my location" title="Use my location" className="btn-primary h-10 w-10 shrink-0 px-0">
+                  {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
+                </button>
+              </div>
+              {locError && <p className="text-xs text-alert">{locError}</p>}
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 scrollbar-none">
                 {EXAMPLES.map(([label, id]) => (
-                  <button key={id} onClick={() => goTo(id)} className="chip">
+                  <button key={id} onClick={() => goTo(id)} className="chip shrink-0 whitespace-nowrap px-2.5 py-1 text-[11.5px]">
                     {label}
                   </button>
                 ))}
               </div>
             </div>
-
             {today && <TodayMini {...today} />}
 
-            {/* Pipeline spec */}
-            <div className="rounded-card border border-line/[0.1] bg-surface/80">
+            {/* Pipeline spec (desktop: on phones the map comes first) */}
+            <div className="hidden rounded-card border border-line/[0.1] bg-surface/80 lg:block">
               <div className="flex items-center justify-between border-b border-line/[0.08] px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
                 <span>Pipeline spec</span>
                 <span className="text-accent">v1.0</span>
