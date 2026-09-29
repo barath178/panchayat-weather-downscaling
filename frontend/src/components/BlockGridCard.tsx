@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Grid3x3, Square, Loader2, MapPinned, Mountain, Thermometer, Sparkles, Download } from 'lucide-react';
-import { exportCsv, exportGeoJson, exportPng } from '@/lib/exportGrid';
+import { Grid3x3, Square, Loader2, MapPinned, Mountain, Thermometer, Sparkles } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import { BlockField, GRID_RISK, GRID_VARS, GridVar, fieldStats } from '@/lib/blockGrid';
 import { NorthArrow, ScaleBar } from './Instrument';
@@ -339,20 +338,6 @@ export default function BlockGridCard({ panchayat: p, field, onShowOnMap }: Prop
               <button onClick={() => onShowOnMap(v)} className="btn-ghost mt-auto">
                 <MapPinned className="h-4 w-4" /> Show grid on the map
               </button>
-              <div className="flex items-center gap-1.5">
-                <span className="mr-1 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-                  <Download className="h-3 w-3" /> Data
-                </span>
-                {[
-                  ['CSV', () => exportCsv(p, field)],
-                  ['GeoJSON', () => exportGeoJson(p, field)],
-                  ['PNG', () => exportPng(p, canvasRef.current, v)],
-                ].map(([label, fn]) => (
-                  <button key={label as string} onClick={fn as () => void} className="chip flex-1 justify-center" title={`Download the 1.2 km field as ${label}`}>
-                    {label as string}
-                  </button>
-                ))}
-              </div>
             </>
           ) : (
             <div className="space-y-2">

@@ -166,7 +166,7 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
               <div className="relative h-7 rounded-md bg-surface2">
                 {isStep && <span className="absolute inset-y-0 w-px border-l border-dashed border-line/25" style={{ left: `${x(r.from)}%` }} />}
                 <span
-                  className="absolute inset-y-1 rounded-[5px] transition-all duration-700 ease-out"
+                  className="absolute inset-y-1 rounded-[5px] transition-[width,left] duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
                   style={{
                     left: `${barLeft}%`,
                     width: shown ? `${barWidth}%` : '0%',

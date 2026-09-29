@@ -2,11 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Clock, Mountain, Radio, Satellite, ShieldCheck, Sparkles, CloudRain, Layers3, Cpu, FileText, ArrowRight, ArrowUpRight, Smartphone, Tv } from 'lucide-react';
+import { Clock, Mountain, Radio, Satellite, ShieldCheck, Download, Github, Sparkles, CloudRain, Layers3, Cpu, FileText, ArrowRight } from 'lucide-react';
 
 import CommandBar, { Logo } from '@/components/CommandBar';
 import Hero from '@/components/Hero';
-import VillageSheet from '@/components/VillageSheet';
+import TodayCard from '@/components/TodayCard';
 import ActionPlan from '@/components/ActionPlan';
 import WhatsAppDrawer from '@/components/WhatsAppDrawer';
 import SprayTimelineChart from '@/components/SprayTimelineChart';
@@ -23,7 +23,7 @@ import BlockGridCard from '@/components/BlockGridCard';
 import ExplainPanel from '@/components/ExplainPanel';
 import AskAeroAgro from '@/components/AskAeroAgro';
 import AgrometBulletin from '@/components/AgrometBulletin';
-import { Reveal, SectionHead, Telemetry, TelemetryStrip } from '@/components/Instrument';
+import { SectionHead, Telemetry, TelemetryStrip } from '@/components/Instrument';
 
 import { ALL_INDIA_PANCHAYATS } from '@/data/all_india_regions';
 import {
@@ -64,7 +64,6 @@ export type MapVariable = 'rainfall' | 'tempMin' | 'tempMax' | 'wind';
 type StudioTab = 'spray' | 'insurance' | 'imd' | 'profile' | 'acoustic';
 
 const DEFAULT_ID = 'tamilnadu_thanjavur_6'; // Thiruvaiyaru, Cauvery delta
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? ''; // '/panchayat-weather-downscaling' on GitHub Pages
 
 /** Climatological season for today, used when live data is unavailable. */
 function seasonForToday(now: Date | null): Exclude<Scenario, 'live'> {
@@ -242,7 +241,6 @@ export default function AeroAgroDashboard() {
 
   return (
     <div id="top" className="flex min-h-screen flex-col">
-      <TelemetryStrip t={telemetry} />
       <CommandBar
         currentScenario={scenario}
         onScenarioChange={setScenario}
@@ -253,37 +251,12 @@ export default function AeroAgroDashboard() {
         regions={ALL_INDIA_PANCHAYATS}
         onSelectRegion={selectRegion}
       />
+      <TelemetryStrip t={telemetry} />
 
-      {activeView === 'dashboard' && (
-        <Hero
-          regions={ALL_INDIA_PANCHAYATS}
-          onSelect={setSelectedId}
-          map={
-            <GoogleMapComponent
-              panchayats={ALL_INDIA_PANCHAYATS}
-              selectedId={selectedId}
-              onSelectPanchayat={setSelectedId}
-              activeVariable={activeVar}
-              onVariableChange={setActiveVar}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              regionMetrics={regionMetrics}
-              liveLoading={isLive && nationalStatus === 'loading'}
-              blockField={blockField}
-              focusBlock={focusBlock}
-            />
-          }
-          today={{ panchayat: activePanchayat, fine, coarse, sprayWindow, pest, crop: selectedCrop, source: dataSource.kind }}
-          below={
-            <section id="map" className="night scroll-mt-16">
-              <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6"><AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} /></div>
-            </section>
-          }
-        />
-      )}
+      {activeView === 'dashboard' && <Hero regions={ALL_INDIA_PANCHAYATS} onSelect={setSelectedId} />}
 
       {activeView === 'mobile' && (
-        <div className="night topo-bg flex-1">
+        <div className="topo-bg flex-1">
           <main className="mx-auto w-full max-w-[1400px] px-4 py-10 sm:px-8">
             <KisanMobileView {...shared} />
           </main>
@@ -291,163 +264,127 @@ export default function AeroAgroDashboard() {
       )}
 
       {activeView === 'kiosk' && (
-        <div className="night flex-1">
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-8 sm:px-8">
-            <PanchayatKioskView {...shared} />
-          </main>
-        </div>
+        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-8 sm:px-8">
+          <PanchayatKioskView {...shared} />
+        </main>
       )}
 
       {activeView === 'dashboard' && (
-        <main id="dashboard" className="flex-1">
-          {/* (01) Your village: paper */}
-          <section id="village" className="mx-auto max-w-[1320px] scroll-mt-16 px-5 py-20 sm:px-8 lg:py-28">
-            <Reveal>
-              <SectionHead
-                index="01"
-                kicker="Your village, today"
-                title={
-                  <>
-                    One village. <em className="text-accent">Its own forecast.</em>
-                  </>
-                }
-                meta="Pick any of 303 regions. Everything here is re-computed for that exact place: temperature, rain and wind, and what to do about them."
-              />
-            </Reveal>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              <div className="card p-7 sm:p-10 lg:col-span-7">
-                <VillageSheet panchayat={activePanchayat} coarse={coarse} fine={fine} coarseElevationM={Math.round(coarseElev)} source={dataSource} now={now} />
-              </div>
-              <div className="lg:col-span-5">
-                <ActionPlan
-                  crop={selectedCrop}
-                  crops={cropChoices}
-                  onCropChange={setSelectedCrop}
-                  hourly={hourlyData}
-                  sprayWindow={sprayWindow}
-                  irrigation={irrigation}
-                  et0={et0}
-                  pest={pest}
+        <div className="blueprint flex-1 border-t border-line/[0.07]">
+        <main id="dashboard" className="mx-auto w-full max-w-[1400px] scroll-mt-20 px-4 pb-16 pt-10 sm:px-8">
+          <SectionHead
+            index="01"
+            kicker="Live dashboard"
+            meta={`${ALL_INDIA_PANCHAYATS.length} regions · ${viewMode === 'fine' ? '1.2 km downscaled' : '18 km block'} view`}
+            title={
+              <>
+                India, <span className="italic text-accent">one village</span> at a time
+              </>
+            }
+          />
+
+          <AlertScan regions={ALL_INDIA_PANCHAYATS} regionMetrics={regionMetrics} selectedId={selectedId} onSelect={setSelectedId} source={dataSource.kind} />
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <div id="map" className="scroll-mt-24">
+                <GoogleMapComponent
+                  panchayats={ALL_INDIA_PANCHAYATS}
+                  selectedId={selectedId}
+                  onSelectPanchayat={setSelectedId}
+                  activeVariable={activeVar}
+                  onVariableChange={setActiveVar}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  regionMetrics={regionMetrics}
+                  liveLoading={isLive && nationalStatus === 'loading'}
+                  blockField={blockField}
+                  focusBlock={focusBlock}
                 />
               </div>
-            </div>
-            <div className="mt-6">
               <WeekForecast panchayat={activePanchayat} week={week} isLive={liveOk} onOpenBulletin={() => setShowBulletin(true)} />
             </div>
-          </section>
 
-          {/* (03) Engine: night */}
-          <section id="engine" className="night scroll-mt-16 border-t border-line/[0.08]" aria-labelledby="engine-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
-              <Reveal>
-                <SectionHead
-                  index="03"
-                  kicker="The downscaling engine"
-                  id="engine-title"
-                  title={
-                    <>
-                      From block to panchayat, <em className="text-accent">shown working.</em>
-                    </>
-                  }
-                  meta="Real terrain heights, transparent physics and an equation behind every number. Nothing here is a black box."
-                />
-              </Reveal>
-              <ol className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line/[0.08] bg-line/[0.08] lg:grid-cols-4" aria-label="Pipeline">
-                {[
-                  { icon: CloudRain, k: 'In', t: 'NWP block forecast', d: `Open-Meteo · cell ${Math.round(coarseElev)} m` },
-                  { icon: Layers3, k: 'Terrain', t: 'DEM + covariates', d: `GLO-90 · slope ${activePanchayat.slopeDeg}° · D ${activePanchayat.drainageAccumulation}` },
-                  { icon: Cpu, k: 'Model', t: 'Physics inference', d: 'Γ lapse · pooling · orographic · OI blend' },
-                  { icon: FileText, k: 'Out', t: 'Village advisory', d: `${activePanchayat.elevationM} m · Δx 1.2 km · 7 days` },
-                ].map(({ icon: I, k, t, d }, i) => (
-                  <li key={k} className="relative flex items-start gap-3 bg-surface px-5 py-4">
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${i === 3 ? 'bg-accent text-accent-ink' : 'bg-surface2 text-ink2'}`}>
-                      <I className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="mono-label block">
-                        {String(i + 1).padStart(2, '0')} · {k}
-                      </span>
-                      <span className="block text-sm font-semibold text-ink">{t}</span>
-                      <span className="block truncate font-mono text-[10.5px] text-muted">{d}</span>
-                    </span>
-                    {i < 3 && <ArrowRight className="absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full bg-bg text-accent lg:block" />}
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-                <BlockGridCard panchayat={activePanchayat} field={blockField} onShowOnMap={showGridOnMap} />
-                <div id="explain" className="min-w-0 scroll-mt-24">
-                  <ExplainPanel panchayat={activePanchayat} coarse={coarse} detail={detail} coarseElevationM={coarseElev} isLive={liveOk} />
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* (04) Ask + reach: paper */}
-          <section className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
-            <Reveal>
-              <SectionHead
-                index="04"
-                kicker="Ask & reach every farmer"
-                title={
-                  <>
-                    Ask it like you&rsquo;d <em className="text-accent">ask a neighbour.</em>
-                  </>
-                }
-                meta="Type or speak in English, हिन्दी or தமிழ். Answers come from this village's forecast and are computed on the device."
+            <aside className="flex min-w-0 flex-col gap-6">
+              <TodayCard panchayat={activePanchayat} coarse={coarse} fine={fine} coarseElevationM={Math.round(coarseElev)} source={dataSource} />
+              <ActionPlan
+                crop={selectedCrop}
+                crops={cropChoices}
+                onCropChange={setSelectedCrop}
+                hourly={hourlyData}
+                sprayWindow={sprayWindow}
+                irrigation={irrigation}
+                et0={et0}
+                pest={pest}
               />
-            </Reveal>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-              <div className="lg:col-span-7">
-                <AskAeroAgro ctx={assistantCtx} lang={lang} onLangChange={setLang} onAction={onAssistantAction} />
-              </div>
-              <div className="flex flex-col gap-4 lg:col-span-5">
-                {[
-                  { k: 'Print', t: 'Agromet bulletin', d: 'Five-day GKMS-format advisory with SMS text and QR, ready for the panchayat notice board.', icon: FileText, act: () => setShowBulletin(true) },
-                  { k: 'Phone', t: 'Farmer app view', d: 'The same advice on a simple phone screen, with voice in three languages.', icon: Smartphone, act: () => setActiveView('mobile') },
-                  { k: 'Wall', t: 'Village kiosk', d: 'A large-type wallboard with a WhatsApp QR code for the panchayat office.', icon: Tv, act: () => setActiveView('kiosk') },
-                ].map(({ k, t, d, icon: I, act }) => (
-                  <button key={t} onClick={act} className="card group flex flex-1 items-start gap-5 p-6 text-left transition-transform hover:-translate-y-0.5">
-                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-btn text-btn-ink">
-                      <I className="h-5 w-5" />
+            </aside>
+          </div>
+
+          {/* ---- The downscaling engine ---- */}
+          <section id="engine" className="mt-16 scroll-mt-24" aria-labelledby="engine-title">
+            <SectionHead
+              index="02"
+              kicker="Downscaling engine"
+              id="engine-title"
+              meta="Physics-informed · explainable · runs in the browser"
+              title={
+                <>
+                  From block to panchayat, <span className="italic text-accent">shown working</span>
+                </>
+              }
+            />
+            {/* Pipeline: each stage with its real input and resolution */}
+            <ol className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line/[0.08] bg-line/[0.08] lg:grid-cols-4" aria-label="Pipeline">
+              {[
+                { icon: CloudRain, k: 'IN', t: 'NWP block forecast', d: `Open-Meteo · cell ${Math.round(coarseElev)} m` },
+                { icon: Layers3, k: 'TERRAIN', t: 'DEM + covariates', d: `GLO-90 · slope ${activePanchayat.slopeDeg}° · D ${activePanchayat.drainageAccumulation}` },
+                { icon: Cpu, k: 'MODEL', t: 'Physics inference', d: 'Γ lapse · pooling · orographic · OI blend' },
+                { icon: FileText, k: 'OUT', t: 'Village advisory', d: `${activePanchayat.elevationM} m · Δx 1.2 km · 7 days` },
+              ].map(({ icon: I, k, t, d }, i) => (
+                <li key={k} className="relative flex items-start gap-3 bg-surface px-4 py-3">
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-md ${i === 3 ? 'bg-accent text-accent-ink' : 'bg-surface2 text-ink2'}`}>
+                    <I className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="mono-label block">
+                      {String(i + 1).padStart(2, '0')} · {k}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">{k}</span>
-                      <span className="mt-1 block font-display text-3xl leading-none text-ink">{t}</span>
-                      <span className="mt-2 block text-sm leading-relaxed text-ink2">{d}</span>
-                    </span>
-                    <ArrowUpRight className="h-5 w-5 shrink-0 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink" />
-                  </button>
-                ))}
+                    <span className="block text-sm font-semibold text-ink">{t}</span>
+                    <span className="block truncate font-mono text-[10.5px] text-muted">{d}</span>
+                  </span>
+                  {i < 3 && <ArrowRight className="absolute -right-2 top-1/2 z-10 hidden h-4 w-4 -translate-y-1/2 rounded-full bg-bg text-accent lg:block" />}
+                </li>
+              ))}
+            </ol>
+            <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+              <BlockGridCard panchayat={activePanchayat} field={blockField} onShowOnMap={showGridOnMap} />
+              <div id="explain" className="min-w-0 scroll-mt-24">
+                <ExplainPanel panchayat={activePanchayat} coarse={coarse} detail={detail} coarseElevationM={coarseElev} isLive={liveOk} />
               </div>
-            </div>
-            <div className="mt-6">
-              <WhatsAppDrawer messageText={advisoryText} lang={lang} onLangChange={setLang} placeName={activePanchayat.name} />
             </div>
           </section>
 
-          {/* (05) Field tools: night */}
-          <section id="tools" className="night scroll-mt-16" aria-labelledby="tools-title">
-            <div className="mx-auto max-w-[1320px] px-5 py-20 sm:px-8 lg:py-28">
-              <Reveal>
-                <SectionHead
-                  index="05"
-                  kicker="Field tools"
-                  id="tools-title"
-                  title={
-                    <>
-                      Verify, <em className="text-accent">then act.</em>
-                    </>
-                  }
-                  meta="Hour-by-hour spray safety, crop-insurance evidence, live satellite, the Himalaya-to-delta transect and a tin-roof rain gauge."
-                />
-              </Reveal>
-              <div className="card overflow-hidden">
+          <div className="mt-16">
+            <SectionHead
+              index="03"
+              kicker="Field tools & assistant"
+              meta="Hourly spray · PMFBY · satellite · voice"
+              title={
+                <>
+                  Decide, verify, <span className="italic text-accent">ask</span>
+                </>
+              }
+            />
+          </div>
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <section id="tools" className="card scroll-mt-24 overflow-hidden" aria-labelledby="tools-title">
                 <div className="border-b border-line/[0.07] px-5 pt-5 sm:px-6">
-                  <p className="text-sm text-muted">
-                    {STUDIO_TABS.find((t) => t.id === activeStudioTab)!.blurb} for {activePanchayat.name}
-                  </p>
-                  <div role="tablist" className="-mb-px mt-3 flex gap-1 overflow-x-auto scrollbar-none">
+                  <h2 id="tools-title" className="font-display text-xl text-ink">
+                    Deep-dive tools
+                  </h2>
+                  <p className="mt-0.5 text-sm text-muted">{STUDIO_TABS.find((t) => t.id === activeStudioTab)!.blurb} for {activePanchayat.name}</p>
+                  <div role="tablist" className="-mb-px mt-4 flex gap-1 overflow-x-auto scrollbar-none">
                     {STUDIO_TABS.map(({ id, label, icon: Icon }) => (
                       <button
                         key={id}
@@ -463,6 +400,7 @@ export default function AeroAgroDashboard() {
                     ))}
                   </div>
                 </div>
+
                 <div key={activeStudioTab} role="tabpanel" className="animate-fade-in p-5 sm:p-6">
                   {activeStudioTab === 'spray' && <SprayTimelineChart hourlyData={hourlyData} sprayWindow={sprayWindow} isLive={liveOk} />}
                   {activeStudioTab === 'insurance' && <PMFBYInsuranceModal panchayat={activePanchayat} selectedCrop={selectedCrop} fineMetrics={fine} coarseMetrics={coarse} />}
@@ -472,18 +410,25 @@ export default function AeroAgroDashboard() {
                   )}
                   {activeStudioTab === 'acoustic' && <AcousticSpectrogram />}
                 </div>
-              </div>
+              </section>
+
+              <WhatsAppDrawer messageText={advisoryText} lang={lang} onLangChange={setLang} placeName={activePanchayat.name} />
             </div>
-          </section>
+
+            <aside className="min-w-0 xl:sticky xl:top-24">
+              <AskAeroAgro ctx={assistantCtx} lang={lang} onLangChange={setLang} onAction={onAssistantAction} />
+            </aside>
+          </div>
 
           {/* Floating shortcut to the assistant */}
           <a
             href="#ask"
-            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-btn px-5 py-3 text-sm font-semibold text-btn-ink shadow-pop transition hover:-translate-y-0.5 lg:hidden"
+            className="fixed bottom-5 right-5 z-[900] inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-ink shadow-glow transition hover:brightness-110 xl:hidden"
           >
             <Sparkles className="h-4 w-4" /> Ask AI
           </a>
         </main>
+        </div>
       )}
 
       {showBulletin && (
@@ -498,60 +443,34 @@ export default function AeroAgroDashboard() {
         />
       )}
 
-      <footer className="night overflow-hidden border-t border-line/[0.1]">
-        <div className="mx-auto grid max-w-[1320px] gap-12 px-5 pt-20 sm:px-8 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <Logo className="h-10 w-10" />
-            <p className="mt-6 font-display text-4xl leading-[1.05] text-ink">
-              Weather for your village, <em className="text-accent">not your district.</em>
-            </p>
-            <p className="mt-5 max-w-md text-xs leading-relaxed text-muted">
-              Data: Open-Meteo NWP · Copernicus GLO-90 DEM · IMD INSAT-3DR · ICAR agromet guidance. Downscaled values are decision-support estimates, not an official IMD
-              forecast.
-            </p>
+      <footer className="border-t border-line/[0.07]">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-4 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <Logo className="h-8 w-8" />
+            <div>
+              <div className="font-display text-lg text-ink">AeroAgro AI</div>
+              <div className="text-xs text-muted">Weather for your village, not your district.</div>
+            </div>
           </div>
-          <nav className="grid grid-cols-2 gap-8 text-sm sm:grid-cols-4 lg:col-span-7 lg:col-start-6" aria-label="Footer">
-            {[
-              ['Product', [['Your village', '#village'], ['All India', '#map'], ['Engine', '#engine'], ['Ask AeroAgro', '#ask'], ['Field tools', '#tools']]],
-              [
-                'Build',
-                [
-                  ['Source code', 'https://github.com/barath178/panchayat-weather-downscaling'],
-                  ['Figma plugin', 'https://github.com/barath178/panchayat-weather-downscaling/tree/main/design/figma-plugin'],
-                ],
-              ],
-              ['Data', [['Open-Meteo', 'https://open-meteo.com'], ['Copernicus DEM', 'https://spacedata.copernicus.eu/collections/copernicus-digital-elevation-model'], ['IMD satellite', 'https://mausam.imd.gov.in']]],
-              ['Legal', [['Privacy policy', `${BASE}/privacy/`], ['Terms of use', `${BASE}/terms/`]]],
-            ].map(([h, links]) => (
-              <div key={h as string}>
-                <div className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">{h as string}</div>
-                <ul className="mt-4 space-y-2.5">
-                  {(links as string[][]).map(([l, href]) => (
-                    <li key={l}>
-                      <a
-                        href={href}
-                        {...(href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                        className="text-ink2 transition-colors hover:text-accent"
-                      >
-                        {l}
-                      </a>
-                    </li>
-                  ))}
-                  {h === 'Build' && (
-                    <li>
-                      <button onClick={() => setShowAbout(true)} className="text-ink2 transition-colors hover:text-accent">
-                        About the project
-                      </button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            ))}
-          </nav>
-        </div>
-        <div className="mx-auto mt-16 max-w-[1320px] px-5 sm:px-8">
-          <div className="select-none whitespace-nowrap font-display text-[21vw] leading-[0.78] tracking-[-0.045em] text-ink lg:text-[270px]" aria-hidden>
-            AeroAgro<em className="text-accent">.</em>
+          <p className="max-w-lg text-xs leading-relaxed text-muted">
+            Data: Open-Meteo NWP · NASA SRTM 30 m · IMD INSAT-3DR · ICAR agromet guidance. Downscaled values are decision-support estimates, not an
+            official IMD forecast.
+          </p>
+          <div className="flex gap-2">
+            <a
+              href="https://github.com/barath178/panchayat-weather-downscaling/tree/main/design/figma-plugin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost h-9 px-3 text-xs"
+            >
+              <Download className="h-3.5 w-3.5" /> Figma plugin
+            </a>
+            <a href="https://github.com/barath178/panchayat-weather-downscaling" target="_blank" rel="noopener noreferrer" className="btn-ghost h-9 px-3 text-xs">
+              <Github className="h-3.5 w-3.5" /> Source
+            </a>
+            <button onClick={() => setShowAbout(true)} className="btn-ghost h-9 px-3 text-xs">
+              About
+            </button>
           </div>
         </div>
       </footer>

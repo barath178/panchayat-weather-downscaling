@@ -7,7 +7,7 @@ import { Logo } from './CommandBar';
 // How each part of the MoES problem statement is answered in the product
 const MOES: [string, string][] = [
   ['Block → panchayat downscaling', '18 km NWP block resolved into 225 cells of 1.2 km from the live Copernicus 90 m DEM'],
-  ['High-resolution from low-resolution', 'Physics-informed inference (lapse rate, cold-air pooling, orographic lift, wind exposure), explained step by step; export the 1.2 km field as CSV, GeoJSON or PNG'],
+  ['High-resolution from low-resolution', 'Physics-informed inference (lapse rate, cold-air pooling, orographic lift, wind exposure), explained step by step'],
   ['Agro-met advisory services', '7-day village outlook, spray windows, irrigation (FAO-56 ET₀), crop disease rules, GKMS-format bulletin'],
   ['Reaching farmers', 'Ask AeroAgro voice assistant and WhatsApp in English, हिन्दी, தமிழ்; kiosk wallboard with QR'],
   ['National scale', 'AI scan of 303 villages flags alerts that the district forecast misses'],

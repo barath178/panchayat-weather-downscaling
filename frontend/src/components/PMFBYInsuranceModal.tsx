@@ -32,7 +32,7 @@ function Gauge({ value, trigger, inverse }: { value: number; trigger: number; in
   return (
     <div className="mt-3">
       <div className="h-1.5 overflow-hidden rounded-full bg-raised">
-        <div className={`h-full rounded-full ${tone} transition-all`} style={{ width: `${clamped}%` }} />
+        <div className={`h-full rounded-full ${tone} transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]`} style={{ width: `${clamped}%` }} />
       </div>
       <div className="mt-1 text-[11px] text-muted">{Math.round(Math.max(0, pct))}% of the way to the trigger</div>
     </div>

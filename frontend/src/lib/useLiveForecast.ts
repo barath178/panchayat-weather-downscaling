@@ -8,24 +8,18 @@ import type { HourlyInput, LiveForecast, WeatherMetrics } from './microclimate';
 // DEM correction, so values are the raw grid-cell mean – the true "coarse" baseline.
 const API = 'https://api.open-meteo.com/v1/forecast';
 const TTL_MS = 30 * 60 * 1000;
-// The national request asks for all 303 points at once and Open-Meteo counts every point, so
-// daily map colours are kept longer. If the API refuses (rate limit, venue wifi), the last real
-// forecast up to STALE_MS old is shown instead of dropping to climatology; its "updated" time says how old.
-const NATIONAL_TTL_MS = 3 * 60 * 60 * 1000;
-const STALE_MS = 12 * 60 * 60 * 1000;
 
 export type LiveStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const r1 = (n: number) => Math.round(n * 10) / 10;
 
-// localStorage so the cache survives reloads and new tabs (sessionStorage did not).
-function cacheGet<T>(key: string, maxAgeMs = TTL_MS): T | null {
+function cacheGet<T>(key: string): T | null {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = sessionStorage.getItem(key);
     if (!raw) return null;
     const { at, data } = JSON.parse(raw);
-    return Date.now() - at < maxAgeMs ? (data as T) : null;
+    return Date.now() - at < TTL_MS ? (data as T) : null;
   } catch {
     return null;
   }
@@ -33,7 +27,7 @@ function cacheGet<T>(key: string, maxAgeMs = TTL_MS): T | null {
 
 function cacheSet(key: string, data: unknown) {
   try {
-    localStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
+    sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), data }));
   } catch {
     /* storage full or blocked – caching is best-effort */
   }
@@ -122,9 +116,7 @@ export function useLiveForecast(p: PanchayatData, enabled: boolean) {
       })
       .catch((e) => {
         if (ctrl.signal.aborted) return;
-        const stale = cacheGet<LiveForecast>(key, STALE_MS);
-        if (stale) setState({ status: 'ready', data: stale });
-        else setState({ status: 'error', data: null, error: String(e?.message || e) });
+        setState({ status: 'error', data: null, error: String(e?.message || e) });
       });
 
     return () => ctrl.abort();
@@ -141,7 +133,7 @@ export function useLiveNational(regions: PanchayatData[], enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const key = 'aeroagro:live:national';
-    const cached = cacheGet<typeof map>(key, NATIONAL_TTL_MS);
+    const cached = cacheGet<typeof map>(key);
     if (cached) {
       setMap(cached);
       setStatus('ready');
@@ -186,12 +178,7 @@ export function useLiveNational(regions: PanchayatData[], enabled: boolean) {
         setStatus('ready');
       })
       .catch(() => {
-        if (ctrl.signal.aborted) return;
-        const stale = cacheGet<typeof map>(key, STALE_MS);
-        if (stale) {
-          setMap(stale);
-          setStatus('ready');
-        } else setStatus('error');
+        if (!ctrl.signal.aborted) setStatus('error');
       });
 
     return () => ctrl.abort();

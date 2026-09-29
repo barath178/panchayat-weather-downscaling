@@ -1,22 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { LocateFixed, Loader2, ArrowDownRight } from 'lucide-react';
+import { LocateFixed, Loader2, ArrowDown } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import RegionSearch from './RegionSearch';
-import TodayMini, { TodayMiniProps } from './TodayMini';
 import ResolutionReveal from './ResolutionReveal';
 import { getPosition, nearestRegion } from '@/lib/geo';
 
 interface HeroProps {
   regions: PanchayatData[];
   onSelect: (id: string) => void;
-  /** the live map, shown directly under the header */
-  map?: React.ReactNode;
-  /** full-width strip under the console, e.g. the hazard scan */
-  below?: React.ReactNode;
-  /** the selected village, answered next to the map */
-  today?: TodayMiniProps;
 }
 
 const EXAMPLES: [string, string][] = [
@@ -27,29 +20,20 @@ const EXAMPLES: [string, string][] = [
   ['Cauvery delta', 'tamilnadu_thanjavur_6'],
 ];
 
-const STATS: [string, string, string][] = [
-  ['303', 'regions', 'districts, metros and hill panchayats across India'],
-  ['15×', 'sharper', '18 km forecast blocks resolved into 1.2 km cells'],
-  ['3', 'languages', 'English, हिन्दी and தமிழ், read aloud for every farmer'],
-  ['₹0', 'running cost', 'free, keyless open data; runs in any browser'],
+const STATS: [string, string][] = [
+  ['303', 'districts & metros'],
+  ['225×', 'finer than an 18 km grid'],
+  ['3', 'languages, with voice'],
+  ['₹0', 'data cost · open APIs'],
 ];
 
-// The pipeline in numbers: what goes in, what comes out, and the physics in between.
-const SPEC: [string, string][] = [
-  ['Input', 'NWP forecast · 11–25 km grid'],
-  ['Output', '1.2 km cells · 15 × 15 per block'],
-  ['Terrain', 'Copernicus GLO-90 DEM'],
-  ['Physics', 'Lapse · cold-air pool · orographic'],
-  ['Blend', 'Elevation-aware OI (gridpp)'],
-  ['Refresh', 'Live · cached 30 min'],
-];
-
-export default function Hero({ regions, onSelect, map, below, today }: HeroProps) {
+export default function Hero({ regions, onSelect }: HeroProps) {
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState<string | null>(null);
 
   const goTo = (id: string) => {
     onSelect(id);
+    requestAnimationFrame(() => document.getElementById('dashboard')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
   const locate = async () => {
@@ -66,101 +50,67 @@ export default function Hero({ regions, onSelect, map, below, today }: HeroProps
   };
 
   return (
-    <>
-      {/* Console: search and spec on the left, the live map on the right, both on the first screen */}
-      <section className="night relative border-b border-line/[0.08]" aria-label="Live map and search">
-        <div className="pointer-events-none absolute inset-0 blueprint" aria-hidden />
-        <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:py-4">
-          {/* Controls */}
-          <div className="flex min-w-0 flex-col gap-3 scrollbar-none lg:max-h-[calc(100vh-170px)] lg:min-h-[640px] lg:overflow-y-auto">
-            <div>
-              <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-                <span>MoES · Block → Panchayat</span>
-                <span className="flex items-center gap-1.5 text-good">
-                  <span className="h-1.5 w-1.5 rounded-full bg-good" /> 303 regions
-                </span>
-              </div>
-              <h1 className="mt-2 font-display text-[26px] leading-[1.05] tracking-[-0.01em] text-ink">
-                Weather for your village, <em className="text-accent">not your district.</em>
-              </h1>
-              <p className="mt-1.5 text-[13px] leading-snug text-ink2">
-                18 km forecasts re-computed at <span className="text-ink">1.2 km</span> from terrain, as spray, irrigation and crop-risk advice.
-              </p>
-            </div>
+    <section className="topo-bg">
+      <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-4 pb-14 pt-10 sm:px-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14 lg:pb-20 lg:pt-16">
+        <div className="animate-rise">
+          <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-accent animate-pulse-ring" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+            Live microclimate forecasts for Indian farms
+          </span>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <div className="min-w-0 flex-1">
-                  <RegionSearch regions={regions} onSelect={goTo} placeholder="Search village, district or crop" />
-                </div>
-                <button onClick={locate} disabled={locating} aria-label="Use my location" title="Use my location" className="btn-primary h-10 w-10 shrink-0 px-0">
-                  {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-                </button>
-              </div>
-              {locError && <p className="text-xs text-alert">{locError}</p>}
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 scrollbar-none">
-                {EXAMPLES.map(([label, id]) => (
-                  <button key={id} onClick={() => goTo(id)} className="chip shrink-0 whitespace-nowrap px-2.5 py-1 text-[11.5px]">
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {today && <TodayMini {...today} />}
+          <h1 className="mt-5 font-display text-[40px] font-medium leading-[1.05] tracking-tight text-ink text-balance sm:text-6xl lg:text-[68px]">
+            Weather for your village, <em className="font-normal italic text-accent">not your district.</em>
+          </h1>
 
-            {/* Pipeline spec (desktop: on phones the map comes first) */}
-            <div className="hidden rounded-card border border-line/[0.1] bg-surface/80 lg:block">
-              <div className="flex items-center justify-between border-b border-line/[0.08] px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-muted">
-                <span>Pipeline spec</span>
-                <span className="text-accent">v1.0</span>
-              </div>
-              <dl className="divide-y divide-line/[0.06] font-mono text-[11.5px]">
-                {SPEC.map(([k, v]) => (
-                  <div key={k} className="grid grid-cols-[76px_1fr] gap-3 px-4 py-2">
-                    <dt className="uppercase tracking-[0.1em] text-muted">{k}</dt>
-                    <dd className="text-ink2">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="border-t border-line/[0.08] px-4 py-2.5 font-mono text-[11.5px] text-ink2">
-                T<sub>1.2</sub> = T<sub>18</sub> − Γ·Δz + ΔT<sub>pool</sub> + ΔT<sub>slope</sub>
-              </div>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-ink2 sm:text-lg">
+            AeroAgro sharpens 18 km forecasts into 1.2 km microclimates using terrain physics, then tells each farmer exactly
+            when to spray, water and protect their crop.
+          </p>
+
+          <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <RegionSearch regions={regions} onSelect={goTo} size="lg" placeholder="Find your village, district or crop" />
             </div>
+            <button onClick={locate} disabled={locating} className="btn-ghost h-14 rounded-2xl px-5">
+              {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+              Use my location
+            </button>
+          </div>
+          {locError && <p className="mt-2 text-sm text-alert">{locError}</p>}
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted">Try</span>
+            {EXAMPLES.map(([label, id]) => (
+              <button key={id} onClick={() => goTo(id)} className="chip">
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Live map */}
-          <div className="min-w-0">{map}</div>
+          <dl className="mt-10 grid max-w-xl grid-cols-2 gap-x-6 gap-y-5 border-t border-line/10 pt-6 sm:grid-cols-4">
+            {STATS.map(([v, l]) => (
+              <div key={l}>
+                <dt className="sr-only">{l}</dt>
+                <dd className="font-display text-3xl text-ink">{v}</dd>
+                <dd className="mt-0.5 text-xs leading-snug text-muted">{l}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
-      </section>
 
-      {below}
-
-      {/* Figure band */}
-      <section className="night relative overflow-hidden" aria-label="Resolution comparison">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_80%_0%,rgb(212_242_90/0.08),transparent_70%)]" aria-hidden />
-        <div className="relative mx-auto max-w-[1320px] px-5 py-16 sm:px-8 lg:py-24">
+        <div className="animate-rise [animation-delay:120ms]">
           <ResolutionReveal />
         </div>
-      </section>
+      </div>
 
-      {/* Numbers */}
-      <section className="border-b border-line/[0.14]">
-        <dl className="mx-auto grid max-w-[1320px] grid-cols-2 px-5 sm:px-8 lg:grid-cols-4">
-          {STATS.map(([v, k, d], i) => (
-            <div key={k} className={`py-10 pr-6 ${i ? 'lg:border-l lg:border-line/[0.14] lg:pl-8' : ''} ${i % 2 ? 'border-l border-line/[0.14] pl-6 lg:pl-8' : ''}`}>
-              <dt className="sr-only">{k}</dt>
-              <dd className="font-display text-6xl leading-none text-ink sm:text-7xl">{v}</dd>
-              <dd className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink">{k}</dd>
-              <dd className="mt-1 max-w-[26ch] text-sm leading-relaxed text-muted">{d}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="flex justify-center pb-8">
-          <a href="#village" className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted transition-colors hover:text-ink">
-            Open your village <ArrowDownRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" />
-          </a>
-        </div>
-      </section>
-    </>
+      <div className="flex justify-center pb-6">
+        <a href="#dashboard" className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-ink">
+          Open the live dashboard <ArrowDown className="h-4 w-4 animate-bounce" />
+        </a>
+      </div>
+    </section>
   );
 }
