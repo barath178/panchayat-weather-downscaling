@@ -19,6 +19,8 @@ interface HeroProps {
   today?: TodayMiniProps;
 }
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+
 const EXAMPLES: [string, string][] = [
   ['Ooty', 'tamilnadu_thenilgiris_7'],
   ['Munnar', 'kerala_idukki_227'],
@@ -72,7 +74,7 @@ export default function Hero({ regions, onSelect, map, below, today }: HeroProps
         <div className="pointer-events-none absolute inset-0 blueprint" aria-hidden />
         <div className="relative mx-auto grid max-w-[1600px] grid-cols-1 gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:py-4">
           {/* Controls */}
-          <div className="flex min-w-0 flex-col gap-3 scrollbar-none lg:max-h-[calc(100vh-170px)] lg:min-h-[640px] lg:overflow-y-auto">
+          <div className="flex min-w-0 flex-col gap-3 scrollbar-none lg:h-[calc(100vh-130px)] lg:min-h-[560px] lg:overflow-y-auto">
             <div>
               <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
                 <span>MoES · Block → Panchayat</span>
@@ -126,41 +128,19 @@ export default function Hero({ regions, onSelect, map, below, today }: HeroProps
                 T<sub>1.2</sub> = T<sub>18</sub> − Γ·Δz + ΔT<sub>pool</sub> + ΔT<sub>slope</sub>
               </div>
             </div>
+
+            <nav aria-label="Legal" className="mt-auto flex flex-wrap gap-x-4 gap-y-1 px-1 pb-1 font-mono text-[10.5px] uppercase tracking-[0.12em] text-muted">
+              <a href={`${BASE}/privacy/`} className="hover:text-ink">Privacy</a>
+              <a href={`${BASE}/terms/`} className="hover:text-ink">Terms</a>
+              <a href="https://github.com/barath178/panchayat-weather-downscaling" target="_blank" rel="noopener noreferrer" className="hover:text-ink">Source</a>
+            </nav>
           </div>
 
-          {/* Live map */}
+          {/* Workspace: map and tabs */}
           <div className="min-w-0">{map}</div>
         </div>
       </section>
 
-      {below}
-
-      {/* Figure band */}
-      <section className="night relative overflow-hidden" aria-label="Resolution comparison">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_80%_0%,rgb(212_242_90/0.08),transparent_70%)]" aria-hidden />
-        <div className="relative mx-auto max-w-[1320px] px-5 py-16 sm:px-8 lg:py-24">
-          <ResolutionReveal />
-        </div>
-      </section>
-
-      {/* Numbers */}
-      <section className="border-b border-line/[0.14]">
-        <dl className="mx-auto grid max-w-[1320px] grid-cols-2 px-5 sm:px-8 lg:grid-cols-4">
-          {STATS.map(([v, k, d], i) => (
-            <div key={k} className={`py-10 pr-6 ${i ? 'lg:border-l lg:border-line/[0.14] lg:pl-8' : ''} ${i % 2 ? 'border-l border-line/[0.14] pl-6 lg:pl-8' : ''}`}>
-              <dt className="sr-only">{k}</dt>
-              <dd className="font-display text-6xl leading-none text-ink sm:text-7xl">{v}</dd>
-              <dd className="mt-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink">{k}</dd>
-              <dd className="mt-1 max-w-[26ch] text-sm leading-relaxed text-muted">{d}</dd>
-            </div>
-          ))}
-        </dl>
-        <div className="flex justify-center pb-8">
-          <a href="#village" className="group inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted transition-colors hover:text-ink">
-            Open your village <ArrowDownRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5" />
-          </a>
-        </div>
-      </section>
     </>
   );
 }
