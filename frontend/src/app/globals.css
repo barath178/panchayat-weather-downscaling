@@ -357,11 +357,3 @@ body {
     animation: none !important;
   }
 }
-
-/* Long-form text on the Privacy and Terms pages */
-.legal h2 { @apply mt-12 font-display text-3xl leading-tight text-ink; }
-.legal p, .legal li { @apply mt-4 text-[16px] leading-relaxed text-ink2; }
-.legal ul { @apply mt-2 list-disc space-y-1 pl-5; }
-.legal li { @apply mt-2; }
-.legal a { @apply text-accent underline underline-offset-2; }
-.legal strong { @apply font-semibold text-ink; }

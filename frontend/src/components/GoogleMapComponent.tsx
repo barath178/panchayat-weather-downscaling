@@ -23,8 +23,6 @@ interface GoogleMapComponentProps {
   blockField?: BlockField | null;
   /** bump to fly the map onto the selected block */
   focusBlock?: number;
-  /** Tailwind height classes for the map frame */
-  heightClass?: string;
 }
 
 type MapType = 'terrain' | 'satellite' | 'roadmap' | 'dark';
@@ -174,7 +172,6 @@ export default function GoogleMapComponent({
   liveLoading,
   blockField,
   focusBlock,
-  heightClass = 'h-[520px] sm:h-[600px]',
 }: GoogleMapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -430,7 +427,7 @@ export default function GoogleMapComponent({
   const panel = 'rounded-2xl border border-line/10 bg-surface/90 shadow-pop backdrop-blur-xl';
 
   return (
-    <div className={`card relative overflow-hidden p-0 ${heightClass}`}>
+    <div className="card relative h-[520px] overflow-hidden p-0 sm:h-[600px]">
       <div ref={mapContainerRef} className="z-0 h-full w-full" aria-label="Map of monitored regions" />
 
       {/* Top-left: variable + resolution */}
