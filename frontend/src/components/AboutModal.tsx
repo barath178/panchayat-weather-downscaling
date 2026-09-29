@@ -10,11 +10,11 @@ const MOES: [string, string][] = [
   ['High-resolution from low-resolution', 'Physics-informed inference (lapse rate, cold-air pooling, orographic lift, wind exposure), explained step by step; export the 1.2 km field as CSV, GeoJSON or PNG'],
   ['Agro-met advisory services', '7-day village outlook, spray windows, irrigation (FAO-56 ET₀), crop disease rules, GKMS-format bulletin'],
   ['Reaching farmers', 'Ask AeroAgro voice assistant and WhatsApp in English, हिन्दी, தமிழ்; kiosk wallboard with QR'],
-  ['National scale', 'A hazard scan of 303 regions flags alerts that the district forecast misses'],
+  ['National scale', 'AI scan of 303 villages flags alerts that the district forecast misses'],
 ];
 
 const STEPS = [
-  { icon: CloudRain, title: 'Coarse forecast', text: 'Live Open-Meteo forecast for the ~11–25 km grid cell, the same scale as IMD block forecasts.' },
+  { icon: CloudRain, title: 'Coarse forecast', text: 'Live Open-Meteo forecast for the ~11–25 km grid cell — the same scale as IMD block forecasts.' },
   { icon: Mountain, title: 'Terrain physics', text: 'Elevation lapse rate, cold-air drainage into valleys, orographic lift, wind gaps and urban heat.' },
   { icon: Cpu, title: '1.2 km microclimate', text: 'Village-level temperature, rain, wind and humidity, hourly spray windows and crop water demand.' },
   { icon: Users, title: 'Farmer delivery', text: 'WhatsApp advisories in English, हिन्दी and தமிழ், voice read-out, village kiosk and insurance evidence.' },

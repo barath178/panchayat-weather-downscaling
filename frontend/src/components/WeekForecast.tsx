@@ -73,13 +73,13 @@ export default function WeekForecast({ panchayat: p, week, isLive, onOpenBulleti
             return (
               <li
                 key={i}
-                className={`relative flex flex-col items-center rounded-2xl border px-2 pb-3 pt-4 text-center transition-colors ${
+                className={`relative flex animate-rise flex-col items-center rounded-2xl border px-2 pb-3 pt-4 text-center transition-colors ${
                   isBest ? 'border-accent/70 bg-accent/[0.06] shadow-glow' : 'border-line/[0.07] bg-surface2/60 hover:border-line/15'
                 }`}
                 style={{ animationDelay: `${i * 60}ms` }}
               >
                 {isBest && (
-                  <span className="absolute -top-2.5 rounded-md bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">Best to spray</span>
+                  <span className="absolute -top-2.5 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">Best to spray</span>
                 )}
                 <div className={`text-sm font-semibold ${i === 0 ? 'text-accent' : 'text-ink'}`}>{dayLabel(d, i, 'en', 'short')}</div>
                 <div className="h-4 text-[11px] text-muted">{shortDate(d)}</div>

@@ -57,7 +57,7 @@ export default function SprayTimelineChart({ hourlyData, sprayWindow, isLive }: 
           {isLive ? 'Live hourly forecast, downscaled to 1.2 km.' : 'Diurnal cycle modelled from the downscaled daily forecast.'} Spraying stops above{' '}
           {DRIFT_LIMIT_KMH} km/h wind or when rain is due within two hours.
         </p>
-        <span className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold ${sprayWindow.hours ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad'}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${sprayWindow.hours ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad'}`}>
           {sprayWindow.hours ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
           {sprayWindow.hours ? `Best window ${sprayWindow.label}` : 'No safe window'}
         </span>

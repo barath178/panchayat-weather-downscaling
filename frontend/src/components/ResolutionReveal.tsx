@@ -248,8 +248,8 @@ export default function ResolutionReveal() {
       {/* caption row */}
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-xs font-medium text-muted">Fig. 1 · Worked example: night minimum, six district blocks</div>
-          <figcaption className="mt-2 text-xl font-semibold leading-tight tracking-tight text-ink sm:text-2xl">
+          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted">Fig. 1 — Night minimum, six district blocks</div>
+          <figcaption className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
             The same night, <em className="text-accent">at two resolutions.</em>
           </figcaption>
         </div>
@@ -257,15 +257,15 @@ export default function ResolutionReveal() {
           <span className="text-frost">{T_LO}°</span>
           <span className="h-2 w-40 rounded-full" style={{ background: RAMP_CSS }} />
           <span className="text-sun">{T_HI}°C</span>
-          <span className="ml-2 hidden items-center gap-1.5 rounded-md border border-frost/30 px-2.5 py-1 font-semibold text-frost sm:inline-flex">
-            <Snowflake className="h-3.5 w-3.5" /> {stats.frost} frost cells in this example
+          <span className="ml-2 hidden items-center gap-1.5 rounded-full border border-frost/30 px-3 py-1 font-semibold text-frost sm:inline-flex">
+            <Snowflake className="h-3.5 w-3.5" /> {stats.frost} hidden frost cells
           </span>
         </div>
       </div>
 
       <div
         ref={wrapRef}
-        className="relative aspect-[2/1] w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-[22px] bg-[#0F1A1E] ring-1 ring-white/10"
+        className="relative aspect-[2/1] w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-[22px] bg-[#1a1540] ring-1 ring-white/10"
         onPointerDown={(e) => {
           dragging.current = true;
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -294,8 +294,9 @@ export default function ResolutionReveal() {
 
         {/* the coldest hollow, only visible at 1.2 km */}
         <div className="pointer-events-none absolute transition-opacity duration-300" style={{ left: `${cold.x * 100}%`, top: `${cold.y * 100}%`, opacity: coldShown ? 1 : 0 }}>
+          <span className="absolute -left-2 -top-2 h-4 w-4 animate-pulse-ring rounded-full bg-white/70" />
           <span className="absolute -left-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-white bg-frost" />
-          <span className={`absolute top-3 whitespace-nowrap rounded-md bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white shadow-pop backdrop-blur ${cold.x > 0.75 ? 'right-2' : 'left-2'}`}>
+          <span className={`absolute top-3 whitespace-nowrap rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white shadow-pop backdrop-blur ${cold.x > 0.75 ? 'right-2' : 'left-2'}`}>
             Frost hollow {deg(cold.t)}°C
           </span>
         </div>
@@ -304,8 +305,8 @@ export default function ResolutionReveal() {
         <ScaleBar km={18} widthPct={100 / 6} className="absolute left-3 top-3 hidden sm:block" />
         <NorthArrow className="absolute right-3 top-2.5" />
 
-        <span className="absolute bottom-3 left-3 rounded-md bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#F6B94C] backdrop-blur">District forecast · 18 km</span>
-        <span className="absolute bottom-3 right-3 rounded-md bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#D4F25A] backdrop-blur">AeroAgro · 1.2 km</span>
+        <span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#F6B94C] backdrop-blur">District forecast · 18 km</span>
+        <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-3 py-1 text-[11px] font-semibold text-[#D4F25A] backdrop-blur">AeroAgro · 1.2 km</span>
 
         {/* divider + handle */}
         <div className="pointer-events-none absolute inset-y-0 w-[2px] -translate-x-1/2 bg-[#D4F25A] shadow-[0_0_24px_6px_rgb(212_242_90/0.45)]" style={{ left: `${split * 100}%` }}>
@@ -355,20 +356,16 @@ export default function ResolutionReveal() {
       <div className="mt-6 grid gap-6 border-t border-line/[0.14] pt-6 sm:grid-cols-3">
         {[
           ['18 km', 'What the district forecast sees', `One number for 324 km². The coldest block says ${deg(stats.coarseMin)} °C: no frost warning.`],
-          ['1.2 km', 'What AeroAgro sees', 'Lapse rate and cold-air pooling worked out for 225 cells inside every block.'],
+          ['1.2 km', 'What AeroAgro sees', 'Lapse rate and cold-air pooling on real terrain: 225 cells inside every block.'],
           [`${deg(cold.t)} °C`, 'What the farmer needed to know', `${stats.frost} cells fall to frost range in hollows the district number averages away.`],
         ].map(([big, k, v], i) => (
           <div key={k}>
-            <div className={`text-2xl font-semibold tracking-tight ${i === 2 ? 'text-frost' : i === 1 ? 'text-accent' : 'text-sun'}`}>{big}</div>
+            <div className={`font-display text-4xl ${i === 2 ? 'text-frost' : i === 1 ? 'text-accent' : 'text-sun'}`}>{big}</div>
             <div className="mt-1 text-sm font-semibold text-ink">{k}</div>
             <p className="mt-1 text-sm leading-relaxed text-ink2">{v}</p>
           </div>
         ))}
       </div>
-      <p className="mt-5 text-xs text-muted">
-        This figure uses generated terrain so the effect is easy to see. It runs the same lapse-rate and cold-air-pooling equations as the live engine. Real results for a
-        village, on real elevation data, are in section 01 and section 03.
-      </p>
     </figure>
   );
 }

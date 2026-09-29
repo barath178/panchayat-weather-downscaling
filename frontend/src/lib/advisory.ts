@@ -85,23 +85,22 @@ export function buildAdvisory(a: AdvisoryInput, lang: Lang) {
   const place = lang === 'en' ? p.name.toUpperCase() : p.regionalName || p.name;
   const spray = a.sprayWindow.hours > 0 ? `${a.sprayWindow.start} ${t.to} ${a.sprayWindow.end}` : t.noSpray;
   const alerts: string[] = [];
-  // Plain text, no emoji: reads the same on any phone and in the voice read-out.
-  if (f.tempMin <= 4) alerts.push(`*! ${t.frost.replace('{t}', String(f.tempMin))}*`);
-  if (f.tempMax >= 40) alerts.push(`*! ${t.heat.replace('{t}', String(f.tempMax))}*`);
+  if (f.tempMin <= 4) alerts.push(`⚠️ ${t.frost.replace('{t}', String(f.tempMin))}`);
+  if (f.tempMax >= 40) alerts.push(`🔥 ${t.heat.replace('{t}', String(f.tempMax))}`);
 
   const lines = [
-    `*${t.header}: ${place}*`,
-    `${p.district}, ${p.state} · ${p.elevationM} m`,
-    `${t.crop}: ${a.crop}`,
+    `🌾 *${t.header}: ${place}*`,
+    `📍 ${p.district}, ${p.state} • ${p.elevationM} m`,
+    `🌱 ${t.crop}: ${a.crop}`,
     '',
-    `*${t.forecast}*`,
+    `📊 *${t.forecast}*`,
     `• ${t.temp}: ${f.tempMin}–${f.tempMax}°C`,
     `• ${t.rain}: ${f.rainfallMm} mm  • ${t.rh}: ${f.relativeHumidity}%`,
     `• ${t.wind}: ${f.windSpeedKmh} km/h`,
     '',
-    `*${t.spray}:* ${spray}`,
-    `*${t.irrigation}:* ${IRRIGATION[a.irrigationAction]?.[lang] ?? a.irrigationAction}`,
-    `*${t.pest}:* ${a.pest.title}`,
+    `🚜 ${t.spray}: ${spray}`,
+    `💧 ${t.irrigation}: ${IRRIGATION[a.irrigationAction]?.[lang] ?? a.irrigationAction}`,
+    `🐛 ${t.pest}: ${a.pest.title}`,
     ...(alerts.length ? ['', ...alerts] : []),
     '',
     `_${t.footer}_`,
@@ -113,8 +112,7 @@ export function buildAdvisory(a: AdvisoryInput, lang: Lang) {
 export function toSpeech(text: string) {
   return text
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
-    .replace(/[*_•!]/g, '')
-    .replace(/ · /g, ', ')
+    .replace(/[*_•]/g, '')
     .replace(/–/g, ' to ')
     .replace(/\n+/g, '. ')
     .replace(/\s+/g, ' ')

@@ -203,7 +203,7 @@ export default function PMFBYInsuranceModal({ panchayat, selectedCrop, fineMetri
                         {t.sign} {t.trigger} {t.unit}
                       </td>
                       <td className="py-3 text-right">
-                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold ${t.breached ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${t.breached ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'}`}>
                           {t.breached ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
                           {t.breached ? 'Breached' : 'Normal'}
                         </span>

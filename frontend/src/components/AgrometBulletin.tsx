@@ -258,7 +258,7 @@ export default function AgrometBulletin({ panchayat: p, crop, week, now, isLive,
                   <span className="flex items-center gap-1.5 font-semibold text-slate-900">
                     <Sprout className="h-3.5 w-3.5 text-emerald-700" /> {c}
                   </span>
-                  <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${LEVEL_TONE[risk.level]}`}>{risk.level}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${LEVEL_TONE[risk.level]}`}>{risk.level}</span>
                 </div>
                 <div className="mt-1.5 text-[12px] font-medium text-slate-800">{risk.title}</div>
                 <div className="mt-0.5 text-[11.5px] leading-snug text-slate-600">{risk.detail}</div>

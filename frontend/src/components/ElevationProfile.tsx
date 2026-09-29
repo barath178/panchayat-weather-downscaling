@@ -71,10 +71,10 @@ export default function ElevationProfile({ panchayats, regionMetrics, selectedId
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-lg text-sm text-ink2">
-          From 2,000 m Himalayan orchards to Kuttanad’s fields below sea level. Height alone swings the night temperature by more than 10 °C. One district forecast
+          From 2,000 m Himalayan orchards to Kuttanad’s fields below sea level. Height alone swings the night temperature by more than 10 °C — one district forecast
           cannot capture that.
         </p>
-        <span className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold ${frostCount ? 'bg-frost/15 text-frost' : 'bg-line/10 text-ink2'}`}>
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${frostCount ? 'bg-frost/15 text-frost' : 'bg-line/10 text-ink2'}`}>
           <Snowflake className="h-3.5 w-3.5" />
           {frostCount ? `${frostCount} site${frostCount > 1 ? 's' : ''} at frost risk` : 'No frost risk today'}
         </span>

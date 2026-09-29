@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Sigma, ArrowRight } from 'lucide-react';
+import { BrainCircuit, ArrowRight } from 'lucide-react';
 import type { PanchayatData } from '@/data/all_india_regions';
 import { DownscaleDetail, Step, WeatherMetrics, terrainClass } from '@/lib/microclimate';
 
@@ -106,7 +106,7 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
   return (
     <section className="card hud flex h-full flex-col p-5 sm:p-6" aria-labelledby="explain-title">
       <div className="eyebrow flex items-center gap-1.5">
-        <Sigma className="h-3.5 w-3.5 text-accent" /> Fig 2.2 · Step by step
+        <BrainCircuit className="h-3.5 w-3.5 text-accent" /> Fig 2.2 · Explainable AI
       </div>
       <h2 id="explain-title" className="mt-1 font-display text-2xl text-ink">
         Why your village differs
@@ -249,17 +249,17 @@ export default function ExplainPanel({ panchayat: p, coarse, detail, coarseEleva
       <div className="border-t border-line/[0.07] pt-4">
         <div className="text-xs text-muted">Terrain inputs the model used</div>
         <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-          <span className="rounded-md bg-surface2 px-2.5 py-1 text-ink2">
+          <span className="rounded-full bg-surface2 px-2.5 py-1 text-ink2">
             Height {p.elevationM} m <ArrowRight className="inline h-3 w-3" /> block {Math.round(coarseElevationM)} m
           </span>
-          <span className="rounded-md bg-surface2 px-2.5 py-1 text-ink2">Slope {p.slopeDeg}°</span>
-          <span className="rounded-md bg-surface2 px-2.5 py-1 text-ink2">Drainage index {p.drainageAccumulation}</span>
+          <span className="rounded-full bg-surface2 px-2.5 py-1 text-ink2">Slope {p.slopeDeg}°</span>
+          <span className="rounded-full bg-surface2 px-2.5 py-1 text-ink2">Drainage index {p.drainageAccumulation}</span>
           {flags.map((f) => (
-            <span key={f} className="rounded-md bg-surface2 px-2.5 py-1 capitalize text-ink2">
+            <span key={f} className="rounded-full bg-surface2 px-2.5 py-1 capitalize text-ink2">
               {f}
             </span>
           ))}
-          <span className={`rounded-md px-2.5 py-1 font-semibold ${confidence === 'High' ? 'bg-good/15 text-good' : 'bg-warn/15 text-warn'}`}>{confidence} confidence</span>
+          <span className={`rounded-full px-2.5 py-1 font-semibold ${confidence === 'High' ? 'bg-good/15 text-good' : 'bg-warn/15 text-warn'}`}>{confidence} confidence</span>
         </div>
       </div>
     </section>

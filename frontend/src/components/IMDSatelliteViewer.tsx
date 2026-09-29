@@ -16,7 +16,7 @@ const CHANNELS = [
     id: 'ir1',
     name: 'Infrared',
     url: 'https://mausam.imd.gov.in/Satellite/3Dasiasec_ir1.jpg',
-    what: 'Heat given off by clouds and land, day and night. The whiter the cloud, the colder and taller it is. Tall storm clouds bring heavy rain.',
+    what: 'Heat given off by clouds and land, day and night. The whiter the cloud, the colder and taller it is — tall storm clouds bring heavy rain.',
   },
   {
     id: 'vis',

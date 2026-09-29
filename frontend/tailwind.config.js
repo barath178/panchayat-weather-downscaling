@@ -29,12 +29,12 @@ module.exports = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        // "Field Console": crisp panels, rectangular controls
-        card: '18px',
+        // "Monsoon Almanac": soft card stock, pill controls
+        card: '20px',
       },
       boxShadow: {
         card: 'var(--shadow-card)',
